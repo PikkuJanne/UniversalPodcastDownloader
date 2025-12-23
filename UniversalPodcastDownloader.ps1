@@ -143,6 +143,15 @@ LICENSE / WARRANTY
     - Personal tool, provided as-is, without warranty. Use at your own risk.
 #>
 
+<#
+UniversalPodcastDownloader.ps1
+Minimal Win11 podcast downloader for personal offline archiving
+
+Author: Janne Vuorela
+Target OS: Windows 11
+Dependencies: PowerShell 5.1+ or PowerShell 7+, Internet access, optional .bat wrapper
+#>
+
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [ValidateSet('Latest','All','Custom')]
@@ -178,14 +187,22 @@ function Write-Log {
     }
 }
 
-# --- Helpers ---
+function Sanitize-ForWindowsName {
+    param([string]$Name)
+
+    if ([string]::IsNullOrWhiteSpace($Name)) { return $null }
+    $safe = ($Name -replace '[\\\/\:\*\?\"<>\|]', '_').Trim()
+    if ([string]::IsNullOrWhiteSpace($safe)) { return $null }
+    return $safe
+}
+
+# --- RSS autodetect helpers ---
 function Find-RssInHtml {
     param(
         [Parameter(Mandatory)][string]$Html,
         [Parameter(Mandatory)][string]$BaseUrl
     )
 
-    # Look for: <link ... type="application/rss+xml" ... href="...">
     $pattern = '<link[^>]+type=["'']application/(rss|atom)\+xml["''][^>]*>'
     $matches = [System.Text.RegularExpressions.Regex]::Matches(
         $Html,
@@ -207,7 +224,6 @@ function Find-RssInHtml {
                 $uri  = [Uri]::new($base, $href)
                 return $uri.AbsoluteUri
             } catch {
-                # If Uri combine fails, fall back to raw href
                 return $href
             }
         }
@@ -244,13 +260,11 @@ function Get-FeedUrlInteractive {
             $resp = Invoke-WebRequest -Uri $inputUrl
             $html = $resp.Content
 
-            # If the content already looks like RSS/Atom, assume it's a direct feed
             if ($html -match '<rss' -or $html -match '<feed') {
                 Write-Host "  This looks like a direct RSS/Atom feed." -ForegroundColor Green
                 return $inputUrl
             }
 
-            # Otherwise, try to detect a <link type="application/rss+xml"...> tag
             $rssUrl = Find-RssInHtml -Html $html -BaseUrl $inputUrl
             if ($rssUrl) {
                 Write-Host "  Found RSS candidate: $rssUrl" -ForegroundColor Green
@@ -270,6 +284,7 @@ function Get-FeedUrlInteractive {
     }
 }
 
+# --- Feed parsing ---
 function Resolve-PodcastItems {
     param([string[]]$Feeds)
 
@@ -279,11 +294,9 @@ function Resolve-PodcastItems {
             $resp = Invoke-WebRequest -Uri $u
             $xml  = [xml]$resp.Content
 
-            # Try RSS first
-            $items = $xml.SelectNodes('//rss/channel/item')
+            $items = $xml.SelectNodes('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="item"]')
             if (-not $items -or $items.Count -eq 0) {
-                # Try Atom fallback, items are usually <entry>
-                $items = $xml.SelectNodes('//feed/entry')
+                $items = $xml.SelectNodes('//*[local-name()="feed"]/*[local-name()="entry"]')
             }
 
             if ($items -and $items.Count -gt 0) {
@@ -297,80 +310,116 @@ function Resolve-PodcastItems {
     throw "No episodes found in the feed. Double-check the RSS URL."
 }
 
+# --- Robust episode extraction + collision-proof filenames ---
+function Get-FirstText {
+    param([object]$Value)
+
+    if ($null -eq $Value) { return $null }
+    if ($Value -is [System.Array]) { $Value = $Value | Select-Object -First 1 }
+    if ($Value -is [string]) { return $Value }
+
+    try { return ($Value.InnerText) } catch { return "$Value" }
+}
+
+function Get-XPathText {
+    param(
+        [xml.XmlNode]$Node,
+        [string]$XPath
+    )
+    $n = $Node.SelectSingleNode($XPath)
+    if ($n) { return $n.InnerText }
+    return $null
+}
+
 function Get-EpisodeData {
-    param($XmlItem)
+    param([xml.XmlNode]$XmlItem)
 
-    # Title
-    $title = $null
-    $titleNode = $XmlItem.title
-    if ($titleNode) {
-        if ($titleNode -is [string]) {
-            $title = $titleNode
-        } else {
-            $title = $titleNode.InnerText
-        }
-    }
+    $title = Get-XPathText -Node $XmlItem -XPath './*[local-name()="title"][1]'
+    if (-not $title) { $title = Get-FirstText $XmlItem.title }
 
-    # pubDate (RSS) or updated/published (Atom)
-    $dateStr = $null
-    if ($XmlItem.pubDate) {
-        $dateStr = $XmlItem.pubDate
-    }
-    if (-not $dateStr) {
-        $updatedNode = $XmlItem.SelectSingleNode('updated')
-        if ($updatedNode) { $dateStr = $updatedNode.InnerText }
-    }
-    if (-not $dateStr) {
-        $publishedNode = $XmlItem.SelectSingleNode('published')
-        if ($publishedNode) { $dateStr = $publishedNode.InnerText }
-    }
+    $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="pubDate"][1]'
+    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="updated"][1]' }
+    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="published"][1]' }
+    if (-not $dateStr) { $dateStr = Get-FirstText $XmlItem.pubDate }
 
     $pubDate = $null
-    if ($dateStr) {
-        try { $pubDate = [datetime]::Parse($dateStr) } catch {}
-    }
+    if ($dateStr) { try { $pubDate = [datetime]::Parse($dateStr) } catch {} }
 
-    # Enclosure URL (RSS)
+    $guid = Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
+    if (-not $guid) { $guid = Get-FirstText $XmlItem.guid }
+
     $url = $null
-    $enc = $XmlItem.SelectSingleNode('enclosure')
+    $enc = $XmlItem.SelectSingleNode('./*[local-name()="enclosure"][1]')
     if ($enc) {
-        $url = $enc.GetAttribute('url')
-        if (-not $url -and $enc.url) { $url = $enc.url }
+        $attr = $enc.Attributes["url"]
+        if ($attr) { $url = $attr.Value }
+        if (-not $url) { $url = $enc.GetAttribute("url") }
     }
 
-    # Atom enclosure alternative: <link rel="enclosure" href="...">
     if (-not $url) {
-        $links = $XmlItem.SelectNodes('link')
-        foreach ($ln in $links) {
-            $rel = $ln.GetAttribute('rel')
-            if ($rel -and $rel -eq 'enclosure') {
-                $href = $ln.GetAttribute('href')
-                if ($href) { $url = $href; break }
-            }
-        }
+        $ln = $XmlItem.SelectSingleNode('./*[local-name()="link" and @rel="enclosure"][1]')
+        if ($ln) { $url = $ln.GetAttribute("href") }
     }
 
-    # Fallback: some feeds put the MP3 in <guid> or a normal <link>
     if (-not $url) {
-        $guid = $XmlItem.guid
-        $link = $XmlItem.link
-        foreach ($cand in @($guid, $link)) {
-            if ($cand -and ($cand.ToString() -match '\.mp3($|\?)')) {
-                $url = $cand.ToString()
-                break
-            }
+        $cands = @(
+            Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
+            Get-XPathText -Node $XmlItem -XPath './*[local-name()="link"][1]'
+            (Get-FirstText $XmlItem.guid)
+            (Get-FirstText $XmlItem.link)
+        ) | Where-Object { $_ }
+
+        foreach ($cand in $cands) {
+            if ($cand -match '\.(mp3|m4a)($|\?)') { $url = "$cand"; break }
         }
     }
 
     [PSCustomObject]@{
-        Title   = "$title"
+        Title   = ($title -as [string])
         PubDate = $pubDate
         Url     = $url
+        Guid    = ($guid -as [string])
     }
 }
 
+function New-EpisodeFileName {
+    param(
+        [Parameter(Mandatory)]$Episode,
+        [Parameter(Mandatory)][int]$Index
+    )
+
+    $ext = 'mp3'
+    if ($Episode.Url -match '\.(mp3|m4a)($|\?)') { $ext = $Matches[1] }
+
+    $titleRaw  = if ([string]::IsNullOrWhiteSpace($Episode.Title)) { 'Episode' } else { $Episode.Title }
+    $safeTitle = (Sanitize-ForWindowsName $titleRaw)
+    if (-not $safeTitle) { $safeTitle = 'Episode' }
+
+    $prefix = ''
+    if ($Episode.PubDate) { $prefix = '{0:yyyy-MM-dd} - ' -f $Episode.PubDate }
+
+    $name = "$prefix$safeTitle.$ext"
+
+    if ($safeTitle -eq 'Episode' -or [string]::IsNullOrWhiteSpace($prefix)) {
+        $id = if ($Episode.Guid) { $Episode.Guid } elseif ($Episode.Url) { $Episode.Url } else { "$Index" }
+        $bytes = [Text.Encoding]::UTF8.GetBytes($id)
+
+        $sha = [Security.Cryptography.SHA1]::Create()
+        try {
+            $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
+        } finally {
+            $sha.Dispose()
+        }
+
+        $hash = $hash.Substring(0,8)
+        $name = "$prefix$safeTitle-$hash.$ext"
+    }
+
+    return $name
+}
+
+# --- Main ---
 try {
-    # --- TUI decisions ---
     $needFeed  = -not $PSBoundParameters.ContainsKey('FeedUrl')
     $needCount = -not $PSBoundParameters.ContainsKey('Mode') -and -not $PSBoundParameters.ContainsKey('CustomCount')
 
@@ -419,30 +468,26 @@ try {
         throw "Mode 'Custom' requires -CustomCount with a value >= 1."
     }
 
-    # --- Base output directory ---
     $baseOutputPath = $OutputPath
     if (-not (Test-Path -LiteralPath $baseOutputPath)) {
         Write-Host "[*] Creating base output directory: $baseOutputPath"
         New-Item -ItemType Directory -Path $baseOutputPath -Force | Out-Null
     }
 
-    # --- Fetch & parse feed ---
     $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
 
     Write-Host "[*] Fetching podcast feed..."
-    Write-Log ("Fetching feed from URL: {0}" -f $FeedUrl)
     $resolved = Resolve-PodcastItems -Feeds $candidateFeeds
     Write-Host "    Using feed: $($resolved.Url)"
-    Write-Log ("Resolved feed URL: {0}" -f $resolved.Url)
 
-    # Feed title, for subfolder
+    # Feed title, PS5.1-safe
     $feedTitle = $null
     try {
-        if ($resolved.Xml.rss -and $resolved.Xml.rss.channel) {
-            $feedTitle = $resolved.Xml.rss.channel.title
-        }
-        if (-not $feedTitle -and $resolved.Xml.feed) {
-            $feedTitle = $resolved.Xml.feed.title
+        $node1 = $resolved.Xml.SelectSingleNode('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="title"][1]')
+        if ($node1) { $feedTitle = $node1.InnerText }
+        if (-not $feedTitle) {
+            $node2 = $resolved.Xml.SelectSingleNode('//*[local-name()="feed"]/*[local-name()="title"][1]')
+            if ($node2) { $feedTitle = $node2.InnerText }
         }
     } catch {}
 
@@ -452,11 +497,8 @@ try {
         Write-Host "    Feed title: (unknown)"
     }
 
-    # --- Per-podcast subfolder ---
-    $safeFeedTitle = $feedTitle
+    $safeFeedTitle = (Sanitize-ForWindowsName $feedTitle)
     if (-not $safeFeedTitle) { $safeFeedTitle = 'UnknownPodcast' }
-    $safeFeedTitle = ($safeFeedTitle -replace '[\\\/\:\*\?\"<>\|]', '_').Trim()
-    if (-not $safeFeedTitle) { $safeFeedTitle = 'Podcast' }
 
     $OutputPath = Join-Path $baseOutputPath $safeFeedTitle
     if (-not (Test-Path -LiteralPath $OutputPath)) {
@@ -464,21 +506,18 @@ try {
         New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
     }
 
-    # --- Prepare log file in podcast folder ---
     $dateStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
     $script:LogFile = Join-Path $OutputPath ("{0}_{1}.log" -f $dateStamp, $safeFeedTitle)
 
     Set-Content -LiteralPath $script:LogFile -Value "UniversalPodcastDownloader log"
     Write-Log ("Feed URL     : {0}" -f $FeedUrl)
+    Write-Log ("Resolved URL : {0}" -f $resolved.Url)
     Write-Log ("Feed title   : {0}" -f ($feedTitle -as [string]))
     Write-Log ("Mode         : {0}" -f $Mode)
     Write-Log ("CustomCount  : {0}" -f ($CustomCount -as [string]))
     Write-Log ("Output folder: {0}" -f $OutputPath)
 
-    # --- Build episode list ---
     $episodes = foreach ($it in $resolved.Items) { Get-EpisodeData $it }
-
-    # Filter out any items with no URL
     $episodes = $episodes | Where-Object { $_.Url }
 
     Write-Log ("Feed items with valid URLs: {0}" -f $episodes.Count)
@@ -487,32 +526,18 @@ try {
         throw "Feed parsed, but no downloadable enclosure URLs were found."
     }
 
-    # Sort newest first
     $episodes = $episodes | Sort-Object PubDate -Descending
 
     switch ($Mode) {
-        'Latest' {
-            $episodes = $episodes | Select-Object -First 1
-        }
-        'All' {
-            # leave as-is
-        }
-        'Custom' {
-            $episodes = $episodes | Select-Object -First $CustomCount
-        }
+        'Latest' { $episodes = $episodes | Select-Object -First 1 }
+        'All'    { }
+        'Custom' { $episodes = $episodes | Select-Object -First $CustomCount }
     }
 
     $total = $episodes.Count
     Write-Host "[*] Episodes to download: $total"
     Write-Log ("Episodes to download (after mode/filter): {0}" -f $total)
 
-    if ($PSBoundParameters.ContainsKey('Verbose')) {
-        $episodes | ForEach-Object {
-            Write-Verbose (" - {0:yyyy-MM-dd}  {1}" -f $_.PubDate, $_.Title)
-        }
-    }
-
-    # --- Download loop with robustness & summary ---
     $downloaded = @()
     $skipped    = @()
     $failed     = @()
@@ -522,24 +547,14 @@ try {
     foreach ($ep in $episodes) {
         $index++
 
-        # Build a safe filename
-        $safeTitle = ($ep.Title -replace '[\\\/\:\*\?\"<>\|]', '_').Trim()
-        if (-not $safeTitle) { $safeTitle = 'Episode' }
-        if ($ep.PubDate) {
-            $fileName = '{0:yyyy-MM-dd} - {1}.mp3' -f $ep.PubDate, $safeTitle
-        } else {
-            $fileName = "$safeTitle.mp3"
-        }
-        $destFile  = Join-Path $OutputPath $fileName
+        $fileName = New-EpisodeFileName -Episode $ep -Index $index
+        $destFile = Join-Path $OutputPath $fileName
 
         if (Test-Path -LiteralPath $destFile) {
             Write-Progress -Activity "Podcast downloads" -Status "Skipping (exists): $fileName" `
                 -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
             Write-Host "[-] Skipping (already exists): $fileName"
-            $skipped += [PSCustomObject]@{
-                Title = $ep.Title
-                File  = $destFile
-            }
+            $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
             Write-Log ("Skipping existing file: {0}" -f $destFile)
             continue
         }
@@ -547,13 +562,16 @@ try {
         $pct = [int](($index/$total)*100)
         Write-Progress -Activity "Podcast downloads" -Status "Preparing: $fileName" -PercentComplete $pct `
             -CurrentOperation "Episode $index of $total"
+
         Write-Host "[+] Downloading ($index/$total): $($ep.Title)"
         Write-Verbose "    URL: $($ep.Url)"
         Write-Verbose "    OUT: $destFile"
 
-        Write-Log ("Starting download {0}/{1}: {2}" -f $index, $total, $ep.Title)
+        Write-Log ("Starting download {0}/{1}: {2}" -f $index, $total, ($ep.Title -as [string]))
         Write-Log ("Target file: {0}" -f $destFile)
         Write-Log ("Source URL : {0}" -f $ep.Url)
+        if ($ep.Guid) { Write-Log ("GUID      : {0}" -f $ep.Guid) }
+        if ($ep.PubDate) { Write-Log ("PubDate   : {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
 
         $success   = $false
         $attempt   = 0
@@ -561,43 +579,38 @@ try {
 
         while (-not $success -and $attempt -lt $maxRetries) {
             $attempt++
-            Write-Log ("Attempt {0} of {1} for: {2}" -f $attempt, $maxRetries, $ep.Title)
+            Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
 
             try {
                 Invoke-WebRequest -Uri $ep.Url -OutFile $destFile
                 $success = $true
             } catch {
                 $lastError = $_
-                Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $lastError.Exception.Message)
-                Write-Log ("Attempt {0} failed: {1}" -f $attempt, $lastError.Exception.Message) 'WARN'
-                if ($attempt -lt $maxRetries) {
-                    Start-Sleep -Seconds 3
-                }
+                $msg = $lastError.Exception.Message
+                Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $msg)
+                Write-Log ("Attempt failed: {0}" -f $msg) 'WARN'
+                if ($attempt -lt $maxRetries) { Start-Sleep -Seconds 3 }
             }
         }
 
         if ($success) {
+            $size = $null
+            try { $size = (Get-Item -LiteralPath $destFile).Length } catch {}
             Write-Host "    Saved: $fileName"
-            $downloaded += [PSCustomObject]@{
-                Title = $ep.Title
-                File  = $destFile
-            }
+            $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
             Write-Log ("Download succeeded: {0}" -f $destFile)
+            if ($size -ne $null) { Write-Log ("File size: {0} bytes" -f $size) }
         } else {
-            Write-Warning "    Giving up after $maxRetries attempts."
-            $failed += [PSCustomObject]@{
-                Title = $ep.Title
-                File  = $destFile
-                Error = if ($lastError) { $lastError.Exception.Message } else { "Unknown error"
-                }
-            }
-            Write-Log ("Giving up after {0} attempts: {1}" -f $maxRetries, $ep.Title) 'ERROR'
+            Write-Warning ("    Giving up after {0} attempts." -f $maxRetries)
+            $errMsg = if ($lastError) { $lastError.Exception.Message } else { "Unknown error" }
+            $failed += [PSCustomObject]@{ Title = $ep.Title; File = $destFile; Error = $errMsg }
+            Write-Log ("Giving up after {0} attempts: {1}" -f $maxRetries, ($ep.Title -as [string])) 'ERROR'
+            Write-Log ("Last error: {0}" -f $errMsg) 'ERROR'
         }
     }
 
     Write-Progress -Activity "Podcast downloads" -Completed
 
-    # --- Summary ---
     Write-Host ""
     Write-Host "Summary" -ForegroundColor Cyan
     Write-Host "-------"
@@ -612,7 +625,7 @@ try {
         Write-Host "Failed episodes:" -ForegroundColor Yellow
         foreach ($f in $failed) {
             Write-Host (" - {0}  ({1})" -f $f.Title, $f.Error)
-            Write-Log ("Failed: {0} ({1})" -f $f.Title, $f.Error) 'ERROR'
+            Write-Log ("Failed: {0} ({1})" -f ($f.Title -as [string]), $f.Error) 'ERROR'
         }
     }
 
