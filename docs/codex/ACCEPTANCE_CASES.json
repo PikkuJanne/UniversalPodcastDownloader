@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A016 passed through UPD-0104; A017-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A018 passed through UPD-0105; A019-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -190,8 +190,8 @@
       "when": "Preview migration and then apply only explicitly approved adoption.",
       "expected": "Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0105.md"
     },
     {
       "id": "A018",
@@ -201,8 +201,8 @@
       "when": "Assess migration confidence.",
       "expected": "No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0105.md"
     },
     {
       "id": "A019",

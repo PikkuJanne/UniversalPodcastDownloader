@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0105",
+  "current_task": "UPD-0106",
   "status_values": [
     "todo",
     "ready",
@@ -207,7 +207,7 @@
       "id": "UPD-0105",
       "milestone": "M1",
       "title": "Protect and migrate legacy archives",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0104"
       ],
@@ -229,15 +229,17 @@
         "A017",
         "A018"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0105.md"
+      ],
+      "implementation_commit": "a24b7781b9861d5a51af6ee7b7e7ee5c305c4e6f",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0106",
       "milestone": "M1",
       "title": "Make startup diagnostics private and reliable",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0105"
       ],

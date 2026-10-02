@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A016 passed; A017-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0104.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A018 passed; A019-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0105.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -20,8 +20,8 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A016 passed; A017-A060 rem
 | A014 | UPD-0104 | unit | passed | Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title. |
 | A015 | UPD-0104 | integration | passed | Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset. |
 | A016 | UPD-0104 | integration | passed | History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted. |
-| A017 | UPD-0105 | integration | not_run | Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion. |
-| A018 | UPD-0105 | integration | not_run | No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites. |
+| A017 | UPD-0105 | integration | passed | Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion. |
+| A018 | UPD-0105 | integration | passed | No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites. |
 | A019 | UPD-0106 | integration | not_run | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |
 | A020 | UPD-0106 | unit | not_run | Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports. |
 | A021 | UPD-0106 | integration | not_run | Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear. |
