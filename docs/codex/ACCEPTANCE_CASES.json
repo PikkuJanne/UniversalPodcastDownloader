@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A018 passed through UPD-0105; A019-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A021 passed through UPD-0106; A022-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -212,8 +212,8 @@
       "when": "Start a normal run and trigger failure.",
       "expected": "A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0106.md"
     },
     {
       "id": "A020",
@@ -223,8 +223,8 @@
       "when": "Write console, verbose, logs and a diagnostic export.",
       "expected": "Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports.",
       "fixture": "privacy-cases.json",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0106.md"
     },
     {
       "id": "A021",
@@ -234,8 +234,8 @@
       "when": "Run and terminate.",
       "expected": "Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0106.md"
     },
     {
       "id": "A022",

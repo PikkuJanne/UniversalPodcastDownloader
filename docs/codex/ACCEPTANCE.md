@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A018 passed; A019-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0105.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A021 passed; A022-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0106.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -22,9 +22,9 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A018 passed; A019-A060 rem
 | A016 | UPD-0104 | integration | passed | History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted. |
 | A017 | UPD-0105 | integration | passed | Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion. |
 | A018 | UPD-0105 | integration | passed | No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites. |
-| A019 | UPD-0106 | integration | not_run | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |
-| A020 | UPD-0106 | unit | not_run | Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports. |
-| A021 | UPD-0106 | integration | not_run | Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear. |
+| A019 | UPD-0106 | integration | passed | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |
+| A020 | UPD-0106 | unit | passed | Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports. |
+| A021 | UPD-0106 | integration | passed | Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear. |
 | A022 | UPD-0107 | integration | not_run | Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion. |
 | A023 | UPD-0107 | unit | not_run | Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible. |
 | A024 | UPD-0107 | integration | not_run | DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse. |

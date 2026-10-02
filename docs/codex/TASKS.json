@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0106",
+  "current_task": "UPD-0107",
   "status_values": [
     "todo",
     "ready",
@@ -239,7 +239,7 @@
       "id": "UPD-0106",
       "milestone": "M1",
       "title": "Make startup diagnostics private and reliable",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0105"
       ],
@@ -264,14 +264,14 @@
       "evidence": [
         "docs/codex/evidence/UPD-0106.md"
       ],
-      "implementation_commit": null,
+      "implementation_commit": "713fa11615dc3a0a9b0d69f7351ceccd1908794e",
       "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0107",
       "milestone": "M1",
       "title": "Enforce preview and untrusted-input boundaries",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0106"
       ],
