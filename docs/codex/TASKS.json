@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0101",
+  "current_task": "UPD-0102",
   "status_values": [
     "todo",
     "ready",
@@ -77,7 +77,7 @@
       "id": "UPD-0101",
       "milestone": "M1",
       "title": "Fix collections and safe Windows web requests",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0002"
       ],
@@ -99,15 +99,17 @@
         "A006",
         "A007"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0101.md"
+      ],
+      "implementation_commit": "12be5abbe0bc3741a275b06a90e22b70bfa7253a",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0102",
       "milestone": "M1",
       "title": "Enforce safe deterministic Windows destinations",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0101"
       ],

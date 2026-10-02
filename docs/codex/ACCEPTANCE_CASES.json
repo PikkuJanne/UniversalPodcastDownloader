@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A005 passed during bootstrap and test foundations; A006-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A007 passed through UPD-0101; A008-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -69,8 +69,8 @@
       "when": "Select Latest, Custom=1, Custom=N, All.",
       "expected": "Selections are arrays; valid counts and progress; empty input is handled explicitly; no null/divide-by-zero errors on either Windows engine.",
       "fixture": "rss-single.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0101.md"
     },
     {
       "id": "A007",
@@ -80,8 +80,8 @@
       "when": "Fetch a fixture page/feed through each request code path.",
       "expected": "No legacy DOM parsing or security confirmation prompt; existing system security policy is not changed.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0101.md"
     },
     {
       "id": "A008",

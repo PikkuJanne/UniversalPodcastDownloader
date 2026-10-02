@@ -3,10 +3,10 @@
 Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0101 only**.
 
 - UPD-0001 and UPD-0002: done; historical evidence preserved.
-- UPD-0101: **in_progress**; implementation and local checks complete, push/PR/CI pending.
-- Next after completion: **UPD-0102 — safe deterministic Windows destinations**.
-- Branch: `codex/upd-m1-safety`, created from verified M0 tip `7be83d07bd10fa02185b127239acddb7720aa150`.
-- M0 remains [draft PR #1](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1), base `main`. M1 must use a stacked draft PR based on `codex/upd-m0-foundation`.
+- UPD-0101: **done**; implementation pushed/verified, local and GitHub checks passed.
+- Next, ready and unstarted: **UPD-0102 — safe deterministic Windows destinations**.
+- Branch/upstream: `codex/upd-m1-safety` / `origin/codex/upd-m1-safety`, created from verified M0 tip `7be83d07bd10fa02185b127239acddb7720aa150`.
+- M0 remains [draft PR #1](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1), base `main`. M1 [draft PR #2](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2) is stacked on `codex/upd-m0-foundation`.
 - [Commands](DEVELOPMENT.md) and [UPD-0101 evidence](evidence/UPD-0101.md).
 
 ## Verified repository state
@@ -32,7 +32,16 @@ Windows 10.0.26300.0; Python 3.14.7; Git 2.56.0.windows.1; gh 2.97.0; Pester 5.7
 | PowerShell 7.6.5 | 39/0/0/29 | 14/0/0/0 | 82/0/0/0 | 14 files; 0 parse errors/new findings; 10 baseline warnings |
 | Windows PowerShell 5.1.26100.9444 | 39/0/0/29 | 14/0/0/0 | 82/0/0/0 | 14 files; 0 parse errors/new findings; 9 baseline warnings |
 
-Counts are passed/failed/skipped/not_run. Full All includes 58 product unit checks (six unchanged defect characterizations), ten runner guards and 14 real loopback integration checks. A006/A007 pass locally; CI pending. A008-A060 remain not_run.
+Counts are passed/failed/skipped/not_run. Full All includes 58 product unit checks (six unchanged defect characterizations), ten runner guards and 14 real loopback integration checks. A006/A007 pass locally and in CI. A008-A060 remain not_run.
+
+## Observed GitHub checks
+
+[Successful implementation run 36990787628](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/36990787628), exact head `12be5abbe0bc3741a275b06a90e22b70bfa7253a`, completed 2026-10-02 09:37:54 UTC. Both Windows Server 2022 jobs passed tests, analysis and runtime inventory:
+
+- PS7 7.6.6: 82 passed / 0 failed / 0 skipped / 0 not_run; analysis 14 files, 0 parse errors/new findings, 10 baseline warnings.
+- Windows PS5.1.20348.5622: 82 passed / 0 failed / 0 skipped / 0 not_run; analysis 14 files, 0 parse errors/new findings, 9 baseline warnings.
+
+OS 10.0.20348.0; pinned Python 3.14.7, Pester 5.7.1, PSScriptAnalyzer 1.24.0. Local PS7 is the installed 7.6.5; CI exercised the current 7.6.6 update. No system runtime upgrade was made.
 
 ## Known limitations and continuity
 
@@ -42,4 +51,4 @@ Counts are passed/failed/skipped/not_run. Full All includes 58 product unit chec
 - Manual launcher, live feeds and broader recovery/security/release acceptance remain unrun.
 - No runtime package/module, transport redesign or entry-point change. No merge/rebase/reset/force-push, deletion, settings, tags/publication, purchase or deployment.
 
-Stop after UPD-0101. Final pushed HEAD and CI will be recorded in the draft PR/final handoff after the documentation checkpoint to avoid a self-referential commit hash.
+Implementation SHA `12be5abbe0bc3741a275b06a90e22b70bfa7253a` was independently verified equal to the remote branch before PR creation at approximately 11:36 Europe/Berlin. This final documentation checkpoint is pushed and verified separately. Stop after UPD-0101. Final pushed HEAD and CI are recorded in the draft PR/final handoff after the documentation checkpoint to avoid a self-referential commit hash.
