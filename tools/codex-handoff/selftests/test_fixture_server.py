@@ -2,6 +2,7 @@
 import http.client
 import importlib.util
 import json
+import struct
 from pathlib import Path
 import tempfile
 import subprocess
@@ -115,6 +116,78 @@ class HelperTests(unittest.TestCase):
                 self.assertNotEqual(first_date.text, second_date.text)
                 first_date.text = second_date.text
                 self.assertEqual(ET.tostring(first), ET.tostring(second))
+        finally:
+            self.server.recovered.clear()
+
+    def test_format_assets_match_the_deterministic_structural_probes(self):
+        names = {'m4a': 'format-audio.m4a', 'isom-audio': 'format-isom-audio.m4a',
+                 'wave': 'format-audio.wav', 'flac': 'format-audio.flac', 'ogg': 'format-audio.ogg'}
+        generated = module.build_format_fixtures()
+        for kind, name in names.items():
+            with self.subTest(kind=kind):
+                self.assertEqual((KIT / 'fixtures' / name).read_bytes(), generated[kind])
+
+    def test_format_container_probes_distinguish_audio_video_and_unknown_packets(self):
+        data = module.build_format_fixtures()
+        self.assertIn(b'hdlr' + b'\0' * 8 + b'soun', data['m4a'])
+        self.assertIn(b'hdlr' + b'\0' * 8 + b'soun', data['isom-audio'])
+        self.assertIn(b'hdlr' + b'\0' * 8 + b'vide', data['mp4-video'])
+        self.assertNotIn(b'hdlr', data['mp4-ambiguous'])
+        self.assertEqual(data['ogg'][28:36], b'OpusHead')
+        self.assertEqual(data['ogg-ambiguous'][28:40], b'UnknownCodec')
+        self.assertEqual(struct.unpack('<I', data['wave'][4:8])[0] + 8, len(data['wave']))
+        self.assertEqual(data['flac'][:8], b'fLaC\x80\0\0\x22')
+
+    def test_format_feed_routes_offer_named_local_candidates_in_source_order(self):
+        for scenario in ('audio-after-video', 'atom-audio-after-video'):
+            status, _, body = self.request('/feeds/format-' + scenario + '.xml')
+            self.assertEqual(status, 200)
+            root = ET.fromstring(body)
+            if root.tag.endswith('feed'):
+                links = root.findall('.//{http://www.w3.org/2005/Atom}link')
+                urls = [link.attrib['href'] for link in links]
+            else:
+                links = root.findall('./channel/item/enclosure')
+                urls = [link.attrib['url'] for link in links]
+            self.assertEqual([link.attrib['type'] for link in links], ['video/mp4', 'audio/mpeg'])
+            self.assertEqual(urls, [self.server.base_url + '/media/format-video.mp4',
+                                    self.server.base_url + '/media/format-mp3'])
+
+    def test_format_routes_preserve_wrong_labels_and_generic_original_bytes(self):
+        routes = {
+            '/media/format-mp3': (self.audio, 'application/octet-stream'),
+            '/media/format-m4a': (self.server.format_media['m4a'], 'application/octet-stream'),
+            '/media/format-wrong.mp3': (self.server.format_media['m4a'], 'audio/mpeg'),
+            '/media/format-wrong.m4a': (self.audio, 'audio/mp4'),
+            '/media/format-ogg': (self.server.format_media['ogg'], 'application/octet-stream'),
+        }
+        for path, (body, mime) in routes.items():
+            with self.subTest(path=path):
+                status, headers, actual = self.request(path)
+                self.assertEqual((status, headers['Content-Type'], actual), (200, mime, body))
+                self.assertEqual(int(headers['Content-Length']), len(body))
+                status, headers, actual = self.request(path, method='HEAD')
+                self.assertEqual((status, actual), (200, b''))
+                self.assertEqual(int(headers['Content-Length']), len(body))
+        status, headers, body = self.request('/media/format-html.mp3')
+        self.assertEqual((status, headers['Content-Type']), (200, 'audio/mpeg'))
+        self.assertTrue(body.startswith(b'<!doctype html>'))
+
+    def test_format_identity_route_adds_a_later_candidate_without_changing_the_first(self):
+        self.server.recovered.clear()
+        try:
+            _, _, body = self.request('/feeds/format-identity-selection.xml')
+            item = ET.fromstring(body).find('./channel/item')
+            self.assertIsNone(item.find('guid'))
+            first = item.findall('enclosure')
+            self.assertEqual(len(first), 1)
+            self.assertEqual(first[0].attrib, {'url': self.server.base_url + '/media/format-stable.mp3'})
+            self.server.recovered.set()
+            _, _, body = self.request('/feeds/format-identity-selection.xml')
+            later = ET.fromstring(body).findall('./channel/item/enclosure')
+            self.assertEqual(len(later), 2)
+            self.assertEqual(later[0].attrib, first[0].attrib)
+            self.assertEqual(later[1].attrib, {'url': self.server.base_url + '/media/format-m4a', 'type': 'audio/mp4'})
         finally:
             self.server.recovered.clear()
 

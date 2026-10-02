@@ -38,6 +38,9 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/feeds/empty-atom.xml`, `/feeds/wrong-root.xml`, `/feeds/wrong-atom-namespace.xml` | Valid empty Atom, nested RSS under an unsupported root and incorrect Atom namespace |
 | `/feeds/publication-order.xml`, `/feeds/publication-midnight.xml` | Equal UTC instants mixed with missing/malformed dates; Atom publication crosses the UTC calendar-day boundary |
 | `/feeds/publication-history-rss.xml`, `/feeds/publication-history-atom.xml` | Stable IDs, titles and media; `POST /__recover` changes only publication date |
+| `/feeds/format-<scenario>.xml` | Named RSS/Atom enclosure choices, conflicting labels, generic response types and rejected container/text scenarios |
+| `/feeds/format-identity-selection.xml` | No publisher ID; URL-only MP3 first, with a later typed M4A alternative added by `POST /__recover` |
+| `/media/format-*` | Original silent MP3 or deterministic M4A/isom/WAVE/FLAC/Ogg structural probes, audio-labelled HTML, video/unknown container evidence |
 | `/redirect/show` | Redirect to the show page |
 | `/redirect/loop` | Same-URL redirect loop |
 | `/redirect/feed`, `/redirect/file`, `/redirect/userinfo` | Relative valid feed target, forbidden file scheme, or synthetic embedded credentials |
@@ -72,3 +75,5 @@ The fixed short delay exists to make tests quick. Configure a suitably smaller i
 The legacy `/media/recover.mp3` and `/media/interrupt.mp3` routes also omit ETag. Their tests continue to cover safe fresh restart and preservation of unknown crash partials. Validator-bearing durable resume is exercised separately by the `/resume/` scenarios.
 
 Self-tests verify helper semantics and readiness-file safety. They do not exercise the PowerShell tool, interrupted archive recovery, TLS/proxy behavior, Windows file APIs or PowerShell versions. Codex must add those product tests in the planned tasks.
+
+`build_format_fixtures()` defines deterministic format probes. The checked-in `format-audio.*` and `format-isom-audio.m4a` assets match those exact byte arrays. WAVE contains small PCM silence; M4A/isom track handlers, FLAC metadata/frame prefix and Ogg identification pages exercise bounded structural recognition. The latter probes do not claim playable codec data, full decoding, CRC validation or complete audio integrity. They carry no real podcast content and the downloader must preserve their original bytes.

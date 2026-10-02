@@ -11,6 +11,7 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
   - Custom (N newest episodes)
   - All (everything in the feed)
 - Publication order compares UTC instants. Atom uses published before updated fallback; equal or missing dates keep feed order, with undated episodes last. See [date policy](docs/codex/PUBLICATION_DATES.md) for supported formats and fallback rules.
+- Audio enclosures are selected in feed order using supported MIME/URL hints. Completed bytes determine new MP3/M4A/Ogg/WAVE/FLAC file extensions; original bytes are retained. See [audio policy](docs/codex/AUDIO_FORMATS.md) for ambiguous containers and inspection limits.
 - Creates per-podcast subfolders based on feed title:
   - `<OutputPath>\<SafeFeedTitle>-<feed hash>\YYYY-MM-DD - Episode title-<episode hash>.mp3`
 - Starts a private local log before feed discovery, then continues it in the podcast folder after an ordinary download is confirmed.
@@ -86,7 +87,7 @@ Usage
 - Downloads are validated before final placement:
   - Fresh transfers reserve a unique `.upd-<GUID>.tmp` in the destination folder; eligible retries verify and reuse their owned checkpoint. Streams close before validation and final rename.
   - Empty bodies, text/error pages, unsupported binary signatures, incomplete HTTP bodies and unsolicited partial responses fail. Valid recognizable audio can succeed without Content-Length. A feed enclosure-length mismatch produces a warning.
-  - Checks read at most 64 KiB for recognizable MPEG audio, WAV, FLAC, Ogg or MP4 signatures. They do not decode the whole file or prove publisher authenticity; Ogg/MP4 audio tracks are not verified.
+  - Checks read at most 64 KiB for supported MPEG Layer III, WAV, FLAC, Ogg audio packet or MP4 audio indications. Generic containers without bounded audio evidence fail; an M4A brand remains a modest compatibility indication. These checks do not decode the whole file, prove audio-only content/playability or establish publisher authenticity.
   - Downloads with a strong ETag, known length and matching durable checkpoint can resume automatically. The downloader verifies the stored identity, local bytes and returned range before appending. Uncertain responses start fresh while preserving the old partial. Corrupt checkpoints or uncheckpointed crash tails stop for review; unknown partials are never reused or cleaned. See [safe resume policy](docs/codex/RESUME_POLICY.md).
 
 **Local history and recovery**

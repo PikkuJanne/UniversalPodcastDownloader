@@ -1,5 +1,6 @@
 BeforeAll {
     $repositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+    . (Join-Path $repositoryRoot 'src/MediaSelection.ps1')
     $helper = Join-Path $repositoryRoot 'src/MediaValidation.ps1'
     if (Test-Path -LiteralPath $helper) { . $helper }
     Mock Invoke-WebRequest { throw 'Validation must not make network requests.' }
@@ -114,7 +115,7 @@ Describe 'A012 bounded conservative media validation' -Tag 'Unit', 'A012' {
     It 'accepts the bounded <Format> signature without relying on MIME' -ForEach @(
         @{ Format = 'wave'; Bytes = [byte[]](82,73,70,70,40,0,0,0,87,65,86,69,102,109,116,32,16,0,0,0,1,0,1,0,68,172,0,0,136,88,1,0,2,0,16,0,100,97,116,97,4,0,0,0,0,0,0,0) },
         @{ Format = 'flac'; Bytes = [byte[]](102,76,97,67,128,0,0,34) + [byte[]]::new(34) + [byte[]](255,248,0,0) },
-        @{ Format = 'ogg_container'; Bytes = [byte[]](79,103,103,83,0) + [byte[]]::new(21) + [byte[]](1,19,79,112,117,115,72,101,97,100,1) + [byte[]]::new(10) },
+        @{ Format = 'ogg_container'; Bytes = [byte[]](79,103,103,83,0,2) + [byte[]]::new(20) + [byte[]](1,19,79,112,117,115,72,101,97,100,1,1) + [byte[]]::new(9) },
         @{ Format = 'mp4_container'; Bytes = [byte[]](0,0,0,20,102,116,121,112,77,52,65,32,0,0,0,0,77,52,65,32,0,0,0,12,109,100,97,116,0,0,0,0) }
     ) {
         [IO.File]::WriteAllBytes($script:MediaPath, $Bytes)

@@ -6,6 +6,8 @@ function Invoke-PodcastMediaTransfer {
         [Parameter(Mandatory)][string]$Root,
         [Parameter(Mandatory)][string]$RelativePath,
         [Nullable[long]]$EnclosureLength,
+        [string]$EnclosureContentType,
+        [scriptblock]$ResolveFinalPath,
         [scriptblock]$BeforeFinalize,
         $Policy,
         $ResumeContext
@@ -104,7 +106,8 @@ function Invoke-PodcastMediaTransfer {
 
         $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
         $validation = Test-PodcastMediaFile -LiteralPath $temporary -TransferCompleted:$transfer.Completed `
-            -HttpContentLength $transfer.ContentLength -ContentType $transfer.ContentType -EnclosureLength $EnclosureLength
+            -HttpContentLength $transfer.ContentLength -ContentType $transfer.ContentType -EnclosureLength $EnclosureLength `
+            -EnclosureContentType $EnclosureContentType -MediaUrl $Uri
         if (-not $validation.Valid) {
             throw [IO.InvalidDataException]::new(('Media validation failed: {0}.' -f $validation.Category))
         }
@@ -113,9 +116,23 @@ function Invoke-PodcastMediaTransfer {
         }
         $evidence = Get-PodcastFileEvidence -Root $Root -RelativePath $temporaryRelative
         if ($evidence.Bytes -ne $validation.Bytes) { throw 'Media changed before recording transfer evidence.' }
+        # A checkpoint continues to own the provisional path. Only a completed,
+        # validated transfer may resolve the final path, before prepared history.
+        $finalRelativePath = $RelativePath
+        if ($ResolveFinalPath) { $finalRelativePath = & $ResolveFinalPath $validation }
+        if ([string]::IsNullOrWhiteSpace($finalRelativePath) -or
+            [IO.Path]::GetDirectoryName($finalRelativePath) -cne $relativeDirectory) {
+            throw 'Resolved media destination must remain in the planned directory.'
+        }
+        $destination = Assert-PodcastDestination -Root $Root -RelativePath $finalRelativePath
+        if (Test-Path -LiteralPath $destination) { throw 'Media destination already exists; preserving it.' }
+        if ([IO.Path]::GetExtension($finalRelativePath) -ine ('.' + $validation.Extension)) {
+            $validation.Warnings += 'Recorded destination extension retained; it differs from the recognized audio format.'
+        }
         $result = [pscustomobject]@{
             Outcome = 'downloaded'
             File = $destination
+            RelativePath = $finalRelativePath
             Bytes = $validation.Bytes
             Sha256 = $evidence.Sha256
             Verification = $validation.Verification
@@ -132,7 +149,7 @@ function Invoke-PodcastMediaTransfer {
             # cleanup responsibility. Previously resumed partials stay preserved.
             if ($owned) { $session.Preserve = $false }
         }
-        $null = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
+        $null = Assert-PodcastDestination -Root $Root -RelativePath $finalRelativePath
         # Close and validate before atomic no-overwrite placement on the same volume.
         [IO.File]::Move($temporary, $destination)
         $owned = $false

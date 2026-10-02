@@ -7,6 +7,7 @@ import json
 import math
 import re
 import socket
+import struct
 import threading
 import time
 from email.utils import formatdate
@@ -37,6 +38,43 @@ FEEDS = {
 }
 
 
+def build_format_fixtures() -> Dict[str, bytes]:
+    """Deterministic bounded format probes, not proof of playable/decoded audio."""
+    def box(kind: bytes, payload: bytes) -> bytes:
+        return struct.pack('>I', len(payload) + 8) + kind + payload
+
+    def iso_media(brand: bytes, handler: Optional[bytes]) -> bytes:
+        ftyp = box(b'ftyp', brand + b'\0' * 4 + brand + b'isom')
+        track = b''
+        if handler is not None:
+            hdlr = box(b'hdlr', b'\0' * 8 + handler + b'\0' * 12 + b'\0')
+            track = box(b'moov', box(b'trak', box(b'mdia', hdlr)))
+        return ftyp + track + box(b'mdat', b'\x21\x10\x56\xe5' * 4)
+
+    wave_body = (b'fmt ' + struct.pack('<IHHIIHH', 16, 1, 1, 8000, 16000, 2, 16)
+                 + b'data' + struct.pack('<I', 32) + b'\0' * 32)
+    stream_info = (struct.pack('>HH', 16, 16) + b'\0' * 6
+                   + struct.pack('>Q', (8000 << 44) | (15 << 36) | 16) + b'\0' * 16)
+    opus_head = b'OpusHead' + struct.pack('<BBHIhB', 1, 1, 0, 8000, 0, 0)
+
+    def ogg_page(packet: bytes) -> bytes:
+        # A complete identification page. CRC/codec frames are not validated by
+        # this helper; it exists to exercise the downloader's bounded evidence.
+        return (b'OggS' + bytes((0, 2)) + b'\0' * 8 + struct.pack('<II', 1, 0)
+                + b'\0' * 4 + bytes((1, len(packet))) + packet)
+
+    return {
+        'm4a': iso_media(b'M4A ', b'soun'),
+        'isom-audio': iso_media(b'isom', b'soun'),
+        'mp4-video': iso_media(b'isom', b'vide'),
+        'mp4-ambiguous': iso_media(b'isom', None),
+        'wave': b'RIFF' + struct.pack('<I', len(wave_body) + 4) + b'WAVE' + wave_body,
+        'flac': b'fLaC' + bytes((128, 0, 0, 34)) + stream_info + b'\xff\xf8\0\0',
+        'ogg': ogg_page(opus_head),
+        'ogg-ambiguous': ogg_page(b'UnknownCodec' + b'\0' * 7),
+    }
+
+
 class FixtureServer(ThreadingHTTPServer):
     """Only binds IPv4 loopback, even when instantiated by a test."""
     daemon_threads = True
@@ -49,6 +87,7 @@ class FixtureServer(ThreadingHTTPServer):
         self.count_lock = threading.Lock()
         self.recovered = threading.Event()
         self.audio = (FIXTURES / 'silence.mp3').read_bytes()
+        self.format_media = build_format_fixtures()
         super().__init__(('127.0.0.1', port), FixtureHandler)
 
     @property
@@ -310,9 +349,75 @@ class FixtureHandler(BaseHTTPRequestHandler):
             else:
                 self.wfile.write(data)
 
+    def _format(self, path: str, head: bool) -> bool:
+        media = {
+            '/media/format-mp3': (self.server.audio, 'application/octet-stream'),
+            '/media/format-stable.mp3': (self.server.audio, 'audio/mpeg'),
+            '/media/format-m4a': (self.server.format_media['m4a'], 'application/octet-stream'),
+            '/media/format-isom-audio': (self.server.format_media['isom-audio'], 'application/octet-stream'),
+            '/media/format-wrong.mp3': (self.server.format_media['m4a'], 'audio/mpeg'),
+            '/media/format-wrong.m4a': (self.server.audio, 'audio/mp4'),
+            '/media/format-wave': (self.server.format_media['wave'], 'application/octet-stream'),
+            '/media/format-flac': (self.server.format_media['flac'], 'application/octet-stream'),
+            '/media/format-ogg': (self.server.format_media['ogg'], 'application/octet-stream'),
+            '/media/format-video.mp4': (self.server.format_media['mp4-video'], 'audio/mp4'),
+            '/media/format-ambiguous.mp4': (self.server.format_media['mp4-ambiguous'], 'audio/mp4'),
+            '/media/format-ambiguous.ogg': (self.server.format_media['ogg-ambiguous'], 'audio/ogg'),
+            '/media/format-html.mp3': (b'<!doctype html><html><body>Denied synthetic audio</body></html>', 'audio/mpeg'),
+        }
+        if path in media:
+            body, mime = media[path]
+            self._send(200, body, head, mime, {'ETag': '"format-v1"'})
+            return True
+        feeds = {
+            'audio-after-video': ('/media/format-mp3', 'audio/mpeg'),
+            'atom-audio-after-video': ('/media/format-mp3', 'audio/mpeg'),
+            'm4a-generic': ('/media/format-m4a', 'audio/mp4'),
+            'isom-audio': ('/media/format-isom-audio', 'audio/mp4'),
+            'm4a-wrong-extension': ('/media/format-wrong.mp3', 'audio/mpeg'),
+            'mp3-wrong-extension': ('/media/format-wrong.m4a', 'audio/mp4'),
+            'wave': ('/media/format-wave', 'audio/wav'),
+            'flac': ('/media/format-flac', 'audio/flac'),
+            'ogg': ('/media/format-ogg', 'audio/ogg'),
+            'video': ('/media/format-video.mp4', 'audio/mp4'),
+            'ambiguous-mp4': ('/media/format-ambiguous.mp4', 'audio/mp4'),
+            'ambiguous-ogg': ('/media/format-ambiguous.ogg', 'audio/ogg'),
+            'html': ('/media/format-html.mp3', 'audio/mpeg'),
+            'identity-selection': ('/media/format-stable.mp3', ''),
+        }
+        match = re.fullmatch(r'/feeds/format-([a-z0-9-]+)\.xml', path)
+        if not match or match.group(1) not in feeds:
+            return False
+        scenario = match.group(1)
+        target, mime = feeds[scenario]
+        audio_url = self.server.base_url + target
+        video_url = self.server.base_url + '/media/format-video.mp4'
+        if scenario == 'atom-audio-after-video':
+            body = ('<feed xmlns="http://www.w3.org/2005/Atom"><title>Format fixtures</title>'
+                    '<entry><title>Original synthetic audio</title><id>urn:fixture:format-one</id>'
+                    '<link rel="enclosure" href="{}" type="video/mp4"/>'
+                    '<link rel="enclosure" href="{}" type="{}"/></entry></feed>').format(
+                        video_url, audio_url, mime)
+        elif scenario == 'identity-selection':
+            alternative = ('<enclosure url="{}" type="audio/mp4"/>'.format(
+                self.server.base_url + '/media/format-m4a') if self.server.recovered.is_set() else '')
+            body = ('<rss version="2.0"><channel><title>Format fixtures</title>'
+                    '<item><title>Original synthetic audio</title><enclosure url="{}"/>{}'
+                    '</item></channel></rss>').format(audio_url, alternative)
+        else:
+            video = '<enclosure url="{}" type="video/mp4"/>'.format(video_url) if scenario == 'audio-after-video' else ''
+            body = ('<rss version="2.0"><channel><title>Format fixtures</title>'
+                    '<item><title>Original synthetic audio</title><guid>format-one</guid>{}'
+                    '<enclosure url="{}" type="{}"/></item></channel></rss>').format(
+                        video, audio_url, mime)
+        self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
+        return True
+
     def _dispatch(self, head: bool) -> None:
         path = urlsplit(self.path).path
         number = self.server.count(path)
+        if self._format(path, head):
+            return
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')
             return

@@ -89,10 +89,10 @@ Describe 'A034: Atom publication date precedence' -Tag 'Unit', 'A034' {
     }
 }
 
-Describe 'Known parser defects: characterization only, not future acceptance' -Tag 'Unit', 'BaselineCharacterization' {
-    It 'currently chooses the first enclosure even when it is video (UPD-0205)' {
+Describe 'A035: supported audio enclosure selection' -Tag 'Unit', 'A035' {
+    It 'chooses the first supported audio enclosure after an unsupported video candidate' {
         [xml]$xml = Read-SyntheticFixture 'rss-media.xml'
         $episode = Get-EpisodeData -XmlItem $xml.rss.channel.item[0]
-        $episode.Url | Should -Be 'https://video.example.invalid/trailer.mp4'
+        $episode.Url | Should -Be 'https://media.example.invalid/media/octet-stream'
     }
 }

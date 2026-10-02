@@ -57,6 +57,26 @@ try {
             [Diagnostics.Process]::GetCurrentProcess().Kill()
         }
     }
+    elseif ($config.TransactionHook -eq 'AfterPrepareBeforeResumeRetireCrash') {
+        # Kill only this owned worker after real prepared history is persisted,
+        # while its completed provisional-path resume checkpoint still exists.
+        $transferSource = Join-Path (Split-Path $config.ProductScript -Parent) 'src/MediaTransfer.ps1'
+        $sourceLines = [IO.File]::ReadAllLines($transferSource)
+        $retireLines = @(for ($line = 0; $line -lt $sourceLines.Length; $line++) {
+            if ($sourceLines[$line] -match '^\s*Remove-PodcastResumeState -Lock \$session.Lock -State \$session.State') { $line + 1 }
+        })
+        if ($retireLines.Count -ne 1) { throw 'The integration prepared-resume hook requires one explicit checkpoint retirement.' }
+        $null = Set-PSBreakpoint -Script $transferSource -Line $retireLines[0] -Action {
+            $marker = [ordered]@{
+                Hook = $config.TransactionHook
+                Temporary = $temporary
+                Destination = $destination
+                ResumePath = Get-PodcastResumeStatePath -Root $Root -EpisodeId $ResumeContext.EpisodeId
+            }
+            [IO.File]::WriteAllText($config.HookMarkerPath, ($marker | ConvertTo-Json))
+            [Diagnostics.Process]::GetCurrentProcess().Kill()
+        }
+    }
     elseif ($config.TransactionHook -and $config.TransactionHook -ne 'None' -or
         ($config.BoundaryJunctionPath -and $config.BoundaryStage -eq 'AfterTransfer')) {
         $transferSource = Join-Path (Split-Path $config.ProductScript -Parent) 'src/MediaTransfer.ps1'

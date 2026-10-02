@@ -66,6 +66,182 @@ function Get-PodcastBinarySignature {
     return $null
 }
 
+function Get-PodcastMediaUInt32 {
+    param([byte[]]$Buffer, [int]$Offset, [switch]$LittleEndian)
+
+    if ($LittleEndian) {
+        return [long]$Buffer[$Offset] + [long]$Buffer[$Offset + 1] * 256 +
+            [long]$Buffer[$Offset + 2] * 65536 + [long]$Buffer[$Offset + 3] * 16777216
+    }
+    return [long]$Buffer[$Offset] * 16777216 + [long]$Buffer[$Offset + 1] * 65536 +
+        [long]$Buffer[$Offset + 2] * 256 + [long]$Buffer[$Offset + 3]
+}
+
+function Get-PodcastMp4BoxContent {
+    param([byte[]]$Buffer, [int]$Count, [long]$Start, [long]$End, [string]$ContainerPath, [int]$Depth, $Context)
+
+    if ($Depth -gt 4) { return $false }
+    $cursor = $Start
+    while ($cursor -lt $End) {
+        $Context.Nodes++
+        if ($Context.Nodes -gt 256) { return $false }
+        if ($End - $cursor -lt 8) { $Context.Invalid = $true; return $false }
+        if ($cursor -gt $Count - 8) { return $false }
+        $position = [int]$cursor
+        $boxSize = Get-PodcastMediaUInt32 -Buffer $Buffer -Offset $position
+        $type = [Text.Encoding]::ASCII.GetString($Buffer, $position + 4, 4)
+        $headerLength = 8
+        if ($boxSize -eq 1) {
+            if ($End - $cursor -lt 16) { $Context.Invalid = $true; return $false }
+            if ($cursor -gt $Count - 16) { return $false }
+            $high = Get-PodcastMediaUInt32 -Buffer $Buffer -Offset ($position + 8)
+            $low = Get-PodcastMediaUInt32 -Buffer $Buffer -Offset ($position + 12)
+            if ($high -gt 2147483647) { $Context.Invalid = $true; return $false }
+            $boxSize = $high * 4294967296L + $low
+            $headerLength = 16
+        }
+        elseif ($boxSize -eq 0) { $boxSize = $End - $cursor }
+        if ($boxSize -lt $headerLength -or $boxSize -gt $End - $cursor) {
+            $Context.Invalid = $true
+            return $false
+        }
+        $boxEnd = $cursor + $boxSize
+        $childPath = $null
+        if ($ContainerPath -ceq '' -and $type -ceq 'moov') {
+            $Context.HasMovie = $true
+            $childPath = 'moov'
+        }
+        elseif ($ContainerPath -ceq 'moov' -and $type -ceq 'trak') { $childPath = 'moov/trak' }
+        elseif ($ContainerPath -ceq 'moov/trak' -and $type -ceq 'mdia') { $childPath = 'moov/trak/mdia' }
+        if ($null -ne $childPath) {
+            $complete = Get-PodcastMp4BoxContent -Buffer $Buffer -Count $Count -Start ($cursor + $headerLength) `
+                -End $boxEnd -ContainerPath $childPath -Depth ($Depth + 1) -Context $Context
+            if (-not $complete) { return $false }
+        }
+        elseif ($ContainerPath -ceq 'moov/trak/mdia' -and $type -ceq 'hdlr') {
+            # FullBox flags, predefined/component type, handler type, reserved.
+            if ($boxSize -lt $headerLength + 24) { $Context.Invalid = $true; return $false }
+            if ($cursor + $headerLength + 12 -gt $Count) { return $false }
+            $handler = [Text.Encoding]::ASCII.GetString($Buffer, $position + $headerLength + 8, 4)
+            if ($handler -ceq 'soun') { $Context.HasAudio = $true }
+            if ($handler -ceq 'vide') { $Context.HasVideo = $true }
+        }
+        # Opaque boxes, including mdat, are skipped by their checked size. Their
+        # payload cannot supply handler evidence or consume additional file reads.
+        $cursor = $boxEnd
+    }
+    return $true
+}
+
+function Get-PodcastMp4AudioEvidence {
+    param([byte[]]$Buffer, [int]$Count, [long]$AvailableBytes)
+
+    $result = [pscustomobject]@{ Valid = $false; Category = 'ambiguous_media'; Warning = $null }
+    if ($Count -lt 16 -or [Text.Encoding]::ASCII.GetString($Buffer, 4, 4) -cne 'ftyp') { return $result }
+    $fileTypeSize = Get-PodcastMediaUInt32 -Buffer $Buffer -Offset 0
+    # Extended/EOF-sized ftyp boxes are outside this modest signature subset.
+    if ($fileTypeSize -lt 16 -or $fileTypeSize % 4 -ne 0 -or $fileTypeSize -gt $Count -or
+        $AvailableBytes -le $fileTypeSize + 8) { return $result }
+    $audioBrand = [Text.Encoding]::ASCII.GetString($Buffer, 8, 4) -ceq 'M4A '
+    for ($brandOffset = 16; $brandOffset -lt $fileTypeSize; $brandOffset += 4) {
+        if ([Text.Encoding]::ASCII.GetString($Buffer, $brandOffset, 4) -ceq 'M4A ') { $audioBrand = $true }
+    }
+    $context = [pscustomobject]@{ Nodes = 0; Invalid = $false; HasMovie = $false; HasAudio = $false; HasVideo = $false }
+    $complete = Get-PodcastMp4BoxContent -Buffer $Buffer -Count $Count -Start $fileTypeSize `
+        -End $AvailableBytes -ContainerPath '' -Depth 0 -Context $context
+    if ($context.HasVideo) { $result.Category = 'unsupported_media'; return $result }
+    if ($context.Invalid) { return $result }
+    if ($audioBrand) {
+        $result.Valid = $true
+        $result.Warning = 'The M4A brand suggests audio; audio-only tracks and codecs were not fully verified.'
+    }
+    elseif ($complete -and $context.HasMovie -and $context.HasAudio) {
+        $result.Valid = $true
+        $result.Warning = 'Audio handler evidence was found within the bounded MP4 inspection; codecs were not decoded.'
+    }
+    if ($result.Valid) { $result.Category = 'accepted' }
+    return $result
+}
+
+function Get-PodcastOggAudioEvidence {
+    param([byte[]]$Buffer, [int]$Count, [long]$AvailableBytes)
+
+    $result = [pscustomobject]@{ Valid = $false; Category = 'ambiguous_media' }
+    if ($Count -lt 27 -or $Buffer[4] -ne 0 -or ($Buffer[5] -band 2) -eq 0 -or
+        ($Buffer[5] -band 1) -ne 0 -or (Get-PodcastMediaUInt32 -Buffer $Buffer -Offset 18 -LittleEndian) -ne 0) { return $result }
+    $segments = [int]$Buffer[26]
+    $headerLength = 27 + $segments
+    if ($segments -eq 0 -or $Count -lt $headerLength) { return $result }
+    $pagePayload = 0
+    $packetLength = 0
+    $packetComplete = $false
+    for ($segment = 27; $segment -lt $headerLength; $segment++) {
+        $pagePayload += $Buffer[$segment]
+        if (-not $packetComplete) {
+            $packetLength += $Buffer[$segment]
+            if ($Buffer[$segment] -lt 255) { $packetComplete = $true }
+        }
+    }
+    if (-not $packetComplete -or $packetLength -eq 0 -or $AvailableBytes -lt $headerLength + $pagePayload -or
+        $Count -lt $headerLength + $packetLength) { return $result }
+    $packet = $headerLength
+    if ($packetLength -ge 7 -and $Buffer[$packet] -eq 128 -and
+        [Text.Encoding]::ASCII.GetString($Buffer, $packet + 1, 6) -ceq 'theora') {
+        $result.Category = 'unsupported_media'
+        return $result
+    }
+    if ($packetLength -ge 19 -and [Text.Encoding]::ASCII.GetString($Buffer, $packet, 8) -ceq 'OpusHead' -and
+        $Buffer[$packet + 8] -ge 1 -and $Buffer[$packet + 8] -le 15 -and $Buffer[$packet + 9] -gt 0) { $result.Valid = $true }
+    elseif ($packetLength -ge 30 -and $Buffer[$packet] -eq 1 -and
+        [Text.Encoding]::ASCII.GetString($Buffer, $packet + 1, 6) -ceq 'vorbis' -and
+        (Get-PodcastMediaUInt32 -Buffer $Buffer -Offset ($packet + 7) -LittleEndian) -eq 0 -and
+        $Buffer[$packet + 11] -gt 0 -and
+        (Get-PodcastMediaUInt32 -Buffer $Buffer -Offset ($packet + 12) -LittleEndian) -gt 0 -and
+        ($Buffer[$packet + 29] -band 1) -ne 0) { $result.Valid = $true }
+    elseif ($packetLength -ge 80 -and [Text.Encoding]::ASCII.GetString($Buffer, $packet, 8) -ceq 'Speex   ') {
+        $speexHeaderLength = Get-PodcastMediaUInt32 -Buffer $Buffer -Offset ($packet + 32) -LittleEndian
+        if ($speexHeaderLength -ge 80 -and $speexHeaderLength -le $packetLength -and
+            (Get-PodcastMediaUInt32 -Buffer $Buffer -Offset ($packet + 36) -LittleEndian) -gt 0 -and
+            (Get-PodcastMediaUInt32 -Buffer $Buffer -Offset ($packet + 48) -LittleEndian) -gt 0) { $result.Valid = $true }
+    }
+    if ($result.Valid) { $result.Category = 'accepted' }
+    return $result
+}
+
+function Get-PodcastMediaTypeExtension {
+    param([AllowNull()][AllowEmptyString()][string]$ContentType)
+
+    if ([string]::IsNullOrWhiteSpace($ContentType)) { return 'generic' }
+    if ($ContentType.Length -gt 1024) { return 'unsupported' }
+    $mediaType = $ContentType.Split(';')[0].Trim().ToLowerInvariant()
+    switch ($mediaType) {
+        { $_ -in @('application/octet-stream', 'binary/octet-stream') } { return 'generic' }
+        { $_ -in @('audio/mpeg', 'audio/mp3', 'audio/x-mp3', 'audio/x-mpeg', 'audio/x-mpegmp3') } { return 'mp3' }
+        { $_ -in @('audio/mp4', 'audio/m4a', 'audio/x-m4a', 'application/mp4') } { return 'm4a' }
+        { $_ -in @('audio/ogg', 'audio/vorbis', 'audio/opus', 'audio/speex', 'application/ogg') } { return 'ogg' }
+        { $_ -in @('audio/wav', 'audio/wave', 'audio/x-wav', 'audio/vnd.wave') } { return 'wav' }
+        { $_ -in @('audio/flac', 'audio/x-flac') } { return 'flac' }
+        default { return 'unsupported' }
+    }
+}
+
+function Get-PodcastMediaUrlExtension {
+    param([AllowNull()][AllowEmptyString()][string]$Url)
+
+    $target = $null
+    if (-not [uri]::TryCreate($Url, [UriKind]::Absolute, [ref]$target)) { return $null }
+    # URL hints are advisory even when a caller supplies malformed path text.
+    try { $extension = [IO.Path]::GetExtension($target.AbsolutePath).TrimStart('.').ToLowerInvariant() }
+    catch [ArgumentException] { return $null }
+    switch ($extension) {
+        { $_ -in @('mp3', 'm4a', 'wav', 'flac') } { return $extension }
+        { $_ -in @('ogg', 'oga', 'opus') } { return 'ogg' }
+        'mp4' { return 'm4a' }
+        { $_ -in @('m4v', 'webm', 'mkv', 'avi', 'mov', 'jpg', 'png', 'html', 'json') } { return 'unsupported' }
+        default { return $null }
+    }
+}
+
 function Test-PodcastTextBody {
     param([byte[]]$Buffer, [int]$Count)
 
@@ -102,12 +278,14 @@ function Test-PodcastMediaFile {
         [Nullable[long]]$HttpContentLength,
         [bool]$ContentLengthAppliesToStoredBytes = $true,
         [string]$ContentType,
+        [string]$EnclosureContentType,
+        [string]$MediaUrl,
         [Nullable[long]]$EnclosureLength
     )
 
     $result = [pscustomobject]@{
         Valid = $false; Category = 'incomplete_transfer'; Bytes = [long]0
-        Verification = 'none'; Warnings = @(); DetectedFormat = $null; InspectedBytes = 0
+        Verification = 'none'; Warnings = @(); DetectedFormat = $null; Extension = $null; InspectedBytes = 0
     }
     if (-not $TransferCompleted) { return $result }
     $stream = $null
@@ -136,6 +314,7 @@ function Test-PodcastMediaFile {
         }
         $result.InspectedBytes = $count
         $format = Get-PodcastBinarySignature -Buffer $buffer -Count $count -AvailableBytes $result.Bytes
+        $mpegLayer = if ($format -eq 'mpeg_audio') { ($buffer[1] -shr 1) -band 3 } else { 0 }
         if ($count -ge 10 -and [Text.Encoding]::ASCII.GetString($buffer, 0, 3) -eq 'ID3' -and
             $buffer[3] -ge 2 -and $buffer[3] -le 4 -and $buffer[4] -lt 255 -and
             $buffer[6] -lt 128 -and $buffer[7] -lt 128 -and $buffer[8] -lt 128 -and $buffer[9] -lt 128) {
@@ -152,15 +331,44 @@ function Test-PodcastMediaFile {
                     $read += $current
                 }
                 $result.InspectedBytes += $read
-                if (Test-PodcastMpegHeader -Buffer $afterTag -Count $read -AvailableBytes ($result.Bytes - $audioOffset)) { $format = 'mpeg_audio' }
+                if (Test-PodcastMpegHeader -Buffer $afterTag -Count $read -AvailableBytes ($result.Bytes - $audioOffset)) {
+                    $format = 'mpeg_audio'
+                    $mpegLayer = ($afterTag[1] -shr 1) -band 3
+                }
             }
         }
+        # A recognizable container must supply structured audio evidence; MIME
+        # and URL hints cannot turn an ambiguous container into validated audio.
+        if ($count -ge 8 -and [Text.Encoding]::ASCII.GetString($buffer, 4, 4) -ceq 'ftyp') {
+            $container = Get-PodcastMp4AudioEvidence -Buffer $buffer -Count $count -AvailableBytes $result.Bytes
+            if (-not $container.Valid) { $result.Category = $container.Category; return $result }
+            $format = 'mp4_container'
+            $result.Warnings += $container.Warning
+        }
+        elseif ($count -ge 4 -and [Text.Encoding]::ASCII.GetString($buffer, 0, 4) -ceq 'OggS') {
+            $container = Get-PodcastOggAudioEvidence -Buffer $buffer -Count $count -AvailableBytes $result.Bytes
+            if (-not $container.Valid) { $result.Category = $container.Category; return $result }
+            $format = 'ogg_container'
+        }
+        if ($format -eq 'mpeg_audio' -and $mpegLayer -ne 1) { $result.Category = 'unsupported_media'; return $result }
         if (-not $format) {
             $result.Category = if (Test-PodcastTextBody -Buffer $buffer -Count $count) { 'non_audio_text' } else { 'unrecognized_media' }
             return $result
         }
-        if ($ContentType -match '^(?i:text/|application/(?:json|xml|xhtml\+xml)(?:;|$))') {
+        $extension = switch ($format) {
+            'mpeg_audio' { 'mp3' }; 'mp4_container' { 'm4a' }; 'ogg_container' { 'ogg' }; 'wave' { 'wav' }; 'flac' { 'flac' }
+        }
+        $responseHint = Get-PodcastMediaTypeExtension -ContentType $ContentType
+        if ($responseHint -ne 'generic' -and $responseHint -ne $extension) {
             $result.Warnings += 'Response Content-Type disagrees with the recognized binary signature; MIME is advisory.'
+        }
+        $publisherHint = Get-PodcastMediaTypeExtension -ContentType $EnclosureContentType
+        if ($publisherHint -ne 'generic' -and $publisherHint -ne $extension) {
+            $result.Warnings += 'Publisher enclosure type disagrees with the detected audio format; byte evidence was used.'
+        }
+        $urlHint = Get-PodcastMediaUrlExtension -Url $MediaUrl
+        if ($urlHint -and $urlHint -ne $extension) {
+            $result.Warnings += 'Media URL extension disagrees with the detected audio format; byte evidence was used.'
         }
         if ($format -in @('mp4_container', 'ogg_container')) {
             $result.Warnings += 'The container signature was recognized; its audio tracks were not decoded or verified.'
@@ -168,6 +376,7 @@ function Test-PodcastMediaFile {
         $result.Valid = $true
         $result.Category = 'accepted'
         $result.DetectedFormat = $format
+        $result.Extension = $extension
         $result.Verification = if ($framingKnown) { 'completed_http_length_and_signature' } else { 'completed_eof_and_signature' }
         return $result
     }

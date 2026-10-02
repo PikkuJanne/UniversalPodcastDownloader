@@ -189,6 +189,7 @@ param(
 )
 
 . (Join-Path $PSScriptRoot 'src/PublicationDate.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaSelection.ps1')
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
 . (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
 . (Join-Path $PSScriptRoot 'src/Diagnostics.ps1')
@@ -373,25 +374,18 @@ function Get-EpisodeData {
     # Retain the established ID lookup so date normalization cannot rebind history.
     $atomId = Get-XPathText -Node $XmlItem -XPath './*[local-name()="id"][1]'
 
-    $url = $null
-    $mediaNode = $null
-    $enc = $XmlItem.SelectSingleNode('./*[local-name()="enclosure"][1]')
-    if ($enc) {
-        $attr = $enc.Attributes["url"]
-        if ($attr) { $url = $attr.Value }
-        if (-not $url) { $url = $enc.GetAttribute("url") }
-        if ($url) { $mediaNode = $enc }
+    $candidates = [Collections.Generic.List[object]]::new()
+    foreach ($node in $XmlItem.SelectNodes('./*[local-name()="enclosure" or (local-name()="link" and @rel="enclosure")]')) {
+        $candidateUrl = if ($node.LocalName -ceq 'enclosure') { $node.GetAttribute('url') } else { $node.GetAttribute('href') }
+        if ([string]::IsNullOrWhiteSpace($candidateUrl)) { continue }
+        $length = $null
+        $parsedLength = 0L
+        if ([long]::TryParse($node.GetAttribute('length'), [Globalization.NumberStyles]::None,
+                [Globalization.CultureInfo]::InvariantCulture, [ref]$parsedLength)) { $length = $parsedLength }
+        $candidates.Add([pscustomobject]@{ Url = $candidateUrl; ContentType = $node.GetAttribute('type'); Length = $length })
     }
 
-    if (-not $url) {
-        $ln = $XmlItem.SelectSingleNode('./*[local-name()="link" and @rel="enclosure"][1]')
-        if ($ln) {
-            $url = $ln.GetAttribute("href")
-            if ($url) { $mediaNode = $ln }
-        }
-    }
-
-    if (-not $url) {
+    if ($candidates.Count -eq 0) {
         $cands = @(
             Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
             Get-XPathText -Node $XmlItem -XPath './*[local-name()="link"][1]'
@@ -400,18 +394,14 @@ function Get-EpisodeData {
         ) | Where-Object { $_ }
 
         foreach ($cand in $cands) {
-            if ($cand -match '\.(mp3|m4a)($|\?)') { $url = "$cand"; break }
+            if ($cand -match '\.(mp3|m4a|ogg|opus|wav|flac)(?:$|[?#])') {
+                $candidates.Add([pscustomobject]@{ Url = [string]$cand; ContentType = ''; Length = $null })
+                break
+            }
         }
     }
 
-    $enclosureLength = $null
-    if ($mediaNode) {
-        $parsedLength = 0L
-        if ([long]::TryParse($mediaNode.GetAttribute('length'), [Globalization.NumberStyles]::None,
-                [Globalization.CultureInfo]::InvariantCulture, [ref]$parsedLength)) {
-            $enclosureLength = $parsedLength
-        }
-    }
+    $media = Select-PodcastAudioCandidate -Candidates $candidates.ToArray()
 
     [PSCustomObject]@{
         Title   = ($title -as [string])
@@ -419,10 +409,14 @@ function Get-EpisodeData {
         PubDateOriginal = $dateStr
         PubDateSource = $dateSource
         LegacyPubDate = $legacyPubDate
-        Url     = $url
+        Url     = $(if ($null -ne $media) { $media.Url } else { $null })
         Guid    = ($guid -as [string])
         AtomId  = ($atomId -as [string])
-        EnclosureLength = $enclosureLength
+        EnclosureLength = $(if ($null -ne $media) { $media.Length } else { $null })
+        Candidates = @($candidates.ToArray())
+        MediaContentType = $(if ($null -ne $media) { $media.ContentType } else { $null })
+        MediaExtension = $(if ($null -ne $media) { $media.Extension } else { $null })
+        MediaSelectionReason = $(if ($null -ne $media) { $media.Reason } else { 'no_supported_audio_candidate' })
     }
 }
 
@@ -553,10 +547,15 @@ try {
     }
 
     $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
+    $unsupportedCount = @($episodes | Where-Object { -not $_.Url }).Count
+    if ($unsupportedCount -gt 0) {
+        Write-Warning ("Feed entries without a supported audio candidate: {0}." -f $unsupportedCount)
+        Write-Log ("Feed entries without a supported audio candidate: {0}." -f $unsupportedCount) 'WARN'
+    }
     $episodes = @($episodes | Where-Object { $_.Url })
     $episodeCount = $episodes.Count
     if ($episodeCount -eq 0) {
-        throw 'Feed parsed, but no downloadable enclosure URLs were found.'
+        throw 'Feed parsed, but no downloadable enclosure URLs were found. No supported audio candidate was declared.'
     }
     # Validate enclosure targets during planning, before any archive write or
     # media request. The transport validates the original target and every hop again.
@@ -746,7 +745,7 @@ try {
 
         if ($success) {
             Write-Host "    Saved episode $index."
-            $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
+            $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $transferResult.File }
             Write-Log ("Download succeeded: {0}" -f $planned.EpisodeId)
             Write-Log ("File size: {0} bytes; validation: {1}" -f $transferResult.Bytes, $transferResult.Verification)
             foreach ($validationWarning in $transferResult.Warnings) {
@@ -754,7 +753,10 @@ try {
                 Write-Log $validationWarning 'WARN'
             }
         } else {
-            if (-not (Test-Path -LiteralPath $destFile)) {
+            $retainedEvidence = @($historyContext.State.episodes | Where-Object {
+                $_.episode_id -ceq $planned.EpisodeId -and $null -ne $_.local_sha256 -and $null -ne $_.bytes
+            })
+            if ($retainedEvidence.Count -eq 0 -and -not (Test-Path -LiteralPath $destFile)) {
                 $failureRecord = New-PodcastEpisodeRecord -Planned $planned
                 Save-PodcastEpisodeRecord -Context $historyContext -Record $failureRecord
             }

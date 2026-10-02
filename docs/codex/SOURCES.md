@@ -48,6 +48,12 @@ The following Microsoft references were checked for the request and parser bound
 - **S22 — RSS Advisory Board and IETF, RSS date compatibility.** [RSS 2.0 date rules](https://www.rssboard.org/rss-specification) permit two/four-digit years. [RFC 2822 section 4.3](https://www.rfc-editor.org/rfc/rfc2822.txt) specifies the fixed two-digit year interpretation and legacy named US zone offsets. The downloader supports a bounded subset rather than every obsolete production.
 - **S23 — Microsoft, explicit offset construction.** [DateTimeOffset numeric Gregorian constructor](https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset.-ctor?view=netframework-4.8.1) validates date/time ranges, whole-minute offsets up to fourteen hours and UTC range. This built-in Framework-compatible API avoids culture parsing; PUBLICATION_DATES.md documents precision and unsupported leap seconds.
 
+## UPD-0205 references checked 2 October 2026
+
+- **S24 — IETF, MPEG media type.** [RFC 3003](https://www.rfc-editor.org/rfc/rfc3003.html) defines audio/mpeg for MPEG audio layers; a MIME hint alone does not justify a `.mp3` extension for Layer I/II. This downloader accepts Layer III and preserves unsupported classifications for other layers.
+- **S25 — MP4 Registration Authority and IETF, MP4 conventions.** [MP4RA brands](https://mp4ra.org/registered-types/brands) lists the M4A brand and allows audio/video content; it is not proof of audio-only media. [RFC 4337](https://www.rfc-editor.org/rfc/rfc4337.html) distinguishes audio, video and generic MP4 MIME uses. The bounded `soun`/`vide` box policy and conservative inspection limit are project choices.
+- **S26 — IETF and codec maintainers, Ogg audio identification.** [RFC 7845 section 5.1](https://www.rfc-editor.org/rfc/rfc7845.html#section-5.1), [Vorbis I specification](https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-610004.2.2) and [Speex Ogg header documentation](https://www.speex.org/docs/manual/speex-manual/node8.html) describe initial codec identification headers. This project checks a bounded first complete BOS packet; it does not decode later pages or verify Ogg checksums.
+
 ## Preparation limitations (original handoff)
 
 No PowerShell runtime was available in the preparation environment. No downloader execution, actual Windows archive migration, patched-Windows prompt reproduction, Authenticode signing, GitHub write or live website action was performed. The bundle validation report separately records structural and helper-only checks actually run.

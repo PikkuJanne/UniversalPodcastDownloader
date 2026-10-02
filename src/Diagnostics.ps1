@@ -87,6 +87,8 @@ function Get-PodcastDiagnosticError {
         'Source content exceeds the safe character limit.',
         'The metadata response does not contain supported source text.',
         'Feed parsed, but no downloadable enclosure URLs were found.',
+        'Feed parsed, but no downloadable enclosure URLs were found. No supported audio candidate was declared.',
+        'Resume identity does not match this episode; partial and sidecar were preserved for review.',
         'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.',
         'Legacy review requires an existing -LegacyPath and an explicit -FeedUrl.',
         'Legacy options require -LegacyPath and an explicit -FeedUrl.',
@@ -100,6 +102,14 @@ function Get-PodcastDiagnosticError {
     }
     $depth = 0
     while ($cause -is [Exception] -and $depth -lt 16) {
+        # Exact local validation messages map to fixed explanations; no response
+        # body, MIME value or URL is incorporated into a diagnostic.
+        switch ($cause.Message) {
+            'Media validation failed: ambiguous_media.' { return 'Media validation failed: ambiguous_media. Supported audio evidence was not found within the inspection limit.' }
+            'Media validation failed: unsupported_media.' { return 'Media validation failed: unsupported_media. The recognized media type is not supported audio.' }
+            'Media validation failed: non_audio_text.' { return 'Media validation failed: non_audio_text. The response contains text rather than recognized audio.' }
+            'Media validation failed: unrecognized_media.' { return 'Media validation failed: unrecognized_media. The response has no supported audio signature.' }
+        }
         if ($cause.Data['PodcastTransport'] -eq $true) {
             # Map fixed categories only; never print the tagged message, header,
             # retry date or any arbitrary data that an exception may carry.
