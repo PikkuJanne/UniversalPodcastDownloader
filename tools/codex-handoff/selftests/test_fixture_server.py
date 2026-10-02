@@ -54,6 +54,27 @@ class HelperTests(unittest.TestCase):
         self.assertEqual(int(enclosure.attrib['length']), len(self.audio))
         self.assertTrue(enclosure.attrib['url'].startswith(self.server.base_url))
 
+    def test_history_feed_changes_titles_and_requires_the_exact_renewed_query(self):
+        self.server.recovered.clear()
+        try:
+            _, _, original = self.request('/feeds/history.xml')
+            before = ET.fromstring(original)
+            old_url = before.find('./channel/item/enclosure').attrib['url']
+            old_path = old_url.removeprefix(self.server.base_url)
+            self.assertEqual(self.request(old_path)[2], self.audio)
+            self.assertEqual(self.request('/media/history.mp3')[0], 403)
+            self.request('/__recover', method='POST')
+            _, _, renewed = self.request('/feeds/history.xml')
+            after = ET.fromstring(renewed)
+            self.assertNotEqual(before.find('./channel/title').text, after.find('./channel/title').text)
+            self.assertNotEqual(before.find('./channel/item/title').text, after.find('./channel/item/title').text)
+            self.assertEqual(before.find('./channel/item/guid').text, after.find('./channel/item/guid').text)
+            new_url = after.find('./channel/item/enclosure').attrib['url']
+            self.assertEqual(self.request(new_url.removeprefix(self.server.base_url))[2], self.audio)
+            self.assertEqual(self.request(old_path)[0], 403)
+        finally:
+            self.server.recovered.clear()
+
     def test_safe_xml_fixture_shapes(self):
         for name in ('rss-single.xml', 'rss-empty.xml', 'rss-collisions.xml',
                      'atom-dates.xml', 'rss-date-cases.xml', 'rss-media.xml',

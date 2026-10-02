@@ -21,7 +21,9 @@ BeforeAll {
             Url = $Context.BaseUrl + '/media/ok.mp3'
             PubDate = [datetime]'2026-09-01T12:00:00'
         }
-        $fileName = New-EpisodeFileName -Episode $episode -MaxLength ([Math]::Min(180, 259 - $folder.Length - 1))
+        $feedId = Get-PodcastNameHash -IdentityKey ('feed:' + $Context.BaseUrl + '/feeds/single.xml')
+        $identity = Get-PodcastEpisodeIdentity -Episode $episode -FeedId $feedId
+        $fileName = New-EpisodeFileName -Episode $episode -IdentityHash $identity.Id -MaxLength ([Math]::Min(180, 259 - $folder.Length - 1))
         [pscustomobject]@{ Output = $output; Folder = $folder; File = Join-Path $folder $fileName }
     }
 }
@@ -90,7 +92,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $second = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/single.xml'
         $second.Result.Succeeded | Should -BeTrue -Because ($second.Stdout + $second.Stderr + $second.Result.ErrorMessage)
         $second.ExitCode | Should -Be 0
-        $second.Stdout | Should -Match 'Skipping \(already exists\)'
+        $second.Stdout | Should -Match 'Skipping \(verified history\)'
         $second.Stdout | Should -Match 'Skipped\s+: 1'
         (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash | Should -Be $script:expectedHash
         (Get-Item -LiteralPath $files[0].FullName).LastWriteTimeUtc | Should -Be $stamp

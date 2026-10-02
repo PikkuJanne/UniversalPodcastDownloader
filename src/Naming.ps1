@@ -86,14 +86,15 @@ function New-EpisodeFileName {
     param(
         [Parameter(Mandatory)]$Episode,
         [int]$Index,
-        [ValidateRange(1, 255)][int]$MaxLength = 180
+        [ValidateRange(1, 255)][int]$MaxLength = 180,
+        [ValidatePattern('^[0-9a-f]{64}$')][string]$IdentityHash
     )
 
     # Index is accepted for compatibility, but never participates in stable identity.
     $null = $Index
     $extension = 'mp3'
     if ([string]$Episode.Url -match '\.(mp3|m4a)(?:$|[?#])') { $extension = $Matches[1].ToLowerInvariant() }
-    $hash = Get-PodcastNameHash -IdentityKey (Get-EpisodeIdentityKey -Episode $Episode)
+    $hash = if ($IdentityHash) { $IdentityHash } else { Get-PodcastNameHash -IdentityKey (Get-EpisodeIdentityKey -Episode $Episode) }
     $suffix = '-' + $hash + '.' + $extension
     $titleBudget = $MaxLength - $suffix.Length
     if ($titleBudget -lt 1) {

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A013 passed through UPD-0103; A014-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A016 passed through UPD-0104; A017-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -157,8 +157,8 @@
       "when": "Refresh the same subscription.",
       "expected": "Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title.",
       "fixture": "atom-dates.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0104.md"
     },
     {
       "id": "A015",
@@ -168,8 +168,8 @@
       "when": "Restart the run.",
       "expected": "Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0104.md"
     },
     {
       "id": "A016",
@@ -179,8 +179,8 @@
       "when": "Rerun the feed.",
       "expected": "History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0104.md"
     },
     {
       "id": "A017",

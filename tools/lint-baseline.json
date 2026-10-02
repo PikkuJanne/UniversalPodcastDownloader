@@ -33,13 +33,6 @@
     },
     {
       "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSUseBOMForUnicodeEncodedFile",
-      "message": "Missing BOM encoding for non-ASCII encoded file 'UniversalPodcastDownloader.ps1'",
-      "context": "<file>",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
       "rule": "PSUseSingularNouns",
       "message": "The cmdlet 'Resolve-PodcastItems' uses a plural noun. A singular noun should be used instead.",
       "context": "# --- Feed parsing ---\nfunction Resolve-PodcastItems {\nparam([string[]]$Feeds)",

@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A013 passed; A014-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0103.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A016 passed; A017-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0104.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -17,9 +17,9 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A013 passed; A014-A060 rem
 | A011 | UPD-0103 | integration | passed | Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete. |
 | A012 | UPD-0103 | integration | passed | Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption. |
 | A013 | UPD-0103 | integration | passed | No existing file is overwritten; temporary file is on destination volume; all streams close on failure. |
-| A014 | UPD-0104 | unit | not_run | Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title. |
-| A015 | UPD-0104 | integration | not_run | Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset. |
-| A016 | UPD-0104 | integration | not_run | History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted. |
+| A014 | UPD-0104 | unit | passed | Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title. |
+| A015 | UPD-0104 | integration | passed | Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset. |
+| A016 | UPD-0104 | integration | passed | History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted. |
 | A017 | UPD-0105 | integration | not_run | Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion. |
 | A018 | UPD-0105 | integration | not_run | No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites. |
 | A019 | UPD-0106 | integration | not_run | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |

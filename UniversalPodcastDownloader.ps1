@@ -1,4 +1,4 @@
-<#
+﻿<#
 UniversalPodcastDownloader.ps1
 Minimal Win11 podcast downloader for personal offline archiving
 
@@ -38,7 +38,7 @@ FEATURES
         - Files:  YYYY-MM-DD - Episode title-<episode identity hash>.mp3
     - Robust download loop:
         - Up to 3 attempts per episode with short delay between tries.
-        - Skips episodes where the target file already exists.
+        - Skips episodes only after checking recorded size and SHA-256 on disk.
         - Summarizes downloaded / skipped / failed at the end.
     - Verbose, per-run log file:
         - Stored in the podcast folder next to the audio files.
@@ -166,6 +166,9 @@ param(
 
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
 . (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
+. (Join-Path $PSScriptRoot 'src/HistoryStore.ps1')
+. (Join-Path $PSScriptRoot 'src/HistoryIdentity.ps1')
+. (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaTransfer.ps1')
@@ -347,6 +350,7 @@ function Get-EpisodeData {
 
     $guid = Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
     if (-not $guid) { $guid = Get-FirstText $XmlItem.guid }
+    $atomId = Get-XPathText -Node $XmlItem -XPath './*[local-name()="id"][1]'
 
     $url = $null
     $mediaNode = $null
@@ -393,6 +397,7 @@ function Get-EpisodeData {
         PubDate = $pubDate
         Url     = $url
         Guid    = ($guid -as [string])
+        AtomId  = ($atomId -as [string])
         EnclosureLength = $enclosureLength
     }
 }
@@ -430,6 +435,8 @@ $global:ProgressPreference = 'Continue'
 $script:LogFile = $null
 $script:LogRoot = $null
 $script:LogRelativePath = $null
+$historyLock = $null
+$archiveLock = $null
 
 # --- Main ---
 try {
@@ -522,7 +529,8 @@ try {
         $folderBudget = [Math]::Min(100, 259 - $baseOutputPath.TrimEnd('\').Length - 2 - 70)
     }
     if ($folderBudget -lt 66) { throw 'Output root is too long to retain safe identifiers. Choose a shorter output path.' }
-    $safeFeedTitle = New-PodcastFolderName -FeedTitle $feedTitle -FeedUrl $resolved.Url -MaxLength $folderBudget
+    $archive = Resolve-PodcastArchive -Root $baseOutputPath -FeedTitle $feedTitle -FeedUrl $resolved.Url -MaxFolderLength $folderBudget
+    $safeFeedTitle = $archive.FolderName
 
     $OutputPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
     $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
@@ -531,15 +539,51 @@ try {
     if ($episodeCount -eq 0) {
         throw 'Feed parsed, but no downloadable enclosure URLs were found.'
     }
-    $episodes = Select-PodcastEpisode -Episodes $episodes -Mode $Mode -CustomCount $CustomCount
+    $allEpisodes = $episodes
+    $episodes = Select-PodcastEpisode -Episodes $allEpisodes -Mode $Mode -CustomCount $CustomCount
     $fileBudget = [Math]::Min(180, 259 - $OutputPath.Length - 1)
-    $destinationPlan = New-PodcastDestinationPlan -Episodes $episodes -MaxFileNameLength $fileBudget
+    $historyState = $archive.State
+    if ($null -eq $historyState) {
+        $historyState = New-PodcastHistory -FeedId $archive.FeedId -FeedAliasFingerprint (Get-PodcastNameHash -IdentityKey ('feed:' + $resolved.Url))
+    }
+    $null = New-PodcastHistoryPlan -Episodes $allEpisodes -State $historyState -MaxFileNameLength $fileBudget
+    $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
 
+    # Serialize discovery and first state creation across title changes. This
+    # short root lock is released before media transfer; the show lock remains.
+    $archiveLock = Enter-PodcastArchiveLock -Root $baseOutputPath
+    $archive = Resolve-PodcastArchive -Root $baseOutputPath -FeedTitle $feedTitle -FeedUrl $resolved.Url -MaxFolderLength $folderBudget
+    $safeFeedTitle = $archive.FolderName
+    $OutputPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
+    $fileBudget = [Math]::Min(180, 259 - $OutputPath.Length - 1)
+    $historyState = $archive.State
+    if ($null -eq $historyState) {
+        $historyState = New-PodcastHistory -FeedId $archive.FeedId -FeedAliasFingerprint (Get-PodcastNameHash -IdentityKey ('feed:' + $resolved.Url))
+    }
+    $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
     if (-not (Test-Path -LiteralPath $OutputPath)) {
         Write-Host "[*] Creating podcast folder: $OutputPath"
         $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
         $null = [IO.Directory]::CreateDirectory($OutputPath)
     }
+
+    # Lock the established show before logs, ownership or history changes, then
+    # reload and replan in case another completed run changed its history.
+    $historyLock = Enter-PodcastHistoryLock -Root $OutputPath
+    $lockedState = Read-PodcastHistory -Root $OutputPath
+    if ($null -ne $lockedState) { $historyState = $lockedState }
+    $feedAlias = Get-PodcastNameHash -IdentityKey ('feed:' + $resolved.Url)
+    if ($historyState.feed_id -cne $archive.FeedId -or $feedAlias -cnotin $historyState.feed_alias_fingerprints) {
+        throw 'Feed identity changed while acquiring archive writer protection; preserving history.'
+    }
+    $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+    if ($historyState.generation -eq 0) {
+        $historyState.generation = 1
+        $historyState = Write-PodcastHistory -Lock $historyLock -State $historyState
+    }
+    $historyContext = @{ Lock = $historyLock; State = $historyState }
+    $archiveLock.Dispose()
+    $archiveLock = $null
 
     $dateStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
     $script:LogRoot = $baseOutputPath
@@ -576,12 +620,20 @@ try {
         $relativeDestination = [IO.Path]::Combine($safeFeedTitle, $fileName)
         $destFile = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
 
-        if (Test-Path -LiteralPath $destFile) {
-            Write-Progress -Activity "Podcast downloads" -Status "Skipping (exists): $fileName" `
+        $historyAction = Resolve-PodcastHistoryItem -Context $historyContext -Planned $planned
+        if ($historyAction -eq 'verified_skip') {
+            Write-Progress -Activity "Podcast downloads" -Status "Skipping (verified history): $fileName" `
                 -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
-            Write-Host "[-] Skipping (already exists): $fileName"
+            Write-Host "[-] Skipping (verified history): $fileName"
             $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
-            Write-Log ("Skipping existing file: {0}" -f $destFile)
+            Write-Log ("Verified history and on-disk SHA-256: {0}" -f $destFile)
+            continue
+        }
+        if ($historyAction -eq 'conflict') {
+            $message = 'Existing media is unknown or changed; preserved for review.'
+            Write-Warning $message
+            $failed += [PSCustomObject]@{ Title = $ep.Title; File = $destFile; Error = $message }
+            Write-Log $message 'ERROR'
             continue
         }
 
@@ -608,8 +660,7 @@ try {
             Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
 
             try {
-                $transferResult = Invoke-PodcastMediaTransfer -Uri $ep.Url -Root $baseOutputPath `
-                    -RelativePath $relativeDestination -EnclosureLength $ep.EnclosureLength
+                $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned
                 $success = $true
             } catch {
                 $lastError = $_
@@ -618,6 +669,9 @@ try {
                 $msg = $lastError.Exception.Message
                 Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $msg)
                 Write-Log ("Attempt failed: {0}" -f $msg) 'WARN'
+                # A final file may exist when the history commit failed. Leave
+                # its prepared evidence for reconciliation on the next run.
+                if (Test-Path -LiteralPath $destFile) { break }
                 if ($attempt -lt $maxRetries) { Start-Sleep -Seconds 3 }
             }
         }
@@ -632,10 +686,14 @@ try {
                 Write-Log $validationWarning 'WARN'
             }
         } else {
-            Write-Warning ("    Giving up after {0} attempts." -f $maxRetries)
+            if (-not (Test-Path -LiteralPath $destFile)) {
+                $failureRecord = New-PodcastEpisodeRecord -Planned $planned
+                Save-PodcastEpisodeRecord -Context $historyContext -Record $failureRecord
+            }
+            Write-Warning ("    Giving up after {0} attempts." -f $attempt)
             $errMsg = if ($lastError) { $lastError.Exception.Message } else { "Unknown error" }
             $failed += [PSCustomObject]@{ Title = $ep.Title; File = $destFile; Error = $errMsg }
-            Write-Log ("Giving up after {0} attempts: {1}" -f $maxRetries, ($ep.Title -as [string])) 'ERROR'
+            Write-Log ("Giving up after {0} attempts: {1}" -f $attempt, ($ep.Title -as [string])) 'ERROR'
             Write-Log ("Last error: {0}" -f $errMsg) 'ERROR'
         }
     }
@@ -658,7 +716,7 @@ try {
             Write-Host (" - {0}  ({1})" -f $f.Title, $f.Error)
             Write-Log ("Failed: {0} ({1})" -f ($f.Title -as [string]), $f.Error) 'ERROR'
         }
-        throw ('Download incomplete: {0} episode(s) failed; no failed transfer was published.' -f $failed.Count)
+        throw ('Download incomplete: {0} episode(s) failed or require review; existing files were preserved.' -f $failed.Count)
     }
 
     Write-Log "Run completed." 'INFO'
@@ -672,5 +730,7 @@ catch {
     throw
 }
 finally {
+    if ($null -ne $historyLock) { $historyLock.Stream.Dispose() }
+    if ($null -ne $archiveLock) { $archiveLock.Dispose() }
     $global:ProgressPreference = $prevProgress
 }

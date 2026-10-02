@@ -31,6 +31,26 @@ try {
             [Diagnostics.Process]::GetCurrentProcess().Kill()
         }
     }
+    elseif ($config.TransactionHook -in @('BeforeStateReplaceCrash', 'AfterStateReplaceCrash')) {
+        $historySource = Join-Path (Split-Path $config.ProductScript -Parent) 'src/HistoryStore.ps1'
+        $sourceLines = [IO.File]::ReadAllLines($historySource)
+        $replaceLines = @(for ($line = 0; $line -lt $sourceLines.Length; $line++) {
+            if ($sourceLines[$line] -match '^\s*\[IO.File\]::Replace\(') { $line + 1 }
+        })
+        if ($replaceLines.Count -ne 1) { throw 'The integration history hook requires one explicit atomic state replacement.' }
+        $hookLine = $replaceLines[0]
+        if ($config.TransactionHook -eq 'AfterStateReplaceCrash') {
+            $afterLines = @(for ($line = $hookLine; $line -lt $sourceLines.Length; $line++) {
+                if ($sourceLines[$line] -match '^\s*\$ownedTemporary = \$false') { $line + 1 }
+            })
+            if ($afterLines.Count -ne 1) { throw 'The integration history hook requires the explicit post-replacement ownership update.' }
+            $hookLine = $afterLines[0]
+        }
+        $null = Set-PSBreakpoint -Script $historySource -Line $hookLine -Action {
+            [IO.File]::WriteAllText($config.HookMarkerPath, (@{ Hook = $config.TransactionHook } | ConvertTo-Json))
+            [Diagnostics.Process]::GetCurrentProcess().Kill()
+        }
+    }
     elseif ($config.TransactionHook -and $config.TransactionHook -ne 'None' -or
         ($config.BoundaryJunctionPath -and $config.BoundaryStage -eq 'AfterTransfer')) {
         $transferSource = Join-Path (Split-Path $config.ProductScript -Parent) 'src/MediaTransfer.ps1'

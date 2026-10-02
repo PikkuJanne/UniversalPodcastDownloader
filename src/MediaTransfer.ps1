@@ -5,7 +5,8 @@ function Invoke-PodcastMediaTransfer {
         [Parameter(Mandatory)][string]$Uri,
         [Parameter(Mandatory)][string]$Root,
         [Parameter(Mandatory)][string]$RelativePath,
-        [Nullable[long]]$EnclosureLength
+        [Nullable[long]]$EnclosureLength,
+        [scriptblock]$BeforeFinalize
     )
 
     $destination = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
@@ -34,18 +35,24 @@ function Invoke-PodcastMediaTransfer {
         if ($validation.Bytes -ne $transfer.Bytes) {
             throw [IO.InvalidDataException]::new('The temporary file length changed after transfer.')
         }
-        $null = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
-        # Close and validate before atomic no-overwrite placement on the same volume.
-        [IO.File]::Move($temporary, $destination)
-        $owned = $false
-        return [pscustomobject]@{
+        $evidence = Get-PodcastFileEvidence -Root $Root -RelativePath $temporaryRelative
+        if ($evidence.Bytes -ne $validation.Bytes) { throw 'Media changed before recording transfer evidence.' }
+        $result = [pscustomobject]@{
             Outcome = 'downloaded'
             File = $destination
             Bytes = $validation.Bytes
+            Sha256 = $evidence.Sha256
             Verification = $validation.Verification
             DetectedFormat = $validation.DetectedFormat
             Warnings = @($validation.Warnings)
         }
+        # A durable prepared record bridges final placement and history commit.
+        if ($BeforeFinalize) { $null = & $BeforeFinalize $result }
+        $null = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
+        # Close and validate before atomic no-overwrite placement on the same volume.
+        [IO.File]::Move($temporary, $destination)
+        $owned = $false
+        return $result
     }
     finally {
         if ($owned) {

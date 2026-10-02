@@ -109,7 +109,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         & $script:DownloaderPath @arguments
 
         Should -Invoke Invoke-PodcastMediaRequest -Times $ExpectedCount -Exactly
-        Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { $Status -like 'Skipping (exists):*' }
+        Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { $Status -like 'Skipping (verified history):*' }
         Should -Invoke Write-Progress -Times 0 -Exactly -ParameterFilter { -not $Completed -and ($PercentComplete -lt 0 -or $PercentComplete -gt 100) }
     }
 

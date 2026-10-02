@@ -96,7 +96,7 @@ function Invoke-UpdIntegrationWorker {
         [string]$BoundaryJunctionPath,
         [string]$BoundaryJunctionTarget,
         [ValidateSet('Preparing', 'AfterTransfer')][string]$BoundaryStage = 'Preparing',
-        [ValidateSet('None', 'BeforeFinalizeCrash', 'AfterFinalizeCrash', 'FinalRace')][string]$TransactionHook = 'None',
+        [ValidateSet('None', 'BeforeFinalizeCrash', 'AfterFinalizeCrash', 'FinalRace', 'BeforeStateReplaceCrash', 'AfterStateReplaceCrash')][string]$TransactionHook = 'None',
         [switch]$InterruptOnPartial
     )
 

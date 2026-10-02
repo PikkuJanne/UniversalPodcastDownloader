@@ -24,7 +24,7 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Place these files together:
   - UniversalPodcastDownloader.ps1
   - UniversalPodcastDownloader.bat (wrapper for double-click)
-  - src/ (all included naming, path safety, media request, validation and transfer helpers)
+  - src/ (all included naming, path safety, media, identity and history helpers)
 - Default output root is:
   - %USERPROFILE%\Downloads\Podcasts
 - No external binaries are required; the script uses PowerShell XML parsing, Invoke-WebRequest for pages/feeds and the built-in .NET HttpClient for streamed media.
@@ -72,18 +72,26 @@ Usage
   - A safe title followed by a full SHA-256 suffix derived from the resolved feed URL.
 - Episodes:
   - `YYYY-MM-DD - Episode title-<episode hash>.mp3` when a date is known.
-  - `Episode title-<episode hash>.mp3` otherwise. The suffix uses the RSS GUID, then the media URL as fallback.
+  - `Episode title-<episode hash>.mp3` otherwise. Identity uses the RSS GUID, then Atom ID, then the exact media URL, scoped to the feed.
   - Names are shortened to fit Windows path limits; the full identifier and extension remain. A tight budget can omit the date. A root with insufficient room fails with a request for a shorter path.
   - Reserved device names, control characters and trailing dots/spaces are handled safely. Dot/dot-dot and rooted metadata paths are rejected. Junctions and symbolic links in destination paths are refused.
 - Existing files are never overwritten:
-  - Already present generated destinations are skipped; their contents are not yet verified against durable history.
+  - Recorded files are skipped only after their size and SHA-256 match local history. Changed or unknown files at a planned destination are preserved and reported for review. Missing recorded files can be downloaded again.
   - A file appearing during transfer is preserved. An owned temporary sibling is moved into place only when the final name is available.
-  - Older title-only archives remain untouched. They are not automatically adopted or renamed; a new download uses the new names. Feed URL/title changes can also produce a new folder until explicit history/migration support is added.
+  - A feed title change retains its established folder. A stable RSS GUID or Atom ID retains its recorded filename across episode title, date and signed media URL changes.
+  - Older archives without history remain untouched and unadopted; new identities can create separate downloads. Changed feed URLs require an explicit alias association; titles and redirects do not establish one automatically. Without a publisher identifier, a changed media URL can mean a new episode.
 - Downloads are validated before final placement:
   - Each attempt writes to a unique `.upd-<GUID>.tmp` in the destination folder. Streams close before validation and final rename.
   - Empty bodies, text/error pages, unsupported binary signatures, incomplete HTTP bodies and unsolicited partial responses fail. Valid recognizable audio can succeed without Content-Length. A feed enclosure-length mismatch produces a warning.
   - Checks read at most 64 KiB for recognizable MPEG audio, WAV, FLAC, Ogg or MP4 signatures. They do not decode the whole file or prove publisher authenticity; Ogg/MP4 audio tracks are not verified.
   - A caught failure cleans only its own temporary file. A killed process may leave a temporary sibling; rerunning starts a fresh download and preserves that old partial. There is no resume or automatic orphan cleanup.
+
+**Local history and recovery**
+- Each established show stores versioned history in `.upd/state.json` and its previous valid generation in `.upd/state.json.bak`. Records contain relative destinations, identity fingerprints, outcomes, measured bytes, SHA-256 and bounded transfer evidence. Request URLs stay exact in memory and are not stored in history.
+- Exclusive file handles serialize writers. The brief output-root `.upd-archive.lock` protects discovery and initial show creation; `.upd/writer.lock` protects that show's run. Lock files remain after exit; the operating system releases their handles on process death. Retry a busy archive after its writer finishes.
+- Prepared evidence is saved before final placement. If the process stops after placement but before the completion record, the next run checks those exact bytes before recording completion. A digest proves consistency with recorded bytes, not publisher authenticity.
+- Corrupt, unsupported or contradictory state is preserved and stops the run. Keep the primary, backup and media for inspection; there is no automatic reset or rollback. An unreadable show history blocks discovery under that output root because its feed aliases cannot be ruled out safely.
+- State replacement requires filesystem support for atomic same-volume replacement. Local Windows tests cover process interruption; hardware power-loss durability and live network shares are not guaranteed.
 
 **Logging**  
 - Each run produces one log file in the podcast’s folder:  
@@ -140,10 +148,9 @@ Usage
 - Only some episodes downloaded:
   - Open the latest .log file in the podcast folder.
   - Look for per-episode errors (timeouts, HTTP 403/404, connection resets).
-  - Try rerunning for the same feed; existing files will be skipped.
-- Skips too many files:
-  - The tool skips when the target filename already exists.
-  - If you changed naming patterns or moved files manually, adjust or delete the old files before rerunning.
+  - Rerun the same feed; unchanged history-backed files are verified and skipped.
+- A file needs review:
+  - Unknown or changed files are preserved. Keep those originals and the history files for inspection; automatic legacy adoption is not implemented yet.
 
 **Intent & License**
 This is a personal tool for a very specific workflow (downloading and archiving podcast episodes I care about, with logs I can read later). It’s provided as-is, without warranty. Use at your own risk. If you want to reuse or adapt it, feel free, just keep in mind it intentionally avoids features to stay simple, predictable, and easy to reason about when something fails at 03:00.

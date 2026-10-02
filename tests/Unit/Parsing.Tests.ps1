@@ -87,12 +87,6 @@ Describe 'Known parser defects: characterization only, not future acceptance' -T
         $episode.PubDate.Year | Should -Not -Be 2020
     }
 
-    It 'currently drops Atom id from the episode identity (UPD-0104)' {
-        [xml]$xml = Read-SyntheticFixture 'atom-dates.xml'
-        $episode = Get-EpisodeData -XmlItem $xml.SelectSingleNode('//*[local-name()="entry"][1]')
-        $episode.Guid | Should -BeNullOrEmpty
-    }
-
     It 'currently chooses the first enclosure even when it is video (UPD-0205)' {
         [xml]$xml = Read-SyntheticFixture 'rss-media.xml'
         $episode = Get-EpisodeData -XmlItem $xml.rss.channel.item[0]
