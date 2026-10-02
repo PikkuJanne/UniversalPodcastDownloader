@@ -73,7 +73,7 @@ Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper fu
 
 Unit network access is mocked; synthetic external URLs use `.invalid`. Integration tests start an owned Python process bound to `127.0.0.1` on an ephemeral port, use marked temporary output directories and stop only their tracked child processes. They check media lengths/hashes, request counts and preservation on repeat runs. They never select the real archive or a private feed.
 
-The two remaining unit characterizations assert Atom updated-before-published behavior and first-enclosure selection even when it is video. Passing those assertions means the defect was reproduced. UPD-0104 replaced the missing Atom ID characterization with desired-behavior identity regressions; broader date/media parsing acceptance remains pending.
+The UPD-0201 snapshot retained two unit characterizations: Atom updated-before-published behavior and first-enclosure selection even when it is video. UPD-0204 replaced the date characterization with desired-behavior A034 regressions; only media selection remains a characterization. Passing those assertions means the defect was reproduced. UPD-0104 replaced the missing Atom ID characterization with desired-behavior identity regressions; broader date/media parsing acceptance remains pending.
 
 UPD-0101 replaced both PS5.1 failure characterizations with desired-behavior regressions by routing page/feed requests through `Invoke-PodcastWebRequest`, which supplied `-UseBasicParsing` to `Invoke-WebRequest`; that implementation remains recorded in its historical evidence. UPD-0107 retains the helper name but delegates metadata to the built-in .NET HttpClient with explicit HTTP(S), redirect and body limits. Media uses the same request policy and keeps its streamed completion checks from UPD-0103. Product requests no longer use the legacy web DOM parser. Feed XML uses bounded XmlReader settings with DTD prohibited and external resolution disabled. The HTML discovery worker supplies only the exact application UI responses; its hidden child remains `-NonInteractive`. Harness control traffic retains its own safe parsing switch.
 
@@ -181,3 +181,20 @@ pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
 Settled inventory is 936: 720 units (710 product units including two parser characterizations plus ten runner guards) and 216 integrations. Final settled Unit passed 720/0/0/0 per engine. A006/A007/A030 focus passed 43/0/0/173 each; repaired diagnostics 10/0/0/206 each; affected archive/transaction units 12/0/0/708 each. Final analyzers passed 63 files with no parse errors/new findings and reduced 3/2 baseline warnings; fixture helpers: 44 passed separately. The 935-case broad local snapshots exposed four stale mock fixtures and three stale diagnostic expectations; evidence records those failures and their corrected reruns separately from full exact-source CI.
 
 The new 78 units and 29 loopback cases cover root classification, empty/malformed/unsupported diagnostics, redirects/base/entities, attribute variants, deduplication, ambiguity and numbered choices, retained response reuse, original identity, static scanner safety and preview media/archive boundaries. Startup sink/export boundaries also retain the broader diagnostics regressions. See [shared discovery policy](FEED_DISCOVERY.md) and [task evidence](evidence/UPD-0203.md) for the explicit scanner subset and exact source/engine results.
+
+## UPD-0204 focused checks
+
+Use fresh processes and the native/Python wrappers above:
+
+```powershell
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit -Filter '*A03[34]:*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A033/A034*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A01[5678]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
+python -B -m unittest discover -s tools/codex-handoff/selftests -v
+```
+
+Settled inventory: 1,093 checks, comprising 870 units (860 product units, including one media-selection characterization, plus ten runner guards) and 223 integrations. Final local Unit passed 870/0/0/0 each. A033/A034 units passed 151/0/0/719 each; date integrations 7/0/0/216 each; affected history/legacy integrations 42/0/0/181 each. Final analyzers: 66 files, no parse errors/new findings, reduced 2/1 baseline warnings. Helper selftests: 46/0, separate from acceptance. No local full All run was performed; exact-head CI is recorded separately in the PR/final handoff.
+
+The new 150 units and seven loopback cases cover invariant parsing across en-US/de-DE/fi-FI, UTC offsets/precision/ranges, published-first Atom selection, date namespaces with compatible IDs, explicit tied/missing order, UTC midnight filename dates, empty/old-priority legacy hints, no-write preview and recorded archive preservation. Prior probes failed as intended before implementation. See [date policy](PUBLICATION_DATES.md) and [UPD-0204 evidence](evidence/UPD-0204.md) for commands, versions, snapshots and limitations.

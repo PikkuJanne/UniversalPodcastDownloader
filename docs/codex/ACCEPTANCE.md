@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A032 passed; A033-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0203.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A034 passed; A035-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0204.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -36,8 +36,8 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A032 passed; A033-A060 rem
 | A030 | UPD-0203 | integration | passed | Shared resolution rules produce same candidates; already fetched feed response reused. |
 | A031 | UPD-0203 | unit | passed | Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy. |
 | A032 | UPD-0203 | unit | passed | Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed. |
-| A033 | UPD-0204 | unit | not_run | Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention. |
-| A034 | UPD-0204 | unit | not_run | Use published when available; updated only a fallback; Atom ID collected. |
+| A033 | UPD-0204 | unit | passed | Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention. |
+| A034 | UPD-0204 | unit | passed | Use published when available; updated only a fallback; Atom ID collected. |
 | A035 | UPD-0205 | unit | not_run | Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained. |
 | A036 | UPD-0205 | integration | not_run | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
 | A037 | UPD-0206 | integration | not_run | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |

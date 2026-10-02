@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0204",
+  "current_task": "UPD-0205",
   "status_values": [
     "todo",
     "ready",
@@ -398,7 +398,7 @@
       "id": "UPD-0204",
       "milestone": "M2",
       "title": "Normalize publication dates and stable ordering",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0203"
       ],
@@ -420,15 +420,15 @@
         "A033",
         "A034"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": ["docs/codex/evidence/UPD-0204.md"],
+      "implementation_commit": "b5fe1b194c66fb5d869134afaccc0dac95636c09",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3"
     },
     {
       "id": "UPD-0205",
       "milestone": "M2",
       "title": "Select and preserve supported audio formats",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0204"
       ],
