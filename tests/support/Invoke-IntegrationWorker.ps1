@@ -8,19 +8,32 @@ $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
 $result = [ordered]@{
     Succeeded = $false
     EngineVersion = $PSVersionTable.PSVersion.ToString()
-    BasicParsingDefault = [bool]$config.BasicParsing
     ErrorMessage = $null
     ErrorId = $null
 }
 
-if ($config.BasicParsing) {
-    # Test-only compatibility injection. It is reported in every result and is
-    # never evidence that the untouched Windows PowerShell entrypoint works.
-    $PSDefaultParameterValues['Invoke-WebRequest:UseBasicParsing'] = $true
-}
-
 try {
     switch ($config.Action) {
+        'Discover' {
+            . $config.ProductScript
+            $script:discoveryPromptCount = 0
+            function Read-Host {
+                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidOverwritingBuiltInCmdlets', '', Justification = 'This bounded test worker supplies only the two expected application UI responses; web cmdlet host prompts still fail under NonInteractive.')]
+                [CmdletBinding()]
+                param([string]$Prompt)
+
+                $script:discoveryPromptCount++
+                if ($script:discoveryPromptCount -eq 1 -and $Prompt -eq 'Paste RSS feed URL OR podcast page URL') {
+                    return $config.FeedUrl
+                }
+                if ($script:discoveryPromptCount -eq 2 -and $Prompt -eq 'Use this feed? (Y/n)') {
+                    return 'y'
+                }
+                throw 'Unexpected or repeated application prompt in discovery integration worker.'
+            }
+            $result.ResolvedUrl = Get-FeedUrlInteractive
+            $result.PromptCount = $script:discoveryPromptCount
+        }
         'Resolve' {
             . $config.ProductScript
             $resolved = Resolve-PodcastItems -Feeds @($config.FeedUrl)
@@ -31,7 +44,7 @@ try {
             $result.EpisodeUrls = @($episodes | ForEach-Object { $_.Url })
         }
         'Download' {
-            & $config.ProductScript -Mode All -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose
+            & $config.ProductScript -Mode $config.Mode -CustomCount $config.CustomCount -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose
         }
         default { throw 'Unknown integration worker action.' }
     }

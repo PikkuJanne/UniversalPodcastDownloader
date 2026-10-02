@@ -87,13 +87,14 @@ function Start-UpdFixtureServer {
 function Invoke-UpdIntegrationWorker {
     param(
         [Parameter(Mandatory)]$Context,
-        [Parameter(Mandatory)][ValidateSet('Resolve', 'Download')][string]$Action,
+        [Parameter(Mandatory)][ValidateSet('Discover', 'Resolve', 'Download')][string]$Action,
         [Parameter(Mandatory)][string]$FeedPath,
-        [switch]$BasicParsing,
+        [ValidateSet('Latest', 'Custom', 'All')][string]$Mode = 'All',
+        [int]$CustomCount = 1,
         [string]$OutputName = 'output'
     )
 
-    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$') { throw 'Only named local feed fixtures are allowed.' }
+    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -ne '/show') { throw 'Only named local feed or show fixtures are allowed.' }
     if ($OutputName -notmatch '^[a-z0-9-]+$') { throw 'OutputName must be a simple test directory name.' }
     $identifier = [guid]::NewGuid().ToString('N')
     $resultPath = Join-Path $Context.Root ($identifier + '-result.json')
@@ -104,7 +105,8 @@ function Invoke-UpdIntegrationWorker {
         FeedUrl = $Context.BaseUrl + $FeedPath
         OutputPath = Join-Path $Context.Root $OutputName
         ResultPath = $resultPath
-        BasicParsing = [bool]$BasicParsing
+        Mode = $Mode
+        CustomCount = $CustomCount
     }
     $config | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
     $engineName = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }

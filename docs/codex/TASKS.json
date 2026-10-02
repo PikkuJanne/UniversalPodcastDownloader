@@ -77,7 +77,7 @@
       "id": "UPD-0101",
       "milestone": "M1",
       "title": "Fix collections and safe Windows web requests",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0002"
       ],

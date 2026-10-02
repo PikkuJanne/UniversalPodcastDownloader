@@ -59,15 +59,15 @@ finally {
 
 Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a focused run. Do not change machine-wide execution policy or install modules globally to make these checks run.
 
-## What the foundation suite covers
+## What the current suite covers
 
-The current full suite contains **33 checks per engine**:
+After UPD-0101, the full suite contains **82 checks per engine**:
 
 | Group | Count | Scope |
 | --- | ---: | --- |
-| Product unit checks | 19 | Import safety, mocked feed parsing and episode names; includes six known-defect characterizations |
+| Product unit checks | 58 | Import safety, mocked feed parsing/names, array selection, counts/progress and safe web requests; includes six known-defect characterizations |
 | Runner guards | 10 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
-| Product integration checks | 4 | Real downloader/functions against loopback RSS/Atom and silent media in owned temporary directories |
+| Product integration checks | 14 | HTML discovery, RSS/Atom parsing, singleton/multiple transfers across modes, repeat preservation and empty-feed errors against loopback fixtures |
 
 Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper functions and returns before startup preferences, logging, prompts and downloads. It is the import seam; no separate runtime module or package is required. A004 tests this against the actual script. Normal invocation with `&` retains the entry-point behavior.
 
@@ -75,14 +75,18 @@ Unit network access is mocked; synthetic external URLs use `.invalid`. Integrati
 
 The six unit characterizations assert existing filename collisions, unsafe reserved/dot names, Atom updated-before-published behavior, a missing Atom ID and first-enclosure selection even when it is video. Passing those assertions means the defect was reproduced. Their later acceptance cases remain pending until the relevant implementation task fixes and retests them.
 
-Windows PowerShell 5.1 has two separately exposed baseline defects:
+UPD-0101 replaces both PS5.1 failure characterizations with desired-behavior regressions. Production requests now use `Invoke-PodcastWebRequest`, which always passes `-UseBasicParsing` to the existing network cmdlet. The worker no longer supplies a parsing default. Its HTML discovery check supplies only two exact application UI responses; the hidden child remains `-NonInteractive`, so the web cmdlet's legacy confirmation would fail. Harness control traffic to `/__stats` retains its own safe parsing switch.
 
-- The untouched entry point encounters the patched `Invoke-WebRequest` legacy parsing confirmation under `-NonInteractive`, then reports no episodes. It transfers no media. The test accepts the earlier singleton failure on older Windows builds that reach that point without the confirmation.
-- A worker-only `Invoke-WebRequest:UseBasicParsing` default bypasses that web parsing path and exposes the singleton `Count` defect as division by zero. This is recorded as an expected baseline failure, not a successful download.
+`Select-PodcastEpisode` returns an array for zero, one or many entries. Unit cases cover Latest, All and Custom counts of 1, 2 and 5, null input, invalid Custom counts, sorting, URL filtering, counts, download/skip progress, and explicit empty/no-enclosure errors. The entry point still rejects an empty feed or a feed without downloadable URLs before episode progress/media requests. A006 covers valid arithmetic; byte-level progress timing and other UX changes remain UPD-0303.
 
-The PS5.1 two-episode transfer/repeat check uses the same explicit test-only BasicParsing default to exercise real media transfer. The worker records that injection in its result. It does not prove that the unchanged PS5.1 entry point is usable. PowerShell 7 exercises the ordinary entry point and successful single/two-episode transfers. UPD-0101 must address the PS5.1 defects with regressions before claiming those behaviors pass.
+Focused UPD-0101 commands (use the same native child wrapper above for PS5.1):
 
-These checks establish test foundations; they do not validate the whole application, launcher UX, cancellation, private feeds, recovery or future acceptance cases. Helper-server self-tests are a separate layer. See [UPD-0002 evidence](evidence/UPD-0002.md) for commands and actual outcomes.
+```powershell
+pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Unit -Filter '*A00[67]*'
+pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Integration
+```
+
+These checks do not validate the whole application, launcher UX, cancellation, private feeds, recovery or future acceptance cases. Helper-server self-tests are a separate layer. See [UPD-0002 evidence](evidence/UPD-0002.md) for the historical baseline and [UPD-0101 evidence](evidence/UPD-0101.md) for current commands and outcomes.
 
 ## Static analysis policy
 

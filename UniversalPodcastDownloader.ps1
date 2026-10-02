@@ -188,6 +188,16 @@ function Sanitize-ForWindowsName {
     return $safe
 }
 
+function Invoke-PodcastWebRequest {
+    param(
+        [Parameter(Mandatory)][string]$Uri,
+        [string]$OutFile
+    )
+
+    # Avoid the legacy DOM parser and its security prompt in Windows PowerShell.
+    Invoke-WebRequest @PSBoundParameters -UseBasicParsing
+}
+
 # --- RSS autodetect helpers ---
 function Find-RssInHtml {
     param(
@@ -249,7 +259,7 @@ function Get-FeedUrlInteractive {
 
         try {
             Write-Host "  Fetching URL..." -ForegroundColor DarkCyan
-            $resp = Invoke-WebRequest -Uri $inputUrl
+            $resp = Invoke-PodcastWebRequest -Uri $inputUrl
             $html = $resp.Content
 
             if ($html -match '<rss' -or $html -match '<feed') {
@@ -283,7 +293,7 @@ function Resolve-PodcastItems {
     foreach ($u in $Feeds) {
         Write-Verbose "Trying feed: $u"
         try {
-            $resp = Invoke-WebRequest -Uri $u
+            $resp = Invoke-PodcastWebRequest -Uri $u
             $xml  = [xml]$resp.Content
 
             $items = $xml.SelectNodes('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="item"]')
@@ -372,6 +382,27 @@ function Get-EpisodeData {
         Url     = $url
         Guid    = ($guid -as [string])
     }
+}
+
+function Select-PodcastEpisode {
+    param(
+        [AllowNull()][AllowEmptyCollection()][object[]]$Episodes,
+        [ValidateSet('Latest','All','Custom')][string]$Mode = 'Latest',
+        [int]$CustomCount
+    )
+
+    if ($Mode -eq 'Custom' -and $CustomCount -lt 1) {
+        throw "Mode 'Custom' requires -CustomCount with a value >= 1."
+    }
+
+    $selected = @($Episodes | Sort-Object PubDate -Descending)
+    switch ($Mode) {
+        'Latest' { $selected = @($selected | Select-Object -First 1) }
+        'Custom' { $selected = @($selected | Select-Object -First $CustomCount) }
+    }
+
+    # Preserve an array for zero/one/many results when assigned by the caller.
+    return ,$selected
 }
 
 function New-EpisodeFileName {
@@ -520,8 +551,8 @@ try {
     Write-Log ("CustomCount  : {0}" -f ($CustomCount -as [string]))
     Write-Log ("Output folder: {0}" -f $OutputPath)
 
-    $episodes = foreach ($it in $resolved.Items) { Get-EpisodeData $it }
-    $episodes = $episodes | Where-Object { $_.Url }
+    $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
+    $episodes = @($episodes | Where-Object { $_.Url })
 
     Write-Log ("Feed items with valid URLs: {0}" -f $episodes.Count)
 
@@ -529,13 +560,7 @@ try {
         throw "Feed parsed, but no downloadable enclosure URLs were found."
     }
 
-    $episodes = $episodes | Sort-Object PubDate -Descending
-
-    switch ($Mode) {
-        'Latest' { $episodes = $episodes | Select-Object -First 1 }
-        'All'    { }
-        'Custom' { $episodes = $episodes | Select-Object -First $CustomCount }
-    }
+    $episodes = Select-PodcastEpisode -Episodes $episodes -Mode $Mode -CustomCount $CustomCount
 
     $total = $episodes.Count
     Write-Host "[*] Episodes to download: $total"
@@ -585,7 +610,7 @@ try {
             Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
 
             try {
-                Invoke-WebRequest -Uri $ep.Url -OutFile $destFile
+                Invoke-PodcastWebRequest -Uri $ep.Url -OutFile $destFile
                 $success = $true
             } catch {
                 $lastError = $_
