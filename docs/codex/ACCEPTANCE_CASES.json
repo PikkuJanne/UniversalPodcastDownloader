@@ -299,9 +299,9 @@
       "given": "Owned partial plus matching strong validator.",
       "when": "Request remaining bytes and receive consistent 206.",
       "expected": "Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer.",
-      "fixture": "http:/media/ok.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/valid",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A028",
@@ -310,9 +310,9 @@
       "given": "Server ignores Range, changes entity, uses only weak validator, omits validator or returns inconsistent range.",
       "when": "Try resume.",
       "expected": "Never blindly append; safely restart with explicit logging or leave partial for review.",
-      "fixture": "http:/media/ignore-range.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/ignore-range",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A029",
@@ -321,9 +321,9 @@
       "given": "416, corrupted resume sidecar, or local partial belongs to another episode.",
       "when": "Recover.",
       "expected": "No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only.",
-      "fixture": "http:/media/always-416.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/always-416",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A030",

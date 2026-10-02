@@ -30,9 +30,9 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A026 passed; A027-A060 rem
 | A024 | UPD-0107 | integration | passed | DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse. |
 | A025 | UPD-0201 | integration | passed | Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed. |
 | A026 | UPD-0201 | integration | passed | Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout. |
-| A027 | UPD-0202 | integration | not_run | Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer. |
-| A028 | UPD-0202 | integration | not_run | Never blindly append; safely restart with explicit logging or leave partial for review. |
-| A029 | UPD-0202 | integration | not_run | No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only. |
+| A027 | UPD-0202 | integration | passed | Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer. |
+| A028 | UPD-0202 | integration | passed | Never blindly append; safely restart with explicit logging or leave partial for review. |
+| A029 | UPD-0202 | integration | passed | No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only. |
 | A030 | UPD-0203 | integration | not_run | Shared resolution rules produce same candidates; already fetched feed response reused. |
 | A031 | UPD-0203 | unit | not_run | Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy. |
 | A032 | UPD-0203 | unit | not_run | Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed. |

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0202",
+  "current_task": "UPD-0203",
   "status_values": [
     "todo",
     "ready",
@@ -337,7 +337,7 @@
       "id": "UPD-0202",
       "milestone": "M2",
       "title": "Add validator-aware safe resume",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0201"
       ],
@@ -361,14 +361,14 @@
         "A029"
       ],
       "evidence": ["docs/codex/evidence/UPD-0202.md"],
-      "implementation_commit": null,
-      "pr": null
+      "implementation_commit": "f32238923367419f29f0151220ce417a008a77d9",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3"
     },
     {
       "id": "UPD-0203",
       "milestone": "M2",
       "title": "Unify feed discovery and resolution",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0202"
       ],
