@@ -3,8 +3,8 @@
 Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0103 only**.
 
 - UPD-0001, UPD-0002, UPD-0101 and UPD-0102: done; historical evidence preserved.
-- UPD-0103: **in_progress**; implementation and all local checks complete, push/CI checkpoint pending.
-- Next after completion: **UPD-0104 — stable identities and durable local history**; unstarted.
+- UPD-0103: **done**; implementation pushed/verified, all local checks and both GitHub jobs passed.
+- Next, ready: **UPD-0104 — stable identities and durable local history**; unstarted.
 - Branch/upstream: `codex/upd-m1-safety` / `origin/codex/upd-m1-safety`.
 - M1 [draft PR #2](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2) remains stacked on `codex/upd-m0-foundation`; M0 draft PR #1 remains unmerged.
 - [Commands](DEVELOPMENT.md), [UPD-0103 evidence](evidence/UPD-0103.md), [decisions](DECISIONS.md).
@@ -38,4 +38,6 @@ Counts are passed/failed/skipped/not_run. Full suite: 227 product units, ten run
 
 ## GitHub checkpoint
 
-Implementation push and its exact-head CI are pending. Keep UPD-0103 in_progress until these are verified; do not start UPD-0104 yet. Final documentation checkpoint and its CI will be recorded separately in draft PR #2/final handoff, since this file cannot embed its own commit SHA.
+Implementation head `eecb7b51b2d9975b31b1064bd8db33ea133c2b82` equals the independently verified remote branch. [CI 36997821160](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/36997821160) passed at that exact head. Both Windows Server 2022 jobs reported 277/0/0/0 and 25 analyzed files with 0 parse errors/new findings. CI PowerShell 7.6.6 retained 6 baseline warnings; Windows PowerShell 5.1.20348.5622 retained 5. Pinned Python/Pester/PSScriptAnalyzer versions remain as above.
+
+Final documentation-only checkpoint and its CI are verified separately after push and recorded in draft PR #2/final handoff, since this file cannot embed its own commit SHA. No merge or later task started. Stop after UPD-0103; the exact UPD-0104 continuation is in NEXT_THREAD_PROMPT.md.
