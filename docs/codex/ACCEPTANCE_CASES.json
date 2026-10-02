@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A003 passed during bootstrap; A004-A060 not_run. Helper checks do not prove downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A005 passed during bootstrap and test foundations; A006-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -47,8 +47,8 @@
       "when": "Import the core without invoking the entry point.",
       "expected": "No prompts, network calls, directories, downloads or preference mutations occur.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0002.md"
     },
     {
       "id": "A005",
@@ -58,8 +58,8 @@
       "when": "Run focused tests locally and equivalent GitHub checks.",
       "expected": "Versions and engine are recorded; missing test tools produce a clear failure, not an empty green result; no runtime dependency added.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0002.md"
     },
     {
       "id": "A006",

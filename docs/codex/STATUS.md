@@ -3,8 +3,8 @@
 Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0002 only**, following completed UPD-0001.
 
 - UPD-0001: done; [historical evidence](evidence/UPD-0001.md).
-- UPD-0002: **in_progress**; implementation and local checks complete, push/CI pending.
-- Next after completion: **UPD-0101 — collections and safe Windows web requests**, not started.
+- UPD-0002: **done**; local and GitHub checks passed, implementation pushed and verified.
+- Next: **UPD-0101 — collections and safe Windows web requests**, ready, not started.
 - Branch/upstream: `codex/upd-m0-foundation` / `origin/codex/upd-m0-foundation`.
 - Reused [draft PR #1](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1), base `main`.
 - [Commands](DEVELOPMENT.md) and [UPD-0002 evidence](evidence/UPD-0002.md).
@@ -32,7 +32,15 @@ Windows 10.0.26300.0; Python 3.14.7; Git 2.56.0.windows.1; gh 2.97.0.
 | PowerShell 7.6.5 | 33 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 10 baseline warnings |
 | Windows PowerShell 5.1.26100.9444 | 33 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 9 baseline warnings |
 
-Each run includes 19 product unit checks (six explicit defect characterizations), ten runner checks and four integration checks. These are not 33 completed acceptance cases. A004/A005 locally verified; A006-A060 remain not_run. Historical helper evidence stays separate.
+Each run includes 19 product unit checks (six explicit defect characterizations), ten runner checks and four integration checks. These are not 33 completed acceptance cases. A004/A005 passed locally and in CI; A006-A060 remain not_run. Historical helper evidence stays separate.
+
+## Observed GitHub checks
+
+[Successful implementation run](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/36988718152), head `057e8a2860f3b3f4a062e8cdc31eeb221e5c982b`, completed 2026-10-02 09:16:15 UTC. Windows Server 2022 (10.0.20348.0), Python 3.14.7, Pester 5.7.1 and PSScriptAnalyzer 1.24.0:
+
+- PS7 7.6.6: 33 passed / 0 failed / 0 skipped / 0 not_run; analysis 12 files, 0 parse errors/new findings, 10 baseline warnings.
+- Windows PS5.1.20348.5622: 33 passed / 0 failed / 0 skipped / 0 not_run; analysis 12 files, 0 parse errors/new findings, 9 baseline warnings.
+- Both runtime inventory steps passed. Initial CI failures and corrections are retained in evidence.
 
 ## Known limitations
 
@@ -41,10 +49,10 @@ Each run includes 19 product unit checks (six explicit defect characterizations)
 - Filename collisions, reserved/dot names, Atom date/identity and first-enclosure defects remain for assigned later tasks.
 - Analysis retains legacy warnings, including original UTF-8-without-BOM encoding. PS7 reports one additional Write-Log built-in-command-profile warning.
 - Local PS5.1 tests use process-only policy Bypass and a native child module path; no persisted changes. No real archive, private subscriptions or external podcast hosts accessed.
-- Initial CI found test-message wrapping and multiple-Python discovery issues; tooling corrections are implemented and the next CI run is pending. Manual launcher, live feeds and broader recovery/security/release acceptance remain unrun.
+- Manual launcher, live feeds and broader recovery/security/release acceptance remain unrun.
 
 ## Continuity and owner gates
 
-Last observed remote feature SHA at task start: `9fc4c004a55943fe9e099a93247299921bfa8f1e`. Local implementation tested before commit. Final checkpoint will record implementation SHA and CI; final HEAD is reported after push rather than embedded in itself.
+Implementation SHA `057e8a2860f3b3f4a062e8cdc31eeb221e5c982b` independently verified equal to the remote feature branch at 2026-10-02 11:15:14 +02:00. This final documentation checkpoint is pushed and verified separately; its resulting SHA and CI are reported in the draft PR and final handoff, avoiding a self-referential commit hash.
 
 No approval needed for authorized feature-branch work/draft PR updates. Merges, rebases, resets, force pushes, existing branch/issue deletion, settings, release tags/publication, purchases and deployment remain outside scope. Stop after UPD-0002.

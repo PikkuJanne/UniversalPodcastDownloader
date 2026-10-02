@@ -1,14 +1,14 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A003 passed; A004-A060 remain NOT RUN. Helper results are separate from downloader acceptance; see evidence/UPD-0001.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A005 passed; A006-A060 remain NOT RUN. Helper results and defect characterizations are separate from future downloader acceptance; see evidence/UPD-0001.md and evidence/UPD-0002.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
 | A001 | UPD-0001 | workflow | passed | Correct repository proven; unrelated changes preserved; baseline drift recorded; no automatic reset or stash. |
 | A002 | UPD-0001 | workflow | passed | Only new handoff files copied; unchanged files recognized; conflicting files cause no overwrite; repeat application is idempotent. |
 | A003 | UPD-0001 | workflow | passed | Remote branch SHA equals local HEAD; draft PR created/reused or an authentication/permission blocker is reported honestly. |
-| A004 | UPD-0002 | unit | not_run | No prompts, network calls, directories, downloads or preference mutations occur. |
-| A005 | UPD-0002 | workflow | not_run | Versions and engine are recorded; missing test tools produce a clear failure, not an empty green result; no runtime dependency added. |
+| A004 | UPD-0002 | unit | passed | No prompts, network calls, directories, downloads or preference mutations occur. |
+| A005 | UPD-0002 | workflow | passed | Versions and engine are recorded; missing test tools produce a clear failure, not an empty green result; no runtime dependency added. |
 | A006 | UPD-0101 | unit | not_run | Selections are arrays; valid counts and progress; empty input is handled explicitly; no null/divide-by-zero errors on either Windows engine. |
 | A007 | UPD-0101 | integration | not_run | No legacy DOM parsing or security confirmation prompt; existing system security policy is not changed. |
 | A008 | UPD-0102 | unit | not_run | Valid deterministic components; identifiers retained after shortening; Windows limits handled clearly. |
