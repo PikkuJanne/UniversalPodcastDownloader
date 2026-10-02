@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A026 passed; A027-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0201.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A029 passed; A030-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0202.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
