@@ -13,6 +13,18 @@ $result = [ordered]@{
 }
 
 try {
+    $paginationParameters = @{}
+    $paginationResolveParameters = @{}
+    if ($config.PSObject.Properties['MaxFeedPages']) {
+        $paginationParameters.MaxFeedPages = [int]$config.MaxFeedPages
+        $paginationResolveParameters.MaxPages = [int]$config.MaxFeedPages
+    }
+    if (-not [string]::IsNullOrEmpty($config.Culture)) {
+        # Culture is confined to this owned child; no parent or system setting changes.
+        $workerCulture = [Globalization.CultureInfo]::GetCultureInfo($config.Culture)
+        [Threading.Thread]::CurrentThread.CurrentCulture = $workerCulture
+        [Threading.Thread]::CurrentThread.CurrentUICulture = $workerCulture
+    }
     if ($config.TransactionHook -eq 'DuringTransferCrash') {
         $requestSource = Join-Path (Split-Path $config.ProductScript -Parent) 'src/MediaRequest.ps1'
         $sourceLines = [IO.File]::ReadAllLines($requestSource)
@@ -48,6 +60,26 @@ try {
         }
         $null = Set-PSBreakpoint -Script $historySource -Line $hookLine -Action {
             [IO.File]::WriteAllText($config.HookMarkerPath, (@{ Hook = $config.TransactionHook } | ConvertTo-Json))
+            [Diagnostics.Process]::GetCurrentProcess().Kill()
+        }
+    }
+    elseif ($config.TransactionHook -eq 'AfterPrepareBeforeResumeRetireCrash') {
+        # Kill only this owned worker after real prepared history is persisted,
+        # while its completed provisional-path resume checkpoint still exists.
+        $transferSource = Join-Path (Split-Path $config.ProductScript -Parent) 'src/MediaTransfer.ps1'
+        $sourceLines = [IO.File]::ReadAllLines($transferSource)
+        $retireLines = @(for ($line = 0; $line -lt $sourceLines.Length; $line++) {
+            if ($sourceLines[$line] -match '^\s*Remove-PodcastResumeState -Lock \$session.Lock -State \$session.State') { $line + 1 }
+        })
+        if ($retireLines.Count -ne 1) { throw 'The integration prepared-resume hook requires one explicit checkpoint retirement.' }
+        $null = Set-PSBreakpoint -Script $transferSource -Line $retireLines[0] -Action {
+            $marker = [ordered]@{
+                Hook = $config.TransactionHook
+                Temporary = $temporary
+                Destination = $destination
+                ResumePath = Get-PodcastResumeStatePath -Root $Root -EpisodeId $ResumeContext.EpisodeId
+            }
+            [IO.File]::WriteAllText($config.HookMarkerPath, ($marker | ConvertTo-Json))
             [Diagnostics.Process]::GetCurrentProcess().Kill()
         }
     }
@@ -92,35 +124,72 @@ try {
             }
         }
     }
+    if ($config.Action -in @('Discover', 'InteractivePreview')) {
+        $discoveryPromptState = @{ Count = 0; SelectionIndex = 0 }
+        function Read-Host {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidOverwritingBuiltInCmdlets', '', Justification = 'This bounded test worker supplies only expected URL and numbered-choice application UI responses; web cmdlet host prompts still fail under NonInteractive.')]
+            [CmdletBinding()]
+            param([string]$Prompt)
+
+            $discoveryPromptState.Count++
+            if ($discoveryPromptState.Count -eq 1 -and $Prompt -eq 'Paste RSS feed URL OR podcast page URL') {
+                return $config.FeedUrl
+            }
+            if ($Prompt -eq 'Choose feed number (1-2)' -and $discoveryPromptState.SelectionIndex -lt @($config.Selection).Count) {
+                $selection = @($config.Selection)[$discoveryPromptState.SelectionIndex]
+                $discoveryPromptState.SelectionIndex++
+                return $selection
+            }
+            throw 'Unexpected or repeated application prompt in discovery integration worker.'
+        }
+    }
     switch ($config.Action) {
         'Discover' {
             . $config.ProductScript
-            $script:discoveryPromptCount = 0
-            function Read-Host {
-                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidOverwritingBuiltInCmdlets', '', Justification = 'This bounded test worker supplies only the two expected application UI responses; web cmdlet host prompts still fail under NonInteractive.')]
-                [CmdletBinding()]
-                param([string]$Prompt)
-
-                $script:discoveryPromptCount++
-                if ($script:discoveryPromptCount -eq 1 -and $Prompt -eq 'Paste RSS feed URL OR podcast page URL') {
-                    return $config.FeedUrl
-                }
-                if ($script:discoveryPromptCount -eq 2 -and $Prompt -eq 'Use this feed? (Y/n)') {
-                    return 'y'
-                }
-                throw 'Unexpected or repeated application prompt in discovery integration worker.'
+            $initial = Get-FeedUrlInteractive
+            $resolved = Resolve-PodcastItems -Feeds @($initial.Url) -InitialResolution $initial
+            $result.ResolvedUrl = $resolved.Url
+            $result.ItemCount = @($resolved.Items).Count
+            $result.Kind = $resolved.Kind
+            $result.FinalUri = $resolved.FinalUri.AbsoluteUri
+            $result.Candidates = @($resolved.Candidates)
+            $result.PromptCount = $discoveryPromptState.Count
+        }
+        'Source' {
+            . $config.ProductScript
+            if ($config.ReuseResponse) {
+                $response = Invoke-PodcastWebRequest -Uri $config.FeedUrl
+                $source = Resolve-PodcastSource -Uri $config.FeedUrl -Response $response
             }
-            $result.ResolvedUrl = Get-FeedUrlInteractive
-            $result.PromptCount = $script:discoveryPromptCount
+            else { $source = Resolve-PodcastSource -Uri $config.FeedUrl }
+            $result.ResolvedUrl = $source.Url
+            $result.Kind = $source.Kind
+            $result.FinalUri = $source.FinalUri.AbsoluteUri
+            $result.Candidates = @($source.Candidates)
+            $result.ItemCount = @($source.Items).Count
+            $result.ContentLength = $source.Content.Length
         }
         'Resolve' {
             . $config.ProductScript
-            $resolved = Resolve-PodcastItems -Feeds @($config.FeedUrl)
+            if ($config.ReuseResponse) {
+                $response = Invoke-PodcastWebRequest -Uri $config.FeedUrl
+                $initial = Resolve-PodcastSource -Uri $config.FeedUrl -Response $response
+                $resolved = Resolve-PodcastItems -Feeds @($config.FeedUrl) -InitialResolution $initial @paginationResolveParameters
+            }
+            else { $resolved = Resolve-PodcastItems -Feeds @($config.FeedUrl) @paginationResolveParameters }
             $result.ItemCount = $resolved.Items.Count
             $result.ResolvedUrl = $resolved.Url
+            if ($resolved.PSObject.Properties['Catalogue']) { $result.Catalogue = $resolved.Catalogue }
             $episodes = @($resolved.Items | ForEach-Object { Get-EpisodeData $_ })
             $result.EpisodeTitles = @($episodes | ForEach-Object { $_.Title })
             $result.EpisodeUrls = @($episodes | ForEach-Object { $_.Url })
+        }
+        'Preview' {
+            & $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -WhatIf @paginationParameters
+        }
+        'InteractivePreview' {
+            & $config.ProductScript -Mode $config.Mode -OutputPath $config.OutputPath -WhatIf @paginationParameters
+            $result.PromptCount = $discoveryPromptState.Count
         }
         'Download' {
             if ($config.BoundaryJunctionPath -and $config.BoundaryStage -eq 'Preparing') {
@@ -137,7 +206,7 @@ try {
                     Microsoft.PowerShell.Utility\Write-Progress @PSBoundParameters
                 }
             }
-            & $config.ProductScript -Mode $config.Mode -CustomCount $config.CustomCount -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose
+            & $config.ProductScript -Mode $config.Mode -CustomCount $config.CustomCount -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose @paginationParameters
         }
         default { throw 'Unknown integration worker action.' }
     }

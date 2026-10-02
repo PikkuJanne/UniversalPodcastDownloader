@@ -1,0 +1,29 @@
+# Implemented feed pagination policy
+
+UPD-0206, 2 October 2026. This is a bounded subset of [RFC 5005](https://www.rfc-editor.org/rfc/rfc5005), not a promise of a complete historical catalogue.
+
+## Supported advertised continuation
+
+Follow direct feed-level Atom-namespace `link` elements: `/atom:feed/atom:link` in Atom, or `/rss/channel/atom:link` in ordinary unnamespaced RSS. The Atom namespace is `http://www.w3.org/2005/Atom`; prefixes are arbitrary. Recognize exact `rel="next"` and `rel="prev-archive"` tokens and their `http://www.iana.org/assignments/relation/next` / `http://www.iana.org/assignments/relation/prev-archive` equivalents. Relation matching is case-sensitive. Atom relations are a single token/IRI, not HTML-style lists.
+
+The type may be absent or RSS/Atom XML, with an optional parameter suffix. A recognized continuation with another type, missing/invalid href or unsafe inherited base yields an incomplete result. Resolve entity-decoded relative references against the effective response URI and inherited `xml:base`, from root through channel and link. Validate every base, target and redirect under the existing HTTP(S), user-information and HTTPS downgrade policy. A continuation must return a safely parsed feed of the same RSS/Atom kind; HTML is never followed as another discovery page.
+
+One distinct supported HTTP request target advances the chain. Repeated declarations of the same target collapse, ignoring fragments; the second distinct supported target stops collection as ambiguous. Do not guess which path contains the archive. Entry-level links, plain RSS website links, HTTP Link headers, `first`, `last`, `previous`, `current`, `next-archive`, provider query conventions, load-more APIs and scraping are unsupported. Other relations are ignored. A publisher exposing only those mechanisms may have additional inaccessible history.
+
+## Bounds, identities and copies
+
+`-MaxFeedPages` defaults to **20**, including the initial selected feed page, and accepts **1–100**. Each page uses the existing retry/header/idle policy, redirect ceiling, complete-HTTP-body requirement, **8 MiB response byte** and XML character/node/depth limits. Across the chain, accept at most **10,000 raw entries**, including duplicates, and **33,554,432 decoded characters**. An entry overflow retains the accepted prefix; a page exceeding the cumulative character budget contributes no entries. A fetched page may therefore be rejected after its bounded response is read. These are cardinality/resource bounds; a continuously progressing body has no new overall wall-clock deadline.
+
+Visit requested and effective HTTP URI aliases, excluding fragments because they are not transmitted. Preserve queries and path case. Detect advertised cycles before requesting the repeated page; a redirect to an already visited effective URI also stops the chain after that response. The configured limits bound aliases or changing queries that evade exact cycle detection.
+
+The originally selected feed URL remains the archive identity across redirects and page URLs. Deduplicate entries using the existing RSS GUID, then Atom ID, then exact selected-media-URL identity priority. Collapse copies only when the canonical title, UTC publication date and selected media URL agree; keep the first encounter and its source position. Conflicting metadata for one identity stops before media destinations or archive changes. This deliberately preserves the existing conflict protection rather than applying RFC 5005's newer-revision preference. History schemas, recorded destinations and media validation remain unchanged.
+
+## Selection and outcomes
+
+All modes traverse the supported chain within these bounds before sorting accessible eligible episodes by UTC publication date. `Latest` selects one and `Custom` selects N from that fetched collection; `All` selects the whole fetched collection. Page order is not assumed to be date order. A later page may contain a newer episode. Equal or missing dates retain encounter order, using the publication-date policy. Reaching N on the first page is insufficient to prove the requested selection.
+
+`Resolve-PodcastItems` returns `Catalogue` with `Complete`, `StopReason`, `PagesFetched`, `ItemsSeen`, `DuplicateCount` and `MaxPages`. `PagesFetched` counts successfully parsed same-kind feed responses, including a response subsequently rejected by character or effective-URI cycle checks; it does not count failed or incompatible responses. `Complete=true` / `end` means only that this supported chain ended. Even an exhausted paged feed can change during traversal and does not prove a coherent complete snapshot, missing historical entries or continued availability of enclosure media. Every run states this limitation.
+
+Cycles, page/entry/character limits, malformed or ambiguous continuations and failed/incompatible later pages retain the accessible collection and a fixed private stop explanation. Download runs process the selected accessible entries, retain ordinary per-episode verification/failure results and then raise an incomplete error without `Run completed` or `[OK]`. The current script/worker boundary returns a nonzero failure; the separate 0/1/2/130 result/launcher contract remains UPD-0301. A simultaneous episode failure remains visible alongside the earlier catalogue warning. Reruns verify and skip recorded media even when the feed remains incomplete.
+
+Preview fetches bounded metadata pages and returns the accessible plan with any incomplete warning. It performs no enclosure request, directory/log/export/lock/history/checkpoint write or completed banner. Reusing a completed guided resolution does not fetch its pages again. Explicit legacy actions also retain the catalogue warning and report incompleteness after their action; legacy preview remains read-only.

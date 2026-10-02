@@ -16,7 +16,7 @@ The brief output-root `.upd-archive.lock` covers a second discovery pass, show c
 
 After media transfer validation, the downloader hashes the closed temporary file and commits `prepared` evidence before no-overwrite final placement. It then commits `transfer_verified`. A restart hashes the final file and compares bytes/digest against prepared or completed evidence before a verified skip; this closes the placement/history crash gap. Missing media with transfer evidence is safely downloaded again at its recorded path. Changed or unknown planned destinations become conflicts and produce an incomplete run. Adopted files are skipped only when their recorded bytes and SHA-256 still match, and the summary counts them separately as `Adopted`. Missing or changed adopted files and `unverified` records require review without automatic redownload or promotion to transfer evidence. Hashing denies write/delete sharing while the read handle is open. These checks do not promise a sandbox against a privileged concurrent filesystem attacker.
 
-Local Windows tests exercise actual process death before/after media placement and state replacement, plus lock contention/release. Legacy tests use synthetic copied archives and compare every original filename, byte count and SHA-256 before and after preview, adoption, redownload and rollback. Hardware power-loss durability and live UNC filesystems remain unverified. Resume remains future work.
+Local Windows tests exercise actual process death before/after media placement and state replacement, plus lock contention/release. Legacy tests use synthetic copied archives and compare every original filename, byte count and SHA-256 before and after preview, adoption, redownload and rollback. Hardware power-loss durability and live UNC filesystems remain unverified. UPD-0202 adds [validator-aware resume](RESUME_POLICY.md) without changing these completion evidence levels.
 
 ## Completion is an evidence level
 
@@ -26,7 +26,7 @@ The HTTP body's expected byte count, when meaningful for the delivered represent
 
 ## State and checkpoint files
 
-`src/HistoryStore.ps1` defines and validates the current schemas. Keep the existing show directory and media names. Migration stores additional full-history snapshots as `.upd/legacy-<32 lowercase hex characters>.json`; it never copies media into a checkpoint. These snapshots use the same strict schema reader and limits as live history. Local subscription configuration and resume sidecars remain future work.
+`src/HistoryStore.ps1` defines and validates the current schemas. Keep the existing show directory and media names. Migration stores additional full-history snapshots as `.upd/legacy-<32 lowercase hex characters>.json`; it never copies media into a checkpoint. These snapshots use the same strict schema reader and limits as live history. `src/ResumeStore.ps1` separately validates schema-1 resume sidecars and their owned byte checkpoints. Local subscription configuration remains future work.
 
 Unknown newer schemas and corrupt primary, backup or selected checkpoint files fail clearly and remain untouched. History is parsed as data, never evaluated as PowerShell.
 
@@ -40,6 +40,8 @@ Legacy inventory deliberately returns exact filenames, titles and identity data 
 
 ## Identity policy
 
+UPD-0204 date normalization changes chronological selection and new UTC filename prefixes only. Existing stable identities keep their recorded relative destinations. The established publisher-ID lookup remains compatible. Old-priority machine-local date hints are retained solely for unverified legacy review; see [PUBLICATION_DATES.md](PUBLICATION_DATES.md). No media/history is renamed or promoted when a date parses differently.
+
 Prefer a stable feed-scoped RSS GUID or Atom ID. Avoid title/date as the primary key. Handle repeated identical entries across pages but flag contradictory reuse of an identifier rather than silently merging unrelated records. Store a stable local feed ID and explicit alias associations so a publisher/feed title change does not create a new archive automatically.
 
 Fallback identity may use a conservative URI/metadata fingerprint. Do not remove all query parameters from the actual request or assume all query values are disposable tracking tokens. Without a stable publisher identity, changes in title, URL and signing tokens can be genuinely ambiguous; document this limit and preserve conflicting files. Do not assert universal perfect deduplication. A digest suffix solves collisions only when backed by a full key and conflict check; a short hash alone is not a guarantee.
@@ -48,15 +50,15 @@ Persist only relative destinations and validate containment when reading state. 
 
 ## Safe write/finalize sequence
 
-Acquire archive writer protection before modifying state/download ownership. Reserve an owned temporary file next to the destination on the same volume. After transfer validation, associate its episode identity and byte/hash evidence with a durable `prepared` record before final placement. Resume sidecars are not implemented. Never adopt a random `.part` left by another program based solely on extension.
+Acquire archive writer protection before modifying state/download ownership. Reserve a new owned temporary file next to the destination or verify an existing resume checkpoint under its exclusive handle. After transfer validation, associate its episode identity and byte/hash evidence with a durable `prepared` record before final placement. Retire the matching resume sidecar before moving the validated partial to its final path. Never adopt a random `.part` left by another program based solely on extension.
 
 Stream to the temporary path, close it and validate. Recheck the destination. Finalize using a no-overwrite operation. Then update state through a temporary state file plus same-volume replacement/backup strategy supported on the chosen Windows runtimes. Keep the previous good state until the new record is valid. Release handles in finally. Document filesystem/UNC constraints; a rename is not a universal guarantee against hardware power-loss corruption.
 
 Test crash gaps: before final rename; after rename before state commit; during state replacement; after cancellation; with concurrent writers; with changed/deleted completed files. Reconciliation must never overwrite a final file because history lagged. Both history and migration use the existing exclusive writer handles.
 
-## Future resume policy
+## Resume policy (UPD-0202)
 
-Resume only program-owned partials with consistent episode and entity evidence. Prefer a suitable strong validator; otherwise restart conservatively. Validate resumed response/offset/total before appending. Full-body responses replace/restart the owned partial safely, not append. Inconsistent range, changed entity, weak/absent evidence, corrupted sidecars and 416 require an explicit tested branch. Partial files belonging to the user or another program are not cleanup targets.
+Resume requires a valid owned sidecar, exact local prefix size/hash, matching feed/episode/request/target identities, a strong ETag, a known total and matching representation. Only a validated complete-tail 206 can append. Ignored ranges, changed validators/representation and 416 use one fresh GET into a new partial while preserving the old files. Corrupt sidecars or uncheckpointed crash tails stop for review. Full or empty checkpoints are not completion evidence. See [RESUME_POLICY.md](RESUME_POLICY.md) for the schema, geometric checkpoint schedule, atomic replacement, privacy and crash rules. Unknown partials are never inferred to be owned from their names.
 
 Resume mechanics depend on HTTP semantics [S6 in SOURCES.md]. The supplied HTTP scenarios are adversarial tests for this project's implementation. They are not proof that all real providers implement ranges correctly.
 
@@ -72,7 +74,7 @@ Matching covers the original title/date naming scheme and its short SHA-1 fallba
 
 An ordinary run checks the proposed archive and, for a new feed binding, the old title-only folder. If selected unbound episodes could cause new downloads while that folder contains unclaimed media, it returns a review plan under `-WhatIf` or stops with a review message. The check repeats under writer protection before initial state writes. A folder title is a reason to request review; it never establishes the feed or episode identity. Existing archives with an unrelated recorded feed are not claimed by title.
 
-In an established archive, an abandoned file with the exact `.upd-<32 lowercase hex characters>.tmp` transfer naming pattern is preserved without blocking a fresh transfer. Its name grants no completion or adoption evidence, and the downloader never reuses that partial. Other unclaimed partial names remain part of legacy review.
+In an established archive, an abandoned file with the exact `.upd-<32 lowercase hex characters>.tmp` transfer naming pattern is preserved without blocking a fresh transfer. Its name grants no completion or adoption evidence. Only a validated resume sidecar and matching bytes can authorize reuse. Other unclaimed partial names remain part of legacy review.
 
 ### Adopt
 

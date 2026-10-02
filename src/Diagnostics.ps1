@@ -72,8 +72,25 @@ function Get-PodcastDiagnosticError {
     # Only exact application-authored messages may retain actionable wording.
     # Never accept a prefix match or append details from an external exception.
     $publicMessages = @(
+        'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved.',
+        'Feed catalogue incomplete; no accessible episodes were found.',
         'No episodes found in the feed. Double-check the RSS URL.',
+        'The RSS or Atom feed is valid but contains no episodes.',
+        'Source XML is invalid or exceeds safe parser limits.',
+        'The source XML root is not a supported RSS or Atom feed.',
+        'No RSS or Atom feed links were found on the page.',
+        'Multiple feed links were found. Supply a direct feed URL with -FeedUrl.',
+        'The discovered URL did not return an RSS or Atom feed.',
+        'HTML metadata exceeds the safe character limit.',
+        'HTML feed discovery exceeds the safe token limit.',
+        'HTML feed discovery exceeded its safe parser timeout.',
+        'Discovered feed URL is not allowed by the network policy.',
+        'HTML base URL is not allowed by the network policy.',
+        'Source content exceeds the safe character limit.',
+        'The metadata response does not contain supported source text.',
         'Feed parsed, but no downloadable enclosure URLs were found.',
+        'Feed parsed, but no downloadable enclosure URLs were found. No supported audio candidate was declared.',
+        'Resume identity does not match this episode; partial and sidecar were preserved for review.',
         'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.',
         'Legacy review requires an existing -LegacyPath and an explicit -FeedUrl.',
         'Legacy options require -LegacyPath and an explicit -FeedUrl.',
@@ -86,7 +103,29 @@ function Get-PodcastDiagnosticError {
         }
     }
     $depth = 0
-    while ($cause -is [Exception] -and $null -ne $cause.InnerException -and $depth -lt 16) {
+    while ($cause -is [Exception] -and $depth -lt 16) {
+        # Exact local validation messages map to fixed explanations; no response
+        # body, MIME value or URL is incorporated into a diagnostic.
+        switch ($cause.Message) {
+            'Media validation failed: ambiguous_media.' { return 'Media validation failed: ambiguous_media. Supported audio evidence was not found within the inspection limit.' }
+            'Media validation failed: unsupported_media.' { return 'Media validation failed: unsupported_media. The recognized media type is not supported audio.' }
+            'Media validation failed: non_audio_text.' { return 'Media validation failed: non_audio_text. The response contains text rather than recognized audio.' }
+            'Media validation failed: unrecognized_media.' { return 'Media validation failed: unrecognized_media. The response has no supported audio signature.' }
+        }
+        if ($cause.Data['PodcastTransport'] -eq $true) {
+            # Map fixed categories only; never print the tagged message, header,
+            # retry date or any arbitrary data that an exception may carry.
+            switch ([string]$cause.Data['Kind']) {
+                'Deferred' { return 'The request was deferred because its retry budget could not allow another attempt.' }
+                'HeaderTimeout' { return 'The request exceeded the connection/header timeout.' }
+                'IdleTimeout' { return 'The response body exceeded the idle transfer timeout.' }
+                'Connection' { return 'The network connection failed before the transfer completed.' }
+                'HttpStatus' { return 'The server returned an unsuccessful HTTP status.' }
+                'IncompleteBody' { return 'The response body was incomplete.' }
+                'Permanent' { return 'The request was rejected by the network policy.' }
+            }
+        }
+        if ($null -eq $cause.InnerException) { break }
         $cause = $cause.InnerException
         $depth++
     }

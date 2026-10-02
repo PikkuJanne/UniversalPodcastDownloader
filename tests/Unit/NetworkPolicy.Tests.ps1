@@ -9,6 +9,7 @@ BeforeAll {
         $task = [pscustomobject]@{ Value = $Value }
         $task | Add-Member ScriptMethod GetAwaiter { return $this }
         $task | Add-Member ScriptMethod GetResult { return $this.Value }
+        $task | Add-Member ScriptMethod Wait { param($milliseconds) $null = $milliseconds; return $true }
         return $task
     }
 
@@ -227,7 +228,7 @@ Describe 'A023/A024: bounded metadata transfer and decoding' -Tag 'Unit', 'A023'
 
     It 'rejects a misleading declared length after stream completion' {
         $script:Response.Content.Headers.ContentLength = 8
-        { Invoke-PodcastMetadataRequest -Uri 'https://podcast.invalid/feed' } | Should -Throw '*Content-Length*byte count*'
+        { Invoke-PodcastMetadataRequest -Uri 'https://podcast.invalid/feed' -Policy (New-PodcastTransportPolicy -MaxAttempts 1) } | Should -Throw '*Content-Length*byte count*'
     }
 
     It 'rejects content encodings before reading compressed bodies' {

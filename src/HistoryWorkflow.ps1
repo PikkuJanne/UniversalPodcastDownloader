@@ -107,11 +107,29 @@ function Resolve-PodcastHistoryItem {
 
 function Invoke-PodcastRecordedTransfer {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned)
+    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy)
+
+    if ($null -eq $Policy) { $Policy = New-PodcastTransportPolicy }
+    $transferContext = $Context
+    $transferPlan = $Planned
+    Invoke-PodcastTransportOperation -Policy $Policy -Operation {
+        param($Attempt, $AttemptPolicy)
+        # Each retry verifies an owned checkpoint or reserves a fresh temporary file.
+        # Untyped filesystem, validation and history errors are never retried.
+        $result = Invoke-PodcastRecordedTransferAttempt -Context $transferContext -Planned $transferPlan -Policy $AttemptPolicy
+        $result | Add-Member NoteProperty Attempts $Attempt -Force
+        return $result
+    }
+}
+
+function Invoke-PodcastRecordedTransferAttempt {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy)
 
     $beforeFinalize = {
         param($Evidence)
         $prepared = New-PodcastEpisodeRecord -Planned $Planned
+        $prepared.relative_path = $Evidence.RelativePath
         $prepared.status = 'prepared'
         $prepared.bytes = $Evidence.Bytes
         $prepared.local_sha256 = $Evidence.Sha256
@@ -123,8 +141,27 @@ function Invoke-PodcastRecordedTransfer {
         }
         Save-PodcastEpisodeRecord -Context $Context -Record $prepared
     }
+    $resolveFinalPath = {
+        param($Validation)
+        $newIdentity = $Planned.PSObject.Properties['NewFileIdentityHash']
+        $uncompletedAllocation = $null -ne $Planned.StateRecord -and
+            $Planned.StateRecord.status -in @('failed', 'missing') -and
+            $null -eq $Planned.StateRecord.bytes -and $null -eq $Planned.StateRecord.local_sha256
+        if ($null -ne $Planned.StateRecord -and -not $newIdentity -and -not $uncompletedAllocation) { return $Planned.FileName }
+        $nameIdentity = if ($newIdentity) { $newIdentity.Value } else { $Planned.EpisodeId }
+        $budget = if ($Planned.PSObject.Properties['MaxFileNameLength']) { $Planned.MaxFileNameLength } else { 180 }
+        $finalName = New-EpisodeFileName -Episode $Planned.Episode -IdentityHash $nameIdentity `
+            -MaxLength $budget -Extension $Validation.Extension
+        if (@($Context.State.episodes | Where-Object {
+                $_.relative_path -ieq $finalName -and $_.episode_id -cne $Planned.EpisodeId
+            }).Count -gt 0) { throw 'Resolved media destination is owned by another history record.' }
+        return $finalName
+    }
+    $mediaType = if ($Planned.Episode.PSObject.Properties['MediaContentType']) { $Planned.Episode.MediaContentType } else { $null }
     $result = Invoke-PodcastMediaTransfer -Uri $Planned.Episode.Url -Root $Context.Lock.Root `
-        -RelativePath $Planned.FileName -EnclosureLength $Planned.Episode.EnclosureLength -BeforeFinalize $beforeFinalize
+        -RelativePath $Planned.FileName -EnclosureLength $Planned.Episode.EnclosureLength -BeforeFinalize $beforeFinalize -Policy $Policy `
+        -EnclosureContentType $mediaType -ResolveFinalPath $resolveFinalPath `
+        -ResumeContext ([pscustomobject]@{ Lock = $Context.Lock; FeedId = $Context.State.feed_id; EpisodeId = $Planned.EpisodeId })
     $completed = @($Context.State.episodes | Where-Object { $_.episode_id -ceq $Planned.EpisodeId })[0].PSObject.Copy()
     $completed.status = 'transfer_verified'
     Save-PodcastEpisodeRecord -Context $Context -Record $completed

@@ -180,10 +180,10 @@ Describe 'A017 A018: legacy migration safety boundaries' -Tag 'Unit', 'A017', 'A
             [IO.File]::WriteAllText($script:CompetingPath, 'Competing owner file')
             [pscustomobject]@{ Completed = $true; Bytes = [long]$script:MigrationMedia.Length; ContentLength = [long]$script:MigrationMedia.Length; ContentType = 'audio/mpeg' }
         }
-        { Invoke-PodcastLegacyMigration @script:MigrationArguments } | Should -Throw
+        { Invoke-PodcastLegacyMigration @script:MigrationArguments } | Should -Throw 'Media destination already exists; preserving it.'
         [IO.File]::ReadAllText($script:CompetingPath) | Should -BeExactly 'Competing owner file'
         (Get-PodcastFileEvidence -Root $script:MigrationShow -RelativePath $script:MigrationFile).Sha256 | Should -BeExactly $script:MigrationDigest
-        (Read-PodcastHistory -Root $script:MigrationShow).episodes[0].status | Should -BeExactly 'prepared'
+        (Read-PodcastHistory -Root $script:MigrationShow).episodes[0].status | Should -BeExactly 'adopted'
         @(Get-ChildItem -LiteralPath $script:MigrationShow -Filter '.upd-*.tmp').Count | Should -Be 0
     }
 

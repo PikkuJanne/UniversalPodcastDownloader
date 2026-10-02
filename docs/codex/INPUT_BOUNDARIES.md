@@ -57,9 +57,11 @@ Text decoding uses a BOM first, then an HTTP charset, then supported XML encodin
 
 The XML helper first reads the complete document with a streaming reader to check depth and node/attribute counts. It then loads the DOM through a second reader with the same settings. DTDs are rejected on encounter; external entity, DTD and schema references are not fetched. Errors use a safe local message rather than including private XML text.
 
-The metadata cap does not limit episode audio to 8 MiB. Media still streams into an owned temporary file and must pass the existing completion/framing/signature checks before final placement. Parser limits bound accepted input size and structure; they are not a promise of a fixed total run time or a full media decoder. Retry/idle-timeout, resume, pagination and richer RSS/Atom selection remain later work.
+The metadata cap does not limit episode audio to 8 MiB. Media still streams into an owned temporary file and must pass the existing completion/framing/signature checks before final placement. Parser limits bound accepted input size and structure; they are not a promise of a fixed total run time or a full media decoder. UPD-0201 adds [bounded retries and header/idle timeouts](TRANSPORT_POLICY.md); UPD-0202 adds [validator-aware resume](RESUME_POLICY.md). Pagination and richer RSS/Atom selection remain later work.
 
 ## Compatibility and evidence
+
+UPD-0203 adds [shared feed discovery](FEED_DISCOVERY.md) for both entry paths. The scanner keeps the 8 MiB character limit and 250 ms regex timeouts, adds a 100,000 token limit, ignores inert/raw text markup, validates decoded discovery/base targets, and stops at one selected feed. Final page/base URIs do not replace original direct-feed identities. Numbered guided choices and explicit CLI ambiguity errors occur before archive locks/writes; already fetched metadata is reused.
 
 The request and XML helpers use built-in .NET APIs available to Windows PowerShell 5.1 and PowerShell 7 on Windows. They add no runtime package, external binary or persistent configuration. Imports define helpers without starting requests or writing files.
 

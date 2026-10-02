@@ -41,10 +41,10 @@ Describe 'Feed parsing baseline' -Tag 'Unit' {
         Should -Invoke Invoke-PodcastMetadataRequest -Times 2 -Exactly
     }
 
-    It 'reports the current no-episodes error for an empty RSS feed' {
+    It 'reports a distinct valid-but-empty error for an empty RSS feed' {
         Mock Invoke-PodcastMetadataRequest { [PSCustomObject]@{ Content = Read-SyntheticFixture 'rss-empty.xml' } }
         { Resolve-PodcastItems -Feeds 'https://feed.example.invalid/empty' } |
-            Should -Throw '*No episodes found in the feed*'
+            Should -Throw 'The RSS or Atom feed is valid but contains no episodes.'
     }
 
     It 'extracts Atom enclosure links through the namespace-aware fixture' {
@@ -79,19 +79,20 @@ Describe 'Feed parsing baseline' -Tag 'Unit' {
     }
 }
 
-Describe 'Known parser defects: characterization only, not future acceptance' -Tag 'Unit', 'BaselineCharacterization' {
-    It 'currently uses Atom updated before published (UPD-0204)' {
+Describe 'A034: Atom publication date precedence' -Tag 'Unit', 'A034' {
+    It 'uses the original Atom publication date despite a recent edit and retains its ID' {
         [xml]$xml = Read-SyntheticFixture 'atom-dates.xml'
         $entry = $xml.SelectSingleNode('//*[local-name()="entry"][1]')
         $episode = Get-EpisodeData -XmlItem $entry
-        $episode.PubDate.ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss') | Should -Be '2026-09-30 12:00:00'
-        # Desired publication ordering is a future regression, not a passing assertion here.
-        $episode.PubDate.Year | Should -Not -Be 2020
+        $episode.PubDate.ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss') | Should -Be '2020-01-01 12:00:00'
+        $episode.AtomId | Should -BeExactly 'urn:fixture:old'
     }
+}
 
-    It 'currently chooses the first enclosure even when it is video (UPD-0205)' {
+Describe 'A035: supported audio enclosure selection' -Tag 'Unit', 'A035' {
+    It 'chooses the first supported audio enclosure after an unsupported video candidate' {
         [xml]$xml = Read-SyntheticFixture 'rss-media.xml'
         $episode = Get-EpisodeData -XmlItem $xml.rss.channel.item[0]
-        $episode.Url | Should -Be 'https://video.example.invalid/trailer.mp4'
+        $episode.Url | Should -Be 'https://media.example.invalid/media/octet-stream'
     }
 }

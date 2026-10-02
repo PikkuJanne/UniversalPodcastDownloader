@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A021 passed; A022-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0106.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A038 passed; A039-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0206 evidence](evidence/UPD-0206.md).
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -25,23 +25,23 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A021 passed; A022-A060 rem
 | A019 | UPD-0106 | integration | passed | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |
 | A020 | UPD-0106 | unit | passed | Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports. |
 | A021 | UPD-0106 | integration | passed | Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear. |
-| A022 | UPD-0107 | integration | not_run | Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion. |
-| A023 | UPD-0107 | unit | not_run | Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible. |
-| A024 | UPD-0107 | integration | not_run | DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse. |
-| A025 | UPD-0201 | integration | not_run | Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed. |
-| A026 | UPD-0201 | integration | not_run | Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout. |
-| A027 | UPD-0202 | integration | not_run | Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer. |
-| A028 | UPD-0202 | integration | not_run | Never blindly append; safely restart with explicit logging or leave partial for review. |
-| A029 | UPD-0202 | integration | not_run | No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only. |
-| A030 | UPD-0203 | integration | not_run | Shared resolution rules produce same candidates; already fetched feed response reused. |
-| A031 | UPD-0203 | unit | not_run | Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy. |
-| A032 | UPD-0203 | unit | not_run | Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed. |
-| A033 | UPD-0204 | unit | not_run | Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention. |
-| A034 | UPD-0204 | unit | not_run | Use published when available; updated only a fallback; Atom ID collected. |
-| A035 | UPD-0205 | unit | not_run | Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained. |
-| A036 | UPD-0205 | integration | not_run | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
-| A037 | UPD-0206 | integration | not_run | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |
-| A038 | UPD-0206 | integration | not_run | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
+| A022 | UPD-0107 | integration | passed | Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion. |
+| A023 | UPD-0107 | unit | passed | Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible. |
+| A024 | UPD-0107 | integration | passed | DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse. |
+| A025 | UPD-0201 | integration | passed | Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed. |
+| A026 | UPD-0201 | integration | passed | Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout. |
+| A027 | UPD-0202 | integration | passed | Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer. |
+| A028 | UPD-0202 | integration | passed | Never blindly append; safely restart with explicit logging or leave partial for review. |
+| A029 | UPD-0202 | integration | passed | No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only. |
+| A030 | UPD-0203 | integration | passed | Shared resolution rules produce same candidates; already fetched feed response reused. |
+| A031 | UPD-0203 | unit | passed | Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy. |
+| A032 | UPD-0203 | unit | passed | Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed. |
+| A033 | UPD-0204 | unit | passed | Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention. |
+| A034 | UPD-0204 | unit | passed | Use published when available; updated only a fallback; Atom ID collected. |
+| A035 | UPD-0205 | unit | passed | Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained. |
+| A036 | UPD-0205 | integration | passed | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
+| A037 | UPD-0206 | integration | passed | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |
+| A038 | UPD-0206 | integration | passed | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
 | A039 | UPD-0301 | integration | not_run | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
 | A040 | UPD-0301 | integration | not_run | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
 | A041 | UPD-0301 | manual | not_run | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |

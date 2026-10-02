@@ -2,6 +2,7 @@
 import http.client
 import importlib.util
 import json
+import struct
 from pathlib import Path
 import tempfile
 import subprocess
@@ -10,6 +11,8 @@ import time
 import threading
 import unittest
 import xml.etree.ElementTree as ET
+from urllib.parse import urljoin
+from email.utils import parsedate_to_datetime
 
 KIT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('upd_fixture_server', KIT / 'fixture_server.py')
@@ -53,6 +56,215 @@ class HelperTests(unittest.TestCase):
         enclosure = tree.find('./channel/item/enclosure')
         self.assertEqual(int(enclosure.attrib['length']), len(self.audio))
         self.assertTrue(enclosure.attrib['url'].startswith(self.server.base_url))
+
+    def test_discovery_redirect_and_relative_base_fixtures_are_named_and_local(self):
+        status, headers, body = self.request('/discovery/redirect')
+        self.assertEqual((status, headers['Location'], body),
+                         (302, '/discovery/final/show.html', b''))
+        status, _, body = self.request(headers['Location'])
+        self.assertEqual(status, 200)
+        self.assertIn(b'href="../../feeds/single.xml"', body)
+        status, _, body = self.request('/discovery/base.html')
+        self.assertEqual(status, 200)
+        self.assertIn(b'<base href="base/">', body)
+        self.assertIn(b'fixture=base&amp;part=1', body)
+
+    def test_discovery_duplicate_entities_and_nonfeed_targets_are_preserved(self):
+        status, _, body = self.request('/discovery/single.html')
+        self.assertEqual(status, 200)
+        self.assertIn(b'fixture=single&amp;part=1', body)
+        self.assertIn(b'fixture=single&#38;part=1', body)
+        status, _, body = self.request('/discovery/nonfeed-link.html')
+        self.assertEqual(status, 200)
+        self.assertIn(b'href="/show/not-feed"', body)
+
+    def test_empty_atom_and_unsupported_xml_root_shapes_are_distinct(self):
+        empty = ET.fromstring(self.request('/feeds/empty-atom.xml')[2])
+        self.assertEqual(empty.tag, '{http://www.w3.org/2005/Atom}feed')
+        self.assertEqual(len(empty.findall('{http://www.w3.org/2005/Atom}entry')), 0)
+        nested = ET.fromstring(self.request('/feeds/wrong-root.xml')[2])
+        self.assertEqual(nested.tag, 'document')
+        self.assertIsNotNone(nested.find('rss'))
+        unsupported = ET.fromstring(self.request('/feeds/wrong-atom-namespace.xml')[2])
+        self.assertEqual(unsupported.tag, '{urn:fixture:unsupported}feed')
+
+    def test_publication_fixture_ties_and_midnight_are_explicit(self):
+        order = ET.fromstring(self.request('/feeds/publication-order.xml')[2])
+        items = order.findall('./channel/item')
+        self.assertEqual([item.findtext('title') for item in items],
+                         ['Missing first', 'Tie first', 'Missing second', 'Tie second'])
+        self.assertEqual(parsedate_to_datetime(items[1].findtext('pubDate')),
+                         parsedate_to_datetime(items[3].findtext('pubDate')))
+        atom = ET.fromstring(self.request('/feeds/publication-midnight.xml')[2])
+        ns = {'atom': 'http://www.w3.org/2005/Atom'}
+        self.assertEqual(atom.findtext('atom:entry/atom:published', namespaces=ns),
+                         '2026-09-01T00:30:00+14:00')
+        self.assertEqual(atom.findtext('atom:entry/atom:updated', namespaces=ns),
+                         '2028-01-01T00:00:00Z')
+
+    def test_publication_history_changes_only_the_date(self):
+        self.server.recovered.clear()
+        try:
+            paths = ('/feeds/publication-history-rss.xml', '/feeds/publication-history-atom.xml')
+            before = [ET.fromstring(self.request(path)[2]) for path in paths]
+            self.server.recovered.set()
+            after = [ET.fromstring(self.request(path)[2]) for path in paths]
+            ns = {'atom': 'http://www.w3.org/2005/Atom'}
+            date_paths = ('./channel/item/pubDate', 'atom:entry/atom:published')
+            for first, second, date_path in zip(before, after, date_paths):
+                first_date = first.find(date_path, ns)
+                second_date = second.find(date_path, ns)
+                self.assertNotEqual(first_date.text, second_date.text)
+                first_date.text = second_date.text
+                self.assertEqual(ET.tostring(first), ET.tostring(second))
+        finally:
+            self.server.recovered.clear()
+
+    def test_format_assets_match_the_deterministic_structural_probes(self):
+        names = {'m4a': 'format-audio.m4a', 'isom-audio': 'format-isom-audio.m4a',
+                 'wave': 'format-audio.wav', 'flac': 'format-audio.flac', 'ogg': 'format-audio.ogg'}
+        generated = module.build_format_fixtures()
+        for kind, name in names.items():
+            with self.subTest(kind=kind):
+                self.assertEqual((KIT / 'fixtures' / name).read_bytes(), generated[kind])
+
+    def test_format_container_probes_distinguish_audio_video_and_unknown_packets(self):
+        data = module.build_format_fixtures()
+        self.assertIn(b'hdlr' + b'\0' * 8 + b'soun', data['m4a'])
+        self.assertIn(b'hdlr' + b'\0' * 8 + b'soun', data['isom-audio'])
+        self.assertIn(b'hdlr' + b'\0' * 8 + b'vide', data['mp4-video'])
+        self.assertNotIn(b'hdlr', data['mp4-ambiguous'])
+        self.assertEqual(data['ogg'][28:36], b'OpusHead')
+        self.assertEqual(data['ogg-ambiguous'][28:40], b'UnknownCodec')
+        self.assertEqual(struct.unpack('<I', data['wave'][4:8])[0] + 8, len(data['wave']))
+        self.assertEqual(data['flac'][:8], b'fLaC\x80\0\0\x22')
+
+    def test_format_feed_routes_offer_named_local_candidates_in_source_order(self):
+        for scenario in ('audio-after-video', 'atom-audio-after-video'):
+            status, _, body = self.request('/feeds/format-' + scenario + '.xml')
+            self.assertEqual(status, 200)
+            root = ET.fromstring(body)
+            if root.tag.endswith('feed'):
+                links = root.findall('.//{http://www.w3.org/2005/Atom}link')
+                urls = [link.attrib['href'] for link in links]
+            else:
+                links = root.findall('./channel/item/enclosure')
+                urls = [link.attrib['url'] for link in links]
+            self.assertEqual([link.attrib['type'] for link in links], ['video/mp4', 'audio/mpeg'])
+            self.assertEqual(urls, [self.server.base_url + '/media/format-video.mp4',
+                                    self.server.base_url + '/media/format-mp3'])
+
+    def test_format_routes_preserve_wrong_labels_and_generic_original_bytes(self):
+        routes = {
+            '/media/format-mp3': (self.audio, 'application/octet-stream'),
+            '/media/format-m4a': (self.server.format_media['m4a'], 'application/octet-stream'),
+            '/media/format-wrong.mp3': (self.server.format_media['m4a'], 'audio/mpeg'),
+            '/media/format-wrong.m4a': (self.audio, 'audio/mp4'),
+            '/media/format-ogg': (self.server.format_media['ogg'], 'application/octet-stream'),
+        }
+        for path, (body, mime) in routes.items():
+            with self.subTest(path=path):
+                status, headers, actual = self.request(path)
+                self.assertEqual((status, headers['Content-Type'], actual), (200, mime, body))
+                self.assertEqual(int(headers['Content-Length']), len(body))
+                status, headers, actual = self.request(path, method='HEAD')
+                self.assertEqual((status, actual), (200, b''))
+                self.assertEqual(int(headers['Content-Length']), len(body))
+        status, headers, body = self.request('/media/format-html.mp3')
+        self.assertEqual((status, headers['Content-Type']), (200, 'audio/mpeg'))
+        self.assertTrue(body.startswith(b'<!doctype html>'))
+
+    def test_format_identity_route_adds_a_later_candidate_without_changing_the_first(self):
+        self.server.recovered.clear()
+        try:
+            _, _, body = self.request('/feeds/format-identity-selection.xml')
+            item = ET.fromstring(body).find('./channel/item')
+            self.assertIsNone(item.find('guid'))
+            first = item.findall('enclosure')
+            self.assertEqual(len(first), 1)
+            self.assertEqual(first[0].attrib, {'url': self.server.base_url + '/media/format-stable.mp3'})
+            self.server.recovered.set()
+            _, _, body = self.request('/feeds/format-identity-selection.xml')
+            later = ET.fromstring(body).findall('./channel/item/enclosure')
+            self.assertEqual(len(later), 2)
+            self.assertEqual(later[0].attrib, first[0].attrib)
+            self.assertEqual(later[1].attrib, {'url': self.server.base_url + '/media/format-m4a', 'type': 'audio/mp4'})
+        finally:
+            self.server.recovered.clear()
+
+    def test_pagination_finite_rss_and_atom_pages_have_exact_duplicates_and_a_later_newer_entry(self):
+        for kind in ('rss', 'atom'):
+            with self.subTest(kind=kind):
+                _, _, first = self.request('/feeds/pagination-' + kind + '.xml')
+                _, _, second = self.request('/feeds/pagination-' + kind + '-page-2.xml')
+                first_root, second_root = ET.fromstring(first), ET.fromstring(second)
+                if kind == 'rss':
+                    first_entries = first_root.findall('./channel/item')
+                    second_entries = second_root.findall('./channel/item')
+                    identity = 'guid'
+                else:
+                    first_entries = first_root.findall('{http://www.w3.org/2005/Atom}entry')
+                    second_entries = second_root.findall('{http://www.w3.org/2005/Atom}entry')
+                    identity = '{http://www.w3.org/2005/Atom}id'
+                self.assertEqual(len(first_entries) + len(second_entries), 4)
+                self.assertEqual(ET.tostring(first_entries[0]), ET.tostring(second_entries[0]))
+                ids = {entry.findtext(identity) for entry in first_entries + second_entries}
+                self.assertEqual(len(ids), 3)
+                self.assertIn(b'2026-09-02' if kind == 'atom' else b'02 Sep 2026', second)
+                self.assertNotIn(b'rel="next"', second)
+
+    def test_pagination_archive_and_gap_routes_advertise_only_named_targets(self):
+        for scenario, relation, target in (
+                ('archive', 'prev-archive', '/feeds/pagination-rss-page-2.xml'),
+                ('gap', 'next', '/pagination/missing.xml'),
+                ('malformed', 'next', '/feeds/malformed.xml'),
+                ('html', 'next', '/show/not-feed')):
+            with self.subTest(scenario=scenario):
+                _, _, body = self.request('/feeds/pagination-' + scenario + '.xml')
+                link = ET.fromstring(body).find('./channel/{http://www.w3.org/2005/Atom}link')
+                self.assertEqual(link.attrib, {'rel': relation, 'href': self.server.base_url + target})
+        status, _, _ = self.request('/pagination/missing.xml')
+        self.assertEqual(status, 404)
+
+    def test_pagination_redirect_and_inherited_xml_base_resolve_to_the_named_page(self):
+        status, headers, _ = self.request('/feeds/pagination-relative.xml')
+        self.assertEqual((status, headers['Location']), (302, '/pagination/redirected/start.xml'))
+        _, _, body = self.request(headers['Location'])
+        root = ET.fromstring(body)
+        channel = root.find('channel')
+        link = channel.find('{http://www.w3.org/2005/Atom}link')
+        effective = self.server.base_url + headers['Location']
+        for node in (root, channel, link):
+            effective = urljoin(effective, node.attrib['{http://www.w3.org/XML/1998/namespace}base'])
+        target = urljoin(effective, link.attrib['href'])
+        self.assertEqual(target, self.server.base_url + '/pagination/redirected/catalog/page-2.xml')
+        status, _, body = self.request('/pagination/redirected/catalog/page-2.xml')
+        self.assertEqual(status, 200)
+        self.assertEqual(ET.fromstring(body).findtext('./channel/item/guid'), 'pagination-new')
+
+    def test_pagination_ambiguous_and_unsafe_targets_are_explicit(self):
+        _, _, body = self.request('/feeds/pagination-ambiguous.xml')
+        links = ET.fromstring(body).findall('./channel/{http://www.w3.org/2005/Atom}link')
+        self.assertEqual([link.attrib['rel'] for link in links], ['next', 'prev-archive'])
+        self.assertEqual(len({link.attrib['href'] for link in links}), 2)
+        _, _, body = self.request('/feeds/pagination-unsafe.xml')
+        link = ET.fromstring(body).find('./channel/{http://www.w3.org/2005/Atom}link')
+        self.assertEqual(link.attrib['href'], 'file:///C:/synthetic-pagination-must-not-read.xml')
+
+    def test_pagination_ignored_relations_and_http_header_remain_visible_to_the_client(self):
+        _, headers, body = self.request('/feeds/pagination-ignored.xml')
+        root = ET.fromstring(body)
+        self.assertIn('rel="next"', headers['Link'])
+        self.assertEqual(root.find('./channel/{http://www.w3.org/2005/Atom}link').attrib['rel'], 'prev')
+        self.assertEqual(root.find('./channel/link').attrib['rel'], 'next')
+
+    def test_pagination_media_is_the_original_fixture_with_complete_head_framing(self):
+        status, headers, body = self.request('/media/pagination.mp3?id=shared')
+        self.assertEqual((status, body), (200, self.audio))
+        self.assertEqual(int(headers['Content-Length']), len(self.audio))
+        status, headers, body = self.request('/media/pagination.mp3?id=new', method='HEAD')
+        self.assertEqual((status, body), (200, b''))
+        self.assertEqual(int(headers['Content-Length']), len(self.audio))
 
     def test_history_feed_changes_titles_and_requires_the_exact_renewed_query(self):
         self.server.recovered.clear()
@@ -206,6 +418,9 @@ class HelperTests(unittest.TestCase):
         self.assertTrue(hdr['ETag'].startswith('W/'))
         _, hdr, _ = self.request('/media/no-validator.mp3')
         self.assertNotIn('ETag', hdr)
+        for path in ('/media/truncated.mp3', '/media/recover.mp3', '/media/interrupt.mp3'):
+            _, headers, _ = self.request(path, method='HEAD')
+            self.assertNotIn('ETag', headers)
 
     def test_intentionally_bad_range(self):
         status, hdr, data = self.request('/media/bad-range.mp3', {'Range': 'bytes=100-'})
@@ -296,6 +511,186 @@ class HelperTests(unittest.TestCase):
     def test_stall_routes_finish(self):
         self.assertEqual(self.request('/media/stall.mp3')[2], self.audio)
         self.assertEqual(self.request('/media/stall-headers.mp3')[2], self.audio)
+
+    def test_transport_feed_only_points_to_named_synthetic_media(self):
+        tree = ET.fromstring(self.request('/transport/feed/once-503')[2])
+        self.assertEqual(tree.find('./channel/item/enclosure').attrib['url'],
+                         self.server.base_url + '/transport/media/once-503')
+        self.assertEqual(self.request('/transport/media/not-a-scenario')[0], 404)
+
+    def test_transport_status_routes_recover_only_when_configured(self):
+        self.request('/__reset', method='POST')
+        for kind in ('metadata', 'media'):
+            for code in (408, 429, 500, 502, 503, 504):
+                route = '/transport/{}/once-{}'.format(kind, code)
+                self.assertEqual(self.request(route)[0], code)
+                self.assertEqual(self.request(route)[0], 200)
+            for code in (400, 403, 404, 501):
+                route = '/transport/{}/permanent-{}'.format(kind, code)
+                self.assertEqual(self.request(route)[0], code)
+                self.assertEqual(self.request(route)[0], code)
+
+    def test_transport_retry_after_events_preserve_actual_server_deadline(self):
+        self.request('/__reset', method='POST')
+        for scenario in ('retry-delta', 'retry-date', 'defer-delta', 'defer-date'):
+            route = '/transport/media/' + scenario
+            status, headers, _ = self.request(route + '?fake_token=DO_NOT_RECORD')
+            self.assertEqual(status, 429)
+            events_raw = self.request('/__transport')[2]
+            self.assertNotIn(b'DO_NOT_RECORD', events_raw)
+            event = next(event for event in json.loads(events_raw) if event['path'] == route)
+            if scenario.endswith('-date'):
+                self.assertEqual(event['not_before'], parsedate_to_datetime(headers['Retry-After']).timestamp())
+            else:
+                self.assertGreaterEqual(event['not_before'] - event['received'], int(headers['Retry-After']))
+            self.assertEqual(self.request(route)[2], self.audio)
+
+    def test_transport_truncation_exposes_half_then_complete_original(self):
+        self.request('/__reset', method='POST')
+        with self.assertRaises(http.client.IncompleteRead) as caught:
+            self.request('/transport/media/truncated-once')
+        self.assertEqual(caught.exception.partial, self.audio[:len(self.audio) // 2])
+        self.assertEqual(self.request('/transport/media/truncated-once')[2], self.audio)
+
+    def test_transport_redirect_exposes_server_wait_and_owned_target(self):
+        for scenario, delay in (('redirect-wait', '1'), ('redirect-defer', '5')):
+            status, headers, body = self.request('/transport/media/' + scenario)
+            self.assertEqual((status, body), (302, b''))
+            self.assertEqual(headers['Retry-After'], delay)
+            self.assertEqual(headers['Location'], '/transport/media/redirect-target')
+        self.assertEqual(self.request('/transport/media/redirect-target')[2], self.audio)
+
+    def test_transport_active_progress_delivers_the_original_body(self):
+        started = time.monotonic()
+        self.assertEqual(self.request('/transport/media/progress')[2], self.audio)
+        self.assertGreater(time.monotonic() - started, 1.0)
+
+    def test_resume_feed_has_stable_identity_and_rotates_only_synthetic_signature(self):
+        self.server.recovered.clear()
+        try:
+            before = ET.fromstring(self.request('/resume/feed/signed')[2])
+            self.server.recovered.set()
+            after = ET.fromstring(self.request('/resume/feed/signed')[2])
+            self.assertEqual(before.find('./channel/item/guid').text, after.find('./channel/item/guid').text)
+            self.assertIn('signature=original', before.find('./channel/item/enclosure').attrib['url'])
+            self.assertIn('signature=renewed', after.find('./channel/item/enclosure').attrib['url'])
+            self.assertEqual(self.request('/resume/media/signed?signature=original')[0], 403)
+            self.assertEqual(self.request('/resume/media/signed?signature=renewed')[2], self.audio * 64)
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_partial_gate_and_matching_range_reconstruct_original_bytes(self):
+        self.server.recovered.clear()
+        conn = http.client.HTTPConnection('127.0.0.1', self.port, timeout=3)
+        try:
+            conn.request('GET', '/resume/media/valid')
+            response = conn.getresponse()
+            self.assertEqual(response.getheader('ETag'), '"resume-v1"')
+            prefix = response.read(1024)
+            self.assertEqual(prefix, (self.audio * 64)[:1024])
+        finally:
+            conn.close()
+            self.server.recovered.set()
+        try:
+            status, headers, suffix = self.request('/resume/media/valid', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            self.assertEqual(status, 206)
+            self.assertEqual(headers['Content-Range'], 'bytes 1024-{}/{}'.format(len(self.audio) * 64 - 1, len(self.audio) * 64))
+            self.assertEqual(prefix + suffix, self.audio * 64)
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_unknown_or_weak_representation_never_claims_a_strong_validator(self):
+        for scenario in ('weak', 'absent', 'last-modified', 'no-length'):
+            status, headers, _ = self.request('/resume/media/' + scenario, method='HEAD')
+            self.assertEqual(status, 200)
+            if scenario == 'weak':
+                self.assertEqual(headers['ETag'], 'W/"resume-v1"')
+            if scenario in ('absent', 'last-modified'):
+                self.assertNotIn('ETag', headers)
+            if scenario == 'last-modified':
+                self.assertIn('Last-Modified', headers)
+            if scenario == 'no-length':
+                self.assertNotIn('Content-Length', headers)
+
+    def test_resume_adversarial_range_headers_and_fresh_responses_are_distinct(self):
+        self.server.recovered.set()
+        try:
+            cases = {
+                'bad-start': ('Content-Range', 'bytes 1025-'),
+                'bad-end': ('Content-Range', 'bytes 1024-{}'.format(len(self.audio) * 64 - 2)),
+                'bad-total': ('Content-Range', 'bytes 1024-{}/{}'.format(len(self.audio) * 64 - 1, len(self.audio) * 64 + 1)),
+                'bad-validator': ('ETag', '"resume-v2"'),
+                'weak-validator': ('ETag', 'W/"resume-v1"'),
+                'bad-type': ('Content-Type', 'audio/ogg'),
+                'bad-encoding': ('Content-Encoding', 'gzip'),
+                'multipart': ('Content-Type', 'multipart/byteranges'),
+            }
+            for scenario, (header, prefix) in cases.items():
+                status, headers, _ = self.request('/resume/media/' + scenario, {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+                self.assertEqual(status, 206)
+                self.assertTrue(headers[header].startswith(prefix), scenario)
+                self.assertEqual(self.request('/resume/media/' + scenario)[2], self.audio * 64)
+            with self.assertRaises(http.client.IncompleteRead):
+                self.request('/resume/media/bad-length', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            status, headers, _ = self.request('/resume/media/missing-validator', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            self.assertEqual(status, 206)
+            self.assertNotIn('ETag', headers)
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_416_and_ignored_or_changed_ranges_are_explicit(self):
+        self.server.recovered.set()
+        try:
+            request_headers = {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'}
+            self.assertEqual(self.request('/resume/media/range-416', request_headers)[0], 416)
+            self.assertEqual(self.request('/resume/media/range-416')[2], self.audio * 64)
+            status, headers, _ = self.request('/resume/media/range-416-local', request_headers)
+            self.assertEqual((status, headers['Content-Range']), (416, 'bytes */1024'))
+            self.assertEqual(self.request('/resume/media/always-416')[0], 416)
+            self.assertEqual(self.request('/resume/media/ignore-range', request_headers)[0], 200)
+            status, headers, body = self.request('/resume/media/changed', request_headers)
+            self.assertEqual((status, headers['ETag'], body), (200, '"resume-v2"', self.audio * 64 + b'\0' * 32))
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_events_record_only_bounded_synthetic_range_values(self):
+        self.request('/__reset', method='POST')
+        self.server.recovered.set()
+        try:
+            self.request('/resume/media/valid?secret=DO_NOT_RECORD', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            self.request('/resume/media/valid?secret=DO_NOT_RECORD', {'If-Range': 'UNTRUSTED_DO_NOT_RECORD'})
+            raw = self.request('/__resume')[2]
+            self.assertNotIn(b'DO_NOT_RECORD', raw)
+            events = json.loads(raw)
+            self.assertEqual(events[0]['range'], 'bytes=1024-')
+            self.assertEqual(events[0]['if_range'], '"resume-v1"')
+            self.assertTrue(events[1]['has_if_range'])
+            self.assertIsNone(events[1]['if_range'])
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_caught_failure_fixtures_advance_from_the_observed_bytes(self):
+        self.request('/__reset', method='POST')
+        self.server.recovered.set()
+        try:
+            original = self.audio * 64
+            with self.assertRaises(http.client.IncompleteRead) as fresh:
+                self.request('/resume/media/fresh-truncated-once')
+            prefix = fresh.exception.partial
+            self.assertEqual(prefix, original[:len(original) // 3])
+            status, _, tail = self.request('/resume/media/fresh-truncated-once', {
+                'Range': 'bytes={}-'.format(len(prefix)), 'If-Range': '"resume-v1"'})
+            self.assertEqual((status, prefix + tail), (206, original))
+            self.request('/resume/media/range-truncated-once', method='HEAD')
+            with self.assertRaises(http.client.IncompleteRead) as resumed:
+                self.request('/resume/media/range-truncated-once', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            middle = resumed.exception.partial
+            self.assertEqual(middle, original[1024:1024 + len(middle)])
+            status, _, tail = self.request('/resume/media/range-truncated-once', {
+                'Range': 'bytes={}-'.format(1024 + len(middle)), 'If-Range': '"resume-v1"'})
+            self.assertEqual((status, original[:1024] + middle + tail), (206, original))
+        finally:
+            self.server.recovered.clear()
 
 
 if __name__ == '__main__':

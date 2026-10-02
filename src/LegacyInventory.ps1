@@ -19,7 +19,10 @@ function Get-PodcastHistoricalFileName {
     $title = if ([string]::IsNullOrWhiteSpace([string]$Episode.Title)) { 'Episode' } else { [string]$Episode.Title }
     $title = ($title -replace '[\\/:*?"<>|]', '_').Trim()
     if ([string]::IsNullOrWhiteSpace($title)) { $title = 'Episode' }
-    $prefix = if ($Episode.PubDate) { ([datetime]$Episode.PubDate).ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
+    $legacyDate = if ($null -ne $Episode.PSObject.Properties['LegacyPubDate']) { $Episode.LegacyPubDate }
+        elseif ($Episode.PubDate -is [DateTimeOffset]) { $Episode.PubDate.LocalDateTime }
+        else { $Episode.PubDate }
+    $prefix = if ($legacyDate) { ([datetime]$legacyDate).ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
     $suffix = ''
     if ($title -eq 'Episode' -or $prefix.Length -eq 0) {
         $oldIdentity = if ($Episode.Guid) { [string]$Episode.Guid } else { [string]$Episode.Url }

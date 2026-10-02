@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A024 passed through UPD-0107; A025-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A038 passed through UPD-0206; A039-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -278,8 +278,8 @@
       "when": "Run retry policy with test-injected delay/clock.",
       "expected": "Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed.",
       "fixture": "http:/retry/once.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0201.md"
     },
     {
       "id": "A026",
@@ -289,8 +289,8 @@
       "when": "Download using configured timeouts.",
       "expected": "Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout.",
       "fixture": "http:/media/stall.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0201.md"
     },
     {
       "id": "A027",
@@ -299,9 +299,9 @@
       "given": "Owned partial plus matching strong validator.",
       "when": "Request remaining bytes and receive consistent 206.",
       "expected": "Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer.",
-      "fixture": "http:/media/ok.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/valid",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A028",
@@ -310,9 +310,9 @@
       "given": "Server ignores Range, changes entity, uses only weak validator, omits validator or returns inconsistent range.",
       "when": "Try resume.",
       "expected": "Never blindly append; safely restart with explicit logging or leave partial for review.",
-      "fixture": "http:/media/ignore-range.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/ignore-range",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A029",
@@ -321,9 +321,9 @@
       "given": "416, corrupted resume sidecar, or local partial belongs to another episode.",
       "when": "Recover.",
       "expected": "No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only.",
-      "fixture": "http:/media/always-416.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/always-416",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A030",
@@ -333,8 +333,8 @@
       "when": "Use TUI and command-line inputs.",
       "expected": "Shared resolution rules produce same candidates; already fetched feed response reused.",
       "fixture": "show-multiple.html",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A031",
@@ -344,8 +344,8 @@
       "when": "Discover and resolve candidates.",
       "expected": "Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy.",
       "fixture": "show-multiple.html",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A032",
@@ -355,8 +355,8 @@
       "when": "Resolve.",
       "expected": "Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed.",
       "fixture": "rss-empty.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A033",
@@ -366,8 +366,8 @@
       "when": "Parse and sort.",
       "expected": "Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention.",
       "fixture": "rss-date-cases.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0204.md"
     },
     {
       "id": "A034",
@@ -377,8 +377,8 @@
       "when": "Select Latest.",
       "expected": "Use published when available; updated only a fallback; Atom ID collected.",
       "fixture": "atom-dates.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0204.md"
     },
     {
       "id": "A035",
@@ -388,8 +388,8 @@
       "when": "Choose enclosure and name final file.",
       "expected": "Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained.",
       "fixture": "rss-media.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0205.md"
     },
     {
       "id": "A036",
@@ -399,8 +399,8 @@
       "when": "Validate downloaded content.",
       "expected": "Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation.",
       "fixture": "http:/media/octet-stream",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0205.md"
     },
     {
       "id": "A037",
@@ -410,8 +410,8 @@
       "when": "Run All.",
       "expected": "Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue.",
       "fixture": "rss-page-1.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0206.md"
     },
     {
       "id": "A038",
@@ -421,8 +421,8 @@
       "when": "Select episodes.",
       "expected": "Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0206.md"
     },
     {
       "id": "A039",

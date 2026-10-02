@@ -24,6 +24,41 @@ The following Microsoft references were checked for the request and parser bound
 - **S14 — Microsoft, streamed response completion.** [HttpCompletionOption](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpcompletionoption?view=netframework-4.8.1) explains that `ResponseHeadersRead` returns before the body is consumed. The client timeout and automatic content buffer limit do not then govern the remaining body read, so bounded metadata reading requires its own checks.
 - **S7 rechecked — Microsoft, ShouldProcess.** [ShouldProcess guidance](https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-shouldprocess?view=powershell-7.6) distinguishes parameter support from guarding the actual mutation and recommends verifying propagation to called helpers. UPD-0107 checks the preview path through the script and legacy workflow.
 
-## Preparation limitations
+## UPD-0201 references checked 2 October 2026
+
+- **S15 — Microsoft, bounded asynchronous requests.** [HttpClient.SendAsync](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.sendasync?view=netframework-4.8.1) exposes a request/completion-option/cancellation-token overload in .NET Framework. [Task.Wait](https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task.wait?view=netframework-4.8.1) returns false on a wait timeout and wraps failed tasks in AggregateException. A timed-out wait alone does not cancel the operation. S14 explains why streamed bodies need their own deadline.
+- **S16 — Microsoft, Framework stream cancellation.** The [Framework Stream reference source](https://raw.githubusercontent.com/microsoft/referencesource/main/mscorlib/system/io/stream.cs) checks cancellation at the beginning of its legacy asynchronous read path; the [HTTP ConnectStream source](https://raw.githubusercontent.com/microsoft/referencesource/main/System/net/System/Net/_ConnectStream.cs) supports the explicit bounded-wait/disposal design. A cancellation token alone is insufficient evidence of a bounded body read across both engines.
+- **S6 rechecked — IETF HTTP Semantics.** [RFC 9110 sections 10.2.3 and 5.6.7](https://www.rfc-editor.org/rfc/rfc9110.html) define Retry-After delay-seconds and HTTP-date, including the minimum delay before following a redirect. Retry classes and budget defaults are project policy, documented in TRANSPORT_POLICY.md.
+
+## UPD-0202 references checked 2 October 2026
+
+- **S6 rechecked — IETF range semantics.** [RFC 9110 sections 13.1.5, 14.2, 14.4, 15.3.7 and 15.5.17](https://www.rfc-editor.org/rfc/rfc9110.html) define If-Range, byte ranges, Content-Range, partial content and 416. Complete-tail-only 206, repeated representation checks and fresh transfer for all 416 responses are explicit conservative project choices; see RESUME_POLICY.md.
+- **S17 — Microsoft, durable stream and metadata operations.** [FileStream.Flush(Boolean)](https://learn.microsoft.com/en-us/dotnet/api/system.io.filestream.flush?view=netframework-4.8.1) flushes intermediate file buffers when requested. [File.Replace](https://learn.microsoft.com/en-us/dotnet/api/system.io.file.replace?view=netframework-4.8.1) replaces a file and can retain its predecessor at a backup path. These APIs support the checkpoint order; they do not establish universal power-loss guarantees.
+- **S18 — Microsoft, PowerShell null string interop.** [NullString](https://learn.microsoft.com/en-us/dotnet/api/system.management.automation.language.nullstring?view=powershellsdk-7.4.0) supplies a true null for a .NET string parameter. Checkpoint replacement uses its Value singleton when no backup is needed, avoiding PowerShell's empty-string binding.
+
+## UPD-0203 references checked 2 October 2026
+
+- **S19 — WHATWG, static HTML base semantics.** [The base element](https://html.spec.whatwg.org/multipage/semantics.html#the-base-element) uses the document fallback URL to resolve the first base href and ignores later base href elements. This project's safe bounded scanner accepts a documented subset of HTML and fails closed for targets outside its network policy; it does not claim browser-equivalent parsing.
+- **S20 — RSS Advisory Board and IETF, document roots.** [RSS 2.0 specification](https://www.rssboard.org/rss-specification) describes the rss/channel structure. [RFC 4287 section 2](https://www.rfc-editor.org/rfc/rfc4287.txt) distinguishes an Atom feed document by its atom:feed root. Root-aware classification here is not complete schema validation.
+- **S21 — Microsoft, built-in entity decoding.** [WebUtility.HtmlDecode](https://learn.microsoft.com/en-us/dotnet/api/system.net.webutility.htmldecode?view=netframework-4.8.1) is available in .NET Framework and supports attribute entity decoding without a runtime package. Discovered values are validated after decoding.
+
+## UPD-0204 references checked 2 October 2026
+
+- **S9 rechecked — IETF, Atom publication semantics.** [RFC 4287 sections 3.3, 4.2.6, 4.2.9 and 4.2.15](https://www.rfc-editor.org/rfc/rfc4287.html) distinguish identity, initial publication and meaningful updates, and require RFC3339 date constructs. Published-first ordering, malformed-present handling and compatibility forms are project choices in PUBLICATION_DATES.md.
+- **S22 — RSS Advisory Board and IETF, RSS date compatibility.** [RSS 2.0 date rules](https://www.rssboard.org/rss-specification) permit two/four-digit years. [RFC 2822 section 4.3](https://www.rfc-editor.org/rfc/rfc2822.txt) specifies the fixed two-digit year interpretation and legacy named US zone offsets. The downloader supports a bounded subset rather than every obsolete production.
+- **S23 — Microsoft, explicit offset construction.** [DateTimeOffset numeric Gregorian constructor](https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset.-ctor?view=netframework-4.8.1) validates date/time ranges, whole-minute offsets up to fourteen hours and UTC range. This built-in Framework-compatible API avoids culture parsing; PUBLICATION_DATES.md documents precision and unsupported leap seconds.
+
+## UPD-0205 references checked 2 October 2026
+
+- **S24 — IETF, MPEG media type.** [RFC 3003](https://www.rfc-editor.org/rfc/rfc3003.html) defines audio/mpeg for MPEG audio layers; a MIME hint alone does not justify a `.mp3` extension for Layer I/II. This downloader accepts Layer III and preserves unsupported classifications for other layers.
+- **S25 — MP4 Registration Authority and IETF, MP4 conventions.** [MP4RA brands](https://mp4ra.org/registered-types/brands) lists the M4A brand and allows audio/video content; it is not proof of audio-only media. [RFC 4337](https://www.rfc-editor.org/rfc/rfc4337.html) distinguishes audio, video and generic MP4 MIME uses. The bounded `soun`/`vide` box policy and conservative inspection limit are project choices.
+- **S26 — IETF and codec maintainers, Ogg audio identification.** [RFC 7845 section 5.1](https://www.rfc-editor.org/rfc/rfc7845.html#section-5.1), [Vorbis I specification](https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-610004.2.2) and [Speex Ogg header documentation](https://www.speex.org/docs/manual/speex-manual/node8.html) describe initial codec identification headers. This project checks a bounded first complete BOS packet; it does not decode later pages or verify Ogg checksums.
+
+## Preparation limitations (original handoff)
 
 No PowerShell runtime was available in the preparation environment. No downloader execution, actual Windows archive migration, patched-Windows prompt reproduction, Authenticode signing, GitHub write or live website action was performed. The bundle validation report separately records structural and helper-only checks actually run.
+
+## UPD-0206 references checked 2 October 2026
+
+- **S27 — IETF, feed paging and archives.** [RFC 5005 sections 3, 4.2 and 6](https://www.rfc-editor.org/rfc/rfc5005) define next/prev-archive relations, archived copies and the limits of coherent paging snapshots. This project's single-chain subset, bounds, conflict preservation and fetch-before-date-selection policy are explicit conservative choices in FEED_PAGINATION.md.
+- **S9 rechecked — IETF, Atom link and base semantics.** [RFC 4287 sections 3 and 4.2.7.2](https://www.rfc-editor.org/rfc/rfc4287) define inherited xml:base and exact IANA HTTP relation equivalence. Atom rel is a single token/IRI. [RSS namespaced extensions](https://www.rssboard.org/rss-specification#extendingRss) support channel-level Atom links without treating plain RSS website links as pagination.

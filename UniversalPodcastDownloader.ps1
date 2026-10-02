@@ -31,7 +31,7 @@ FEATURES
         - Asks how many newest episodes to download:
             - Enter  = latest only
             - Number = N newest episodes
-            - all    = whole feed
+            - all    = accessible entries in the bounded feed catalogue
     - Per-podcast subfolders based on feed title:
         - Root:   <OutputPath> (default: %USERPROFILE%\Downloads\Podcasts)
         - Folder: <SafeFeedTitle>-<feed identity hash>
@@ -40,6 +40,11 @@ FEATURES
         - Up to 3 attempts per episode with short delay between tries.
         - Skips episodes only after checking recorded size and SHA-256 on disk.
         - Summarizes downloaded / skipped / failed at the end.
+    - Explicit feed pagination:
+        - Follows feed-level Atom next/prev-archive links before date selection.
+        - MaxFeedPages defaults to 20 (1-100); entry/metadata limits also apply.
+        - Gaps, limits and cycles report incomplete after accessible downloads.
+        - A complete historical catalogue is not guaranteed.
     - Private per-run UTF-8 diagnostics:
         - Startup: LOCALAPPDATA\UniversalPodcastDownloader\Logs (TEMP fallback).
         - Confirmed downloads also keep a log in the podcast folder.
@@ -83,7 +88,7 @@ USAGE
             3) Choose how many newest episodes to download:
                  - Enter  = latest only
                  - Number = N newest
-                 - all    = entire feed
+                 - all    = bounded accessible feed catalogue
         - Output:
             - Audio files under:
                 %USERPROFILE%\Downloads\Podcasts\<FeedTitle>\
@@ -109,7 +114,7 @@ USAGE
                 -CustomCount 10
 
 NOTES
-    - Episodes are sorted by publication date (PubDate) newest first.
+    - Episodes are sorted by UTC publication instant newest first; tied/undated entries keep source order.
     - New folder and file names include deterministic SHA-256 identity suffixes.
     - Windows names are sanitized and shortened to fit the selected output root.
     - Unsafe archive paths fail before archive writes; startup diagnostics use a separate safe location.
@@ -178,9 +183,19 @@ param(
 
     [string]$LegacyCheckpoint,
 
-    [string]$DiagnosticExportPath
+    [string]$DiagnosticExportPath,
+
+    [ValidateRange(1, 100)][int]$MaxFeedPages = 20,
+    [ValidateRange(1, 10)][int]$MaxAttempts = 3,
+    [ValidateRange(0.001, 86400)][double]$HeaderTimeoutSeconds = 30,
+    [ValidateRange(0.001, 86400)][double]$IdleTimeoutSeconds = 30,
+    [ValidateRange(0, 86400)][double]$RetryBudgetSeconds = 120,
+    [ValidateRange(0, 3600)][double]$BaseDelaySeconds = 1,
+    [ValidateRange(0, 3600)][double]$MaxDelaySeconds = 30
 )
 
+. (Join-Path $PSScriptRoot 'src/PublicationDate.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaSelection.ps1')
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
 . (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
 . (Join-Path $PSScriptRoot 'src/Diagnostics.ps1')
@@ -189,11 +204,19 @@ param(
 . (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
 . (Join-Path $PSScriptRoot 'src/NetworkPolicy.ps1')
 . (Join-Path $PSScriptRoot 'src/FeedXml.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedDiscovery.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedPagination.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
+. (Join-Path $PSScriptRoot 'src/ResumeStore.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaTransfer.ps1')
 . (Join-Path $PSScriptRoot 'src/LegacyInventory.ps1')
 . (Join-Path $PSScriptRoot 'src/LegacyMigration.ps1')
+
+$script:PodcastTransportPolicy = New-PodcastTransportPolicy -MaxAttempts $MaxAttempts `
+    -HeaderTimeoutSeconds $HeaderTimeoutSeconds -IdleTimeoutSeconds $IdleTimeoutSeconds `
+    -RetryBudgetSeconds $RetryBudgetSeconds -BaseDelaySeconds $BaseDelaySeconds -MaxDelaySeconds $MaxDelaySeconds
+$script:PodcastMaxFeedPages = $MaxFeedPages
 
 function Write-Log {
     param(
@@ -210,59 +233,15 @@ function Invoke-PodcastWebRequest {
     param([Parameter(Mandatory)][string]$Uri)
 
     # Metadata stays in memory. Media writes use the confirmed transfer path.
-    Invoke-PodcastMetadataRequest -Uri $Uri
+    Invoke-PodcastMetadataRequest -Uri $Uri -Policy $script:PodcastTransportPolicy
 }
 
-# --- RSS autodetect helpers ---
-function Find-RssInHtml {
-    param(
-        [Parameter(Mandatory)][string]$Html,
-        [Parameter(Mandatory)][string]$BaseUrl
-    )
-
-    if ($Html.Length -gt 8388608) { throw 'HTML metadata exceeds the safe character limit.' }
-    $pattern = '<link[^>]+type=["'']application/(rss|atom)\+xml["''][^>]*>'
-    $matches = [System.Text.RegularExpressions.Regex]::Matches(
-        $Html,
-        $pattern,
-        [System.Text.RegularExpressions.RegexOptions]::IgnoreCase,
-        [TimeSpan]::FromMilliseconds(250)
-    )
-
-    foreach ($m in $matches) {
-        $hrefMatch = [System.Text.RegularExpressions.Regex]::Match(
-            $m.Value,
-            'href=["''](?<url>[^"\'']+)["'']',
-            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase,
-            [TimeSpan]::FromMilliseconds(250)
-        )
-
-        if ($hrefMatch.Success) {
-            $href = $hrefMatch.Groups['url'].Value
-            try {
-                if ($href -match '[\\\x00-\x20\x7f]') { throw 'Invalid discovered target.' }
-                $base = Get-PodcastRequestUri -Uri $BaseUrl
-                $uri  = [Uri]::new($base, $href)
-                return (Get-PodcastRequestUri -Uri $uri.AbsoluteUri).AbsoluteUri
-            } catch {
-                throw 'Discovered feed URL is not allowed by the network policy.'
-            }
-        }
-    }
-
-    return $null
-}
-
+# --- Shared RSS/Atom resolution and guided input ---
 function Get-FeedUrlInteractive {
     Write-Host "==== Universal Podcast Downloader ====" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "How to find the RSS feed for your podcast:" -ForegroundColor Yellow
-    Write-Host "  1. Open the podcast's main page in your browser."
-    Write-Host "  2. Look for an icon or link labelled 'RSS', 'Feed', or 'Subscribe'."
-    Write-Host "  3. Copy that link (often ends with .xml or /feed)."
-    Write-Host ""
-    Write-Host "You can also paste a normal podcast web page URL (show page),"
-    Write-Host "and I'll TRY to auto-detect the RSS feed from there."
+    Write-Host "Paste a direct RSS/Atom feed URL or a podcast show page URL." -ForegroundColor Yellow
+    Write-Host "For pages with several feeds, choose the feed number shown below."
     Write-Host ""
 
     while ($true) {
@@ -271,62 +250,90 @@ function Get-FeedUrlInteractive {
             Write-Host "Please paste a URL (or press Ctrl+C to quit)." -ForegroundColor Red
             continue
         }
-
         try {
             Write-Host "  Fetching URL..." -ForegroundColor DarkCyan
-            $resp = Invoke-PodcastWebRequest -Uri $inputUrl
-            $html = $resp.Content
-
-            if ($html -match '<rss' -or $html -match '<feed') {
-                Write-Host "  This looks like a direct RSS/Atom feed." -ForegroundColor Green
-                return $inputUrl
-            }
-
-            $pageBase = $inputUrl
-            if ($resp.FinalUri) { $pageBase = $resp.FinalUri.AbsoluteUri }
-            $rssUrl = Find-RssInHtml -Html $html -BaseUrl $pageBase
-            if ($rssUrl) {
-                Write-Host ("  Found RSS candidate: " + (Get-PodcastSafeUrl -Url $rssUrl)) -ForegroundColor Green
-                $ans = Read-Host "Use this feed? (Y/n)"
-                if ($ans -match '^(n|no)$') {
-                    Write-Host "  Okay, let's try another URL." -ForegroundColor Yellow
-                    continue
-                }
-                return $rssUrl
-            }
-
-            Write-Host "  Could not auto-detect an RSS feed on that page." -ForegroundColor Red
-            Write-Host "  Try a different URL or copy a direct 'RSS' link." -ForegroundColor Yellow
+            return (Resolve-PodcastItems -Feeds @($inputUrl) -Interactive)
         } catch {
-            Write-Host ("  Failed to fetch URL: " + (Get-PodcastDiagnosticError -Error $_)) -ForegroundColor Red
+            Write-Host ("  Could not resolve the feed: " + (Get-PodcastDiagnosticError -Error $_)) -ForegroundColor Red
         }
     }
 }
 
-# --- Feed parsing ---
 function Resolve-PodcastItems {
-    param([string[]]$Feeds)
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Retains the established import-safe helper name for existing callers.')]
+    [CmdletBinding()]
+    param([string[]]$Feeds, [switch]$Interactive, [AllowNull()]$InitialResolution,
+        [ValidateRange(1, 100)][int]$MaxPages = $script:PodcastMaxFeedPages)
 
+    $lastFailure = 'No RSS or Atom feed links were found on the page.'
+    $initial = $InitialResolution
     foreach ($u in $Feeds) {
         Write-Verbose ("Trying feed: " + (Get-PodcastSafeUrl -Url $u))
         try {
-            $resp = Invoke-PodcastWebRequest -Uri $u
-            $xml  = ConvertFrom-PodcastFeedXml -Content $resp.Content
-
-            $items = $xml.SelectNodes('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="item"]')
-            if (-not $items -or $items.Count -eq 0) {
-                $items = $xml.SelectNodes('//*[local-name()="feed"]/*[local-name()="entry"]')
+            if ($null -ne $initial) {
+                $source = $initial
+                $initial = $null
+                if (-not [StringComparer]::Ordinal.Equals([string]$source.Url, $u)) {
+                    throw 'The initial feed resolution does not belong to the supplied URL.'
+                }
+                if ($null -ne $source.PSObject.Properties['Catalogue']) { return $source }
+            } else {
+                $source = Resolve-PodcastSource -Uri $u
             }
-
-            if ($items -and $items.Count -gt 0) {
-                return [PSCustomObject]@{ Url = $u; Xml = $xml; Items = $items }
+            $candidates = @($source.Candidates)
+            if ($source.Kind -eq 'Html') {
+                if ($candidates.Count -eq 0) { throw 'No RSS or Atom feed links were found on the page.' }
+                if ($candidates.Count -gt 1 -and -not $Interactive) {
+                    throw 'Multiple feed links were found. Supply a direct feed URL with -FeedUrl.'
+                }
+                $index = 0
+                if ($candidates.Count -gt 1) {
+                    Write-Host 'Multiple feeds found:' -ForegroundColor Yellow
+                    for ($i = 0; $i -lt $candidates.Count; $i++) {
+                        Write-Host ("  {0}. {1}" -f ($i + 1), (Get-PodcastSafeUrl -Url $candidates[$i]))
+                    }
+                    while ($true) {
+                        $choice = Read-Host ("Choose feed number (1-{0})" -f $candidates.Count)
+                        $number = 0
+                        if ([int]::TryParse($choice, [ref]$number) -and $number -ge 1 -and $number -le $candidates.Count) {
+                            $index = $number - 1
+                            break
+                        }
+                        Write-Host 'Enter one of the listed feed numbers.' -ForegroundColor Red
+                    }
+                }
+                # A page can discover one selected feed, never a recursive crawl.
+                $feed = Resolve-PodcastSource -Uri $candidates[$index]
+                if ($feed.Kind -eq 'Html') { throw 'The discovered URL did not return an RSS or Atom feed.' }
+            } else {
+                $feed = $source
+            }
+            $catalogue = Resolve-PodcastCatalogue -InitialResolution $feed -MaxPages $MaxPages
+            if (@($catalogue.Items).Count -eq 0) {
+                if (-not $catalogue.Catalogue.Complete) {
+                    throw 'Feed catalogue incomplete; no accessible episodes were found.'
+                }
+                throw 'The RSS or Atom feed is valid but contains no episodes.'
+            }
+            return [pscustomobject]@{
+                Url = $feed.Url
+                Xml = $feed.Xml
+                Items = @($catalogue.Items)
+                Kind = $feed.Kind
+                FinalUri = $feed.FinalUri
+                Content = $feed.Content
+                Candidates = $candidates
+                SourceUrl = $source.Url
+                Catalogue = $catalogue.Catalogue
             }
         } catch {
-            Write-Verbose ("Feed failed: {0} ({1})" -f (Get-PodcastSafeUrl -Url $u), (Get-PodcastDiagnosticError -Error $_))
+            $transportFailure = Get-PodcastTransportFailure -ErrorObject $_
+            if ($null -ne $transportFailure) { throw $transportFailure }
+            $lastFailure = $_
+            Write-Verbose ("Feed resolution stopped: {0} ({1})" -f (Get-PodcastSafeUrl -Url $u), (Get-PodcastDiagnosticError -Error $_))
         }
     }
-
-    throw "No episodes found in the feed. Double-check the RSS URL."
+    throw $lastFailure
 }
 
 # --- Robust episode extraction + collision-proof filenames ---
@@ -356,37 +363,46 @@ function Get-EpisodeData {
     $title = Get-XPathText -Node $XmlItem -XPath './*[local-name()="title"][1]'
     if (-not $title) { $title = Get-FirstText $XmlItem.title }
 
-    $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="pubDate"][1]'
-    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="updated"][1]' }
-    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="published"][1]' }
-    if (-not $dateStr) { $dateStr = Get-FirstText $XmlItem.pubDate }
+    $isAtom = $XmlItem.LocalName -ceq 'entry' -and $XmlItem.NamespaceURI -ceq 'http://www.w3.org/2005/Atom'
+    $dateStr = $null
+    $dateSource = $null
+    $dateFields = if ($isAtom) { @('published', 'updated') } else { @('pubDate') }
+    $dateNamespace = if ($isAtom) { 'http://www.w3.org/2005/Atom' } else { '' }
+    foreach ($field in $dateFields) {
+        $candidate = Get-XPathText -Node $XmlItem -XPath ('./*[local-name()="{0}" and namespace-uri()="{1}"][1]' -f $field, $dateNamespace)
+        if (-not [string]::IsNullOrWhiteSpace($candidate)) {
+            $dateStr = $candidate
+            $dateSource = $field
+            break
+        }
+    }
+    $pubDate = ConvertTo-PodcastPublicationDate -Value $dateStr
 
-    $pubDate = $null
-    if ($dateStr) { try { $pubDate = [datetime]::Parse($dateStr) } catch {} }
+    # Preserve old date priority only for historical filename review hints.
+    $legacyDateStr = $null
+    foreach ($field in @('pubDate', 'updated', 'published')) {
+        $legacyCandidate = Get-XPathText -Node $XmlItem -XPath ('./*[local-name()="{0}"][1]' -f $field)
+        if (-not [string]::IsNullOrWhiteSpace($legacyCandidate)) { $legacyDateStr = $legacyCandidate; break }
+    }
+    $legacyPubDate = Get-PodcastLegacyPublicationDate -Value $legacyDateStr
 
     $guid = Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
     if (-not $guid) { $guid = Get-FirstText $XmlItem.guid }
+    # Retain the established ID lookup so date normalization cannot rebind history.
     $atomId = Get-XPathText -Node $XmlItem -XPath './*[local-name()="id"][1]'
 
-    $url = $null
-    $mediaNode = $null
-    $enc = $XmlItem.SelectSingleNode('./*[local-name()="enclosure"][1]')
-    if ($enc) {
-        $attr = $enc.Attributes["url"]
-        if ($attr) { $url = $attr.Value }
-        if (-not $url) { $url = $enc.GetAttribute("url") }
-        if ($url) { $mediaNode = $enc }
+    $candidates = [Collections.Generic.List[object]]::new()
+    foreach ($node in $XmlItem.SelectNodes('./*[local-name()="enclosure" or (local-name()="link" and @rel="enclosure")]')) {
+        $candidateUrl = if ($node.LocalName -ceq 'enclosure') { $node.GetAttribute('url') } else { $node.GetAttribute('href') }
+        if ([string]::IsNullOrWhiteSpace($candidateUrl)) { continue }
+        $length = $null
+        $parsedLength = 0L
+        if ([long]::TryParse($node.GetAttribute('length'), [Globalization.NumberStyles]::None,
+                [Globalization.CultureInfo]::InvariantCulture, [ref]$parsedLength)) { $length = $parsedLength }
+        $candidates.Add([pscustomobject]@{ Url = $candidateUrl; ContentType = $node.GetAttribute('type'); Length = $length })
     }
 
-    if (-not $url) {
-        $ln = $XmlItem.SelectSingleNode('./*[local-name()="link" and @rel="enclosure"][1]')
-        if ($ln) {
-            $url = $ln.GetAttribute("href")
-            if ($url) { $mediaNode = $ln }
-        }
-    }
-
-    if (-not $url) {
+    if ($candidates.Count -eq 0) {
         $cands = @(
             Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
             Get-XPathText -Node $XmlItem -XPath './*[local-name()="link"][1]'
@@ -395,26 +411,29 @@ function Get-EpisodeData {
         ) | Where-Object { $_ }
 
         foreach ($cand in $cands) {
-            if ($cand -match '\.(mp3|m4a)($|\?)') { $url = "$cand"; break }
+            if ($cand -match '\.(mp3|m4a|ogg|opus|wav|flac)(?:$|[?#])') {
+                $candidates.Add([pscustomobject]@{ Url = [string]$cand; ContentType = ''; Length = $null })
+                break
+            }
         }
     }
 
-    $enclosureLength = $null
-    if ($mediaNode) {
-        $parsedLength = 0L
-        if ([long]::TryParse($mediaNode.GetAttribute('length'), [Globalization.NumberStyles]::None,
-                [Globalization.CultureInfo]::InvariantCulture, [ref]$parsedLength)) {
-            $enclosureLength = $parsedLength
-        }
-    }
+    $media = Select-PodcastAudioCandidate -Candidates $candidates.ToArray()
 
     [PSCustomObject]@{
         Title   = ($title -as [string])
         PubDate = $pubDate
-        Url     = $url
+        PubDateOriginal = $dateStr
+        PubDateSource = $dateSource
+        LegacyPubDate = $legacyPubDate
+        Url     = $(if ($null -ne $media) { $media.Url } else { $null })
         Guid    = ($guid -as [string])
         AtomId  = ($atomId -as [string])
-        EnclosureLength = $enclosureLength
+        EnclosureLength = $(if ($null -ne $media) { $media.Length } else { $null })
+        Candidates = @($candidates.ToArray())
+        MediaContentType = $(if ($null -ne $media) { $media.ContentType } else { $null })
+        MediaExtension = $(if ($null -ne $media) { $media.Extension } else { $null })
+        MediaSelectionReason = $(if ($null -ne $media) { $media.Reason } else { 'no_supported_audio_candidate' })
     }
 }
 
@@ -429,7 +448,7 @@ function Select-PodcastEpisode {
         throw "Mode 'Custom' requires -CustomCount with a value >= 1."
     }
 
-    $selected = @($Episodes | Sort-Object PubDate -Descending)
+    $selected = Get-OrderedPodcastEpisode -Episodes $Episodes
     switch ($Mode) {
         'Latest' { $selected = @($selected | Select-Object -First 1) }
         'Custom' { $selected = @($selected | Select-Object -First $CustomCount) }
@@ -468,8 +487,10 @@ try {
     $needFeed  = -not $PSBoundParameters.ContainsKey('FeedUrl')
     $needCount = -not $legacyRequested -and -not $PSBoundParameters.ContainsKey('Mode') -and -not $PSBoundParameters.ContainsKey('CustomCount')
 
+    $resolved = $null
     if ($needFeed) {
-        $FeedUrl = Get-FeedUrlInteractive
+        $resolved = Get-FeedUrlInteractive
+        $FeedUrl = $resolved.Url
     }
 
     if ($needCount) {
@@ -477,7 +498,7 @@ try {
         Write-Host "How many episodes to download (newest first)?" -ForegroundColor Yellow
         Write-Host "  - Press Enter for only the latest episode."
         Write-Host "  - Enter a number like 5 to download the 5 newest."
-        Write-Host "  - Type 'all' to download everything from the feed."
+        Write-Host "  - Type 'all' to download all accessible entries within the feed limits."
         Write-Host ""
 
         while ($true) {
@@ -522,8 +543,15 @@ try {
     $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
 
     Write-Host "[*] Fetching podcast feed..."
-    $resolved = Resolve-PodcastItems -Feeds $candidateFeeds
+    if ($null -eq $resolved) { $resolved = Resolve-PodcastItems -Feeds $candidateFeeds }
     Write-Host ("    Using feed: " + (Get-PodcastSafeUrl -Url $resolved.Url))
+    Write-Host ('    Feed pages retrieved: {0}; repeated entries removed: {1}.' -f $resolved.Catalogue.PagesFetched, $resolved.Catalogue.DuplicateCount)
+    Write-Host '    Selection uses accessible entries; a complete historical catalogue is not guaranteed.'
+    if (-not $resolved.Catalogue.Complete) {
+        $catalogueMessage = Get-PodcastCatalogueMessage -Catalogue $resolved.Catalogue
+        Write-Warning $catalogueMessage
+        Write-Log $catalogueMessage 'WARN'
+    }
 
     # Feed title, PS5.1-safe
     $feedTitle = $null
@@ -543,10 +571,15 @@ try {
     }
 
     $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
+    $unsupportedCount = @($episodes | Where-Object { -not $_.Url }).Count
+    if ($unsupportedCount -gt 0) {
+        Write-Warning ("Feed entries without a supported audio candidate: {0}." -f $unsupportedCount)
+        Write-Log ("Feed entries without a supported audio candidate: {0}." -f $unsupportedCount) 'WARN'
+    }
     $episodes = @($episodes | Where-Object { $_.Url })
     $episodeCount = $episodes.Count
     if ($episodeCount -eq 0) {
-        throw 'Feed parsed, but no downloadable enclosure URLs were found.'
+        throw 'Feed parsed, but no downloadable enclosure URLs were found. No supported audio candidate was declared.'
     }
     # Validate enclosure targets during planning, before any archive write or
     # media request. The transport validates the original target and every hop again.
@@ -555,7 +588,10 @@ try {
     if ($legacyRequested) {
         Invoke-PodcastLegacyMigration -Root $baseOutputPath -LegacyRoot $LegacyPath -FeedUrl $resolved.Url `
             -Episodes $allEpisodes -Action $LegacyAction -EpisodeId $LegacyEpisodeId -FileName $LegacyFile `
-            -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint
+            -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint -Policy $script:PodcastTransportPolicy
+        if (-not $resolved.Catalogue.Complete -and -not $WhatIfPreference -and $LegacyAction -ne 'Preview') {
+            throw 'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved.'
+        }
         return
     }
 
@@ -651,6 +687,7 @@ try {
     Write-Log ("Resolved URL : {0}" -f (Get-PodcastSafeUrl -Url $resolved.Url))
     Write-Log ("Mode         : {0}" -f $Mode)
     Write-Log ("CustomCount  : {0}" -f ($CustomCount -as [string]))
+    if (-not $resolved.Catalogue.Complete) { Write-Log (Get-PodcastCatalogueMessage -Catalogue $resolved.Catalogue) 'WARN' }
 
     Write-Log ("Feed items with valid URLs: {0}" -f $episodeCount)
 
@@ -662,7 +699,6 @@ try {
     $skipped    = @()
     $adopted    = @()
     $failed     = @()
-    $maxRetries = 3
 
     $index = 0
     foreach ($planned in $destinationPlan) {
@@ -708,36 +744,36 @@ try {
 
         Write-Log ("Starting download {0}/{1}: {2}" -f $index, $total, $planned.EpisodeId)
         Write-Log ("Source URL : {0}" -f (Get-PodcastSafeUrl -Url $ep.Url))
-        if ($ep.PubDate) { Write-Log ("PubDate   : {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
+        if ($ep.PubDate) { Write-Log ("PubDate UTC: {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
 
         $success   = $false
-        $attempt   = 0
+        $attempt   = 1
         $lastError = $null
 
-        while (-not $success -and $attempt -lt $maxRetries) {
-            $attempt++
-            Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
-
-            try {
-                $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned
-                $success = $true
-            } catch {
-                $lastError = $_
-                # A path that became unsafe is fatal, not a retryable network error.
-                $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
-                $msg = Get-PodcastDiagnosticError -Error $lastError
-                Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $msg)
-                Write-Log ("Attempt failed: {0}" -f $msg) 'WARN'
-                # A final file may exist when the history commit failed. Leave
-                # its prepared evidence for reconciliation on the next run.
-                if (Test-Path -LiteralPath $destFile) { break }
-                if ($attempt -lt $maxRetries) { Start-Sleep -Seconds 3 }
+        try {
+            $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned -Policy $script:PodcastTransportPolicy
+            $success = $true
+            $attempt = $transferResult.Attempts
+        } catch {
+            $lastError = $_
+            # Revalidate paths before recording failure. Prepared evidence for
+            # an already placed final file remains for the next run to reconcile.
+            $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
+            $transportFailure = Get-PodcastTransportFailure -ErrorObject $lastError
+            if ($null -ne $transportFailure -and $transportFailure.Data.Contains('Attempts')) {
+                $attempt = [int]$transportFailure.Data['Attempts']
             }
+            elseif ($lastError.Exception.Data.Contains('PodcastAttempts')) {
+                $attempt = [int]$lastError.Exception.Data['PodcastAttempts']
+            }
+            $msg = Get-PodcastDiagnosticError -Error $lastError
+            Write-Warning ("    Transfer failed: {0}" -f $msg)
+            Write-Log ("Transfer failed: {0}" -f $msg) 'WARN'
         }
 
         if ($success) {
             Write-Host "    Saved episode $index."
-            $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
+            $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $transferResult.File }
             Write-Log ("Download succeeded: {0}" -f $planned.EpisodeId)
             Write-Log ("File size: {0} bytes; validation: {1}" -f $transferResult.Bytes, $transferResult.Verification)
             foreach ($validationWarning in $transferResult.Warnings) {
@@ -745,7 +781,10 @@ try {
                 Write-Log $validationWarning 'WARN'
             }
         } else {
-            if (-not (Test-Path -LiteralPath $destFile)) {
+            $retainedEvidence = @($historyContext.State.episodes | Where-Object {
+                $_.episode_id -ceq $planned.EpisodeId -and $null -ne $_.local_sha256 -and $null -ne $_.bytes
+            })
+            if ($retainedEvidence.Count -eq 0 -and -not (Test-Path -LiteralPath $destFile)) {
                 $failureRecord = New-PodcastEpisodeRecord -Planned $planned
                 Save-PodcastEpisodeRecord -Context $historyContext -Record $failureRecord
             }
@@ -779,6 +818,9 @@ try {
         throw ('Download incomplete: {0} episode(s) failed or require review; existing files were preserved.' -f $failed.Count)
     }
 
+    if (-not $resolved.Catalogue.Complete) {
+        throw 'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved.'
+    }
     Write-Log "Run completed." 'INFO'
 
     Write-Host ""

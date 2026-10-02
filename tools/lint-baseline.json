@@ -5,13 +5,6 @@
   "findings": [
     {
       "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSAvoidAssignmentToAutomaticVariable",
-      "message": "The Variable 'matches' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name.",
-      "context": "$pattern = '<link[^>]+type=[\"'']application/(rss|atom)\\+xml[\"''][^>]*>'\n$matches = [System.Text.RegularExpressions.Regex]::Matches(\n$Html,",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
       "rule": "PSAvoidOverwritingBuiltInCmdlets",
       "message": "'Write-Log' is a cmdlet that is included with PowerShell (version core-6.1.0-windows) whose definition should not be overridden",
       "context": "\nfunction Write-Log {\nparam(",
@@ -22,20 +15,6 @@
       "rule": "PSAvoidUsingEmptyCatchBlock",
       "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
       "context": "}\n} catch {}\n",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSAvoidUsingEmptyCatchBlock",
-      "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
-      "context": "$pubDate = $null\nif ($dateStr) { try { $pubDate = [datetime]::Parse($dateStr) } catch {} }\n",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSUseSingularNouns",
-      "message": "The cmdlet 'Resolve-PodcastItems' uses a plural noun. A singular noun should be used instead.",
-      "context": "# --- Feed parsing ---\nfunction Resolve-PodcastItems {\nparam([string[]]$Feeds)",
       "count": 1
     }
   ]

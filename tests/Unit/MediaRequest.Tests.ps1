@@ -10,6 +10,7 @@ BeforeAll {
         $task = [pscustomobject]@{ Value = $Value }
         $task | Add-Member ScriptMethod GetAwaiter { return $this }
         $task | Add-Member ScriptMethod GetResult { return $this.Value }
+        $task | Add-Member ScriptMethod Wait { param($milliseconds) return ($milliseconds -ge 0) }
         return $task
     }
 
@@ -137,7 +138,11 @@ Describe 'A012/A013: media HTTP response streaming' -Tag 'Unit', 'A012', 'A013' 
         @{ Length = 5 }, @{ Length = 3 }
     ) {
         $script:Client = Get-MediaTestClient -Length $Length
-        { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/episode.mp3' -DestinationStream $script:Destination } | Should -Throw '*Content-Length*byte count*'
+        $failure = $null
+        try { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/episode.mp3' -DestinationStream $script:Destination }
+        catch { $failure = Get-PodcastTransportFailure -ErrorObject $_ }
+        $failure.Message | Should -BeLike '*Content-Length*byte count*'
+        $failure.Data['Retryable'] | Should -Be (4 -lt $Length)
         $script:Client.Disposed | Should -BeTrue
         $script:Client.Response.Disposed | Should -BeTrue
         $script:Client.Response.Content.Source.CanRead | Should -BeFalse
@@ -199,7 +204,8 @@ Describe 'A012/A013: media HTTP response streaming' -Tag 'Unit', 'A012', 'A013' 
         $errorRecord = $null
         try { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/private?secret-token' -DestinationStream $script:Destination }
         catch { $errorRecord = $_ }
-        $errorRecord.Exception.Message | Should -Be 'Media request or stream failed before completion.'
+        $errorRecord.Exception.Message | Should -Be 'HTTP request failed before response headers were available.'
+        $errorRecord.Exception.Message | Should -Not -Match 'secret-token|media.invalid'
         $script:Client.Disposed | Should -BeTrue
         $script:Destination.CanWrite | Should -BeTrue
     }
@@ -217,11 +223,11 @@ Describe 'A012/A013: media HTTP response streaming' -Tag 'Unit', 'A012', 'A013' 
     It 'closes response resources when reading fails and hides the raw read exception' {
         $script:Client.Response.Content.Source.Dispose()
         $source = [pscustomobject]@{ Disposed = $false }
-        $source | Add-Member ScriptMethod Read { throw 'synthetic-secret in response stream exception' }
+        $source | Add-Member ScriptMethod ReadAsync { throw 'synthetic-secret in response stream exception' }
         $source | Add-Member ScriptMethod Dispose { $this.Disposed = $true }
         $script:Client.Response.Content.Source = $source
         { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/episode.mp3' -DestinationStream $script:Destination } |
-            Should -Throw 'Media request or stream failed before completion.'
+            Should -Throw 'The response body could not be read completely.'
         $source.Disposed | Should -BeTrue
         $script:Client.Response.Disposed | Should -BeTrue
         $script:Client.Disposed | Should -BeTrue

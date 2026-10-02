@@ -5,10 +5,13 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Accepts either:
   - A direct RSS/Atom feed URL, or  
   - A normal “show page” URL and tries to auto-detect the RSS feed.  
+  - A single discovered feed is selected automatically. Several feeds require a numbered TUI choice; CLI users receive an explicit error and must supply a direct `-FeedUrl`.
 - Downloads newest episodes first, with three modes:
   - Latest (1 newest episode)
   - Custom (N newest episodes)
-  - All (everything in the feed)
+  - All (accessible entries in the bounded feed catalogue)
+- Publication order compares UTC instants. Atom uses published before updated fallback; equal or missing dates keep feed order, with undated episodes last. See [date policy](docs/codex/PUBLICATION_DATES.md) for supported formats and fallback rules.
+- Audio enclosures are selected in feed order using supported MIME/URL hints. Completed bytes determine new MP3/M4A/Ogg/WAVE/FLAC file extensions; original bytes are retained. See [audio policy](docs/codex/AUDIO_FORMATS.md) for ambiguous containers and inspection limits.
 - Creates per-podcast subfolders based on feed title:
   - `<OutputPath>\<SafeFeedTitle>-<feed hash>\YYYY-MM-DD - Episode title-<episode hash>.mp3`
 - Starts a private local log before feed discovery, then continues it in the podcast folder after an ordinary download is confirmed.
@@ -39,7 +42,7 @@ Usage
      - Choose how many episodes to download (newest first):
        - Enter = latest only
        - Number = N newest
-       - all = entire feed
+       - all = bounded accessible feed catalogue
    - The episodes are saved under:
      - `%USERPROFILE%\Downloads\Podcasts\<SafeFeedTitle>-<feed hash>\`
    - A log file for the run is written next to the audio files when that location is writable. Startup failures have a fallback log as described below.
@@ -71,7 +74,7 @@ Usage
 - For each feed:
   - A safe title followed by a full SHA-256 suffix derived from the resolved feed URL.
 - Episodes:
-  - `YYYY-MM-DD - Episode title-<episode hash>.mp3` when a date is known.
+  - `YYYY-MM-DD - Episode title-<episode hash>.mp3` using the UTC calendar date when a date is known. Existing history-bound filenames are retained when dates change.
   - `Episode title-<episode hash>.mp3` otherwise. Identity uses the RSS GUID, then Atom ID, then the exact media URL, scoped to the feed.
   - Names are shortened to fit Windows path limits; the full identifier and extension remain. A tight budget can omit the date. A root with insufficient room fails with a request for a shorter path.
   - Reserved device names, control characters and trailing dots/spaces are handled safely. Dot/dot-dot and rooted metadata paths are rejected. Junctions and symbolic links in destination paths are refused.
@@ -82,10 +85,10 @@ Usage
   - A legacy folder matching the old title-based name or the proposed archive folder blocks an ordinary new download when unclaimed media needs review. Use the explicit legacy workflow below to inspect and choose one episode at a time. A title match never binds a feed identity automatically.
   - Changed feed URLs require an explicit alias association; titles and redirects do not establish one automatically. Without a publisher identifier, a changed media URL can mean a new episode.
 - Downloads are validated before final placement:
-  - Each attempt writes to a unique `.upd-<GUID>.tmp` in the destination folder. Streams close before validation and final rename.
+  - Fresh transfers reserve a unique `.upd-<GUID>.tmp` in the destination folder; eligible retries verify and reuse their owned checkpoint. Streams close before validation and final rename.
   - Empty bodies, text/error pages, unsupported binary signatures, incomplete HTTP bodies and unsolicited partial responses fail. Valid recognizable audio can succeed without Content-Length. A feed enclosure-length mismatch produces a warning.
-  - Checks read at most 64 KiB for recognizable MPEG audio, WAV, FLAC, Ogg or MP4 signatures. They do not decode the whole file or prove publisher authenticity; Ogg/MP4 audio tracks are not verified.
-  - A caught failure cleans only its own temporary file. A killed process may leave a temporary sibling; rerunning starts a fresh download and preserves that old partial. There is no resume or automatic orphan cleanup.
+  - Checks read at most 64 KiB for supported MPEG Layer III, WAV, FLAC, Ogg audio packet or MP4 audio indications. Generic containers without bounded audio evidence fail; an M4A brand remains a modest compatibility indication. These checks do not decode the whole file, prove audio-only content/playability or establish publisher authenticity.
+  - Downloads with a strong ETag, known length and matching durable checkpoint can resume automatically. The downloader verifies the stored identity, local bytes and returned range before appending. Uncertain responses start fresh while preserving the old partial. Corrupt checkpoints or uncheckpointed crash tails stop for review; unknown partials are never reused or cleaned. See [safe resume policy](docs/codex/RESUME_POLICY.md).
 
 **Local history and recovery**
 
@@ -98,7 +101,7 @@ Usage
 
 ## Review and migrate a legacy archive
 
-Start with a copy of an older archive. `LegacyPath` must name an existing immediate show directory inside `OutputPath`; it can be an absolute path or that folder's name. Supply `FeedUrl` explicitly. Legacy actions use the whole current feed for identity matching and do not ask for a download count.
+Start with a copy of an older archive. `LegacyPath` must name an existing immediate show directory inside `OutputPath`; it can be an absolute path or that folder's name. Supply `FeedUrl` explicitly. Legacy actions use the bounded accessible feed catalogue for identity matching and do not ask for a download count.
 
 Set these example paths and URL to the copied archive and its feed:
 
@@ -203,7 +206,8 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
 
 **Technical details**
 - Feed resolution:
-  - Direct RSS/Atom content is detected via <rss> / <feed>.
+  - Direct feeds are recognized by their actual RSS/Atom XML root; already fetched content is reused.
+  - Page discovery uses the final response URL and first supported HTML base URL, decodes attribute entities and deduplicates candidates. See [feed discovery policy](docs/codex/FEED_DISCOVERY.md).
   - For normal HTML pages, the tool scans for:
     - <link type="application/rss+xml" ... href="..."> or Atom equivalents.
   - Relative discovered links use the final page URL after validated redirects. Redirects alone do not change a stored feed identity.
@@ -215,14 +219,18 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
     - <link rel="enclosure" href="...">
     - Fallback: .mp3 URLs in <guid> or <link>.
 - Sorting & selection:
+  - Follows explicit feed-level Atom `next` / `prev-archive` links before selection, with duplicate and cycle checks. `-MaxFeedPages` defaults to 20 (range 1–100); entry and metadata bounds also apply.
   - Episodes are sorted by publication date, newest first.
   - Modes:
     - Latest = first 1
     - Custom = first N
-    - All = everything
+    - All = all accessible entries
+  - Page order is not assumed to be date order. Latest/Custom use the fetched collection, so unavailable pages can change the correct selection. Cycles, limits and retrieval gaps produce an incomplete error after accessible downloads, with no `[OK]` banner. A complete historical catalogue is never guaranteed. See [feed pagination policy](docs/codex/FEED_PAGINATION.md).
 - Download robustness:
-  - Each episode is attempted up to 3 times.
-  - Short sleep between retries.
+  - Metadata and episodes get up to 3 attempts for transient failures. Permanent HTTP, validation and local-file errors stop immediately.
+  - Exponential backoff respects `Retry-After`. A server delay beyond the retry budget reports a deferred failure.
+  - Separate 30-second header and body-idle timeouts allow long downloads that keep making progress.
+  - Configure `-MaxAttempts`, `-HeaderTimeoutSeconds`, `-IdleTimeoutSeconds`, `-RetryBudgetSeconds`, `-BaseDelaySeconds` and `-MaxDelaySeconds` when needed. See [retry and timeout policy](docs/codex/TRANSPORT_POLICY.md) for defaults and limits.
   - Media failures use local error categories; a run with failed episodes reports an error without an “[OK]” completion message.
   - HTTP Content-Length is checked against bytes received when the platform exposes it. Original media bytes are kept; unexpected HTTP content encodings are rejected.
 
@@ -230,8 +238,8 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
 - Script window closes immediately:
   - Run UniversalPodcastDownloader.bat from an existing cmd window to see errors.
   - Check PowerShell’s ExecutionPolicy and any corporate restrictions.
-- “No episodes found in the feed”:
-  - The URL may not be a real RSS/Atom feed.
+- “The RSS or Atom feed is valid but contains no episodes”:
+  - The feed is recognized but currently empty. Malformed XML, unsupported document roots and pages without feed links have separate errors.
   - Try copying the RSS link from the host (Apple Podcasts, Podbean, etc.).
 - “Feed parsed, but no downloadable enclosure URLs were found”:
   - The feed might not expose direct audio URLs, or it uses a custom format.

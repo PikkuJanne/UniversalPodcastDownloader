@@ -1,33 +1,29 @@
 # Current implementation status
 
-Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0107 only**.
+Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0206 only**.
 
-- UPD-0001, UPD-0002 and UPD-0101 through UPD-0106: done; historical evidence preserved.
-- UPD-0107: **done**; implementation pushed and verified; full local checks and both GitHub jobs passed.
-- Next, ready: **UPD-0201 — implement bounded retry and timeout policy**; not started.
-- Branch/upstream: `codex/upd-m1-safety` / `origin/codex/upd-m1-safety`.
-- M1 [draft PR #2](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2) remains stacked on `codex/upd-m0-foundation`; M0 draft PR #1 remains unmerged.
-- [Commands](DEVELOPMENT.md), [UPD-0107 evidence](evidence/UPD-0107.md), [input and preview policy](INPUT_BOUNDARIES.md), [diagnostics](DIAGNOSTICS.md), [history and migration](STATE_AND_MIGRATION.md).
+- UPD-0001, UPD-0002, UPD-0101 through UPD-0107 and UPD-0201 through UPD-0206: done; historical evidence preserved.
+- UPD-0206: **done**; advertised bounded pagination and honest incomplete catalogues verified on both Windows engines.
+- Next, ready: **UPD-0301 — finalize CLI, results and launcher semantics**; unstarted.
+- Actual checkout `D:\projects\UniversalPodcastDownloader`; preserved original `UniversalPodcastDownloader-main` snapshot untouched.
+- Branch `codex/upd-m2-network-feeds`; [M2 draft PR #3](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3) remains stacked on `codex/upd-m1-safety`. PRs #1/#2 remain open, draft and unmerged at startup.
 
-## Verified checkout and changes
+## Verified behavior
 
-Actual checkout: `D:\projects\UniversalPodcastDownloader`. Preserved `UniversalPodcastDownloader-main` snapshot untouched. Origin: `git@github.com:PikkuJanne/UniversalPodcastDownloader.git`. Starting local/fetched remote/PR HEAD `0d05898fee3dc7d2fb7ec154508c68ad17dc3301` was clean. [Predecessor CI 37010095589](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37010095589) passed both jobs at that exact SHA. Continue command-scoped authenticated HTTPS and public author identity without persistent settings changes.
+Starting local/fetched remote/PR head `d366d4be89c020ccc18d1eea73b87c563c7c90cc` matched, clean with 0/0 divergence. [Predecessor exact-head CI 37049246114](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37049246114) passed both jobs. Implementation `5d1bd9fdaabe4d1de0a46e151656d09a6450703c` contains 16 explicitly named runtime/test/policy files; final completion records use a separate documentation checkpoint. Final pushed SHA, independent remote match and exact-head full CI are recorded in the PR/final handoff, avoiding self-referential commits.
 
-Metadata and media now use a shared HTTP(S) request policy with manual validated redirects, at most five hops, no HTTPS downgrade/userinfo/default credentials/cookies and unchanged TLS/proxy defaults. Private and loopback destinations remain supported. Metadata is streamed into memory with an 8 MiB cap and strict decoding. XML uses explicit DTD prohibition/null resolvers plus character, depth and node/attribute limits. HTML relative links use the effective page URL; feed identity retains the original requested URL.
+`FeedPagination.ps1` follows one supported feed-level Atom next/prev-archive chain, including exact IANA HTTP relation equivalents, in same-kind RSS/Atom feeds. Relative links and inherited xml:base use effective response URLs under the existing network policy. Two distinct targets stop as ambiguous immediately; requested/effective HTTP aliases without fragments detect cycles. No provider guessing, HTTP Link traversal, entry links or HTML recursion. The originally selected feed identity remains exact across page URLs and redirects.
 
-The existing read/plan/ShouldProcess/locked-revalidation path validates all parsed enclosure targets before archive writes. Preview and declined confirmation cannot create directories, media, state, locks, logs or exports, and cannot report completed downloads. A later real run still downloads and verifies bytes. History schemas, no-overwrite behavior, original audio, modes and entry points remain intact. No runtime dependency was added.
+Default 20 pages (configurable 1-100), 10,000 raw entries and 32 MiB accepted decoded characters complement existing per-response/XML/transport bounds. Exact duplicate identities collapse in encounter order; contradictory metadata retains fatal before-write protection. Whitespace-only publisher IDs stay unsupported entries without invented identities. Empty accessible collections with unresolved continuations get an incomplete diagnosis.
 
-## Checks and limits
+Every mode collects the bounded chain before UTC date selection. Latest/Custom may choose newer entries on later pages; page order is not assumed to be date order. Cycles, bounds and later-page/link/format failures preserve accessible selected work and prevent `Run completed`/[OK]. Preview warns and returns accessible planning without media or persistent writes, and completed guided resolution is reused. Legacy Preview stays read-only. Exhaustion proves only that the supported chain ended; no coherent/complete historical catalogue or continued media availability is promised. See [FEED_PAGINATION.md](FEED_PAGINATION.md).
 
-Focused A023 units pass **66/0/0/435** on both supported local engines; new integrations pass **20/0/0/91** each. Helper tests pass **28/0** separately. Settled suite contains 612 checks: 491 product units, ten runner guards and 111 integrations, including two remaining parser characterizations. Full local All passed **612/0/0/0 on each engine** (PS7: 761.38 seconds; native: 436.37 seconds). Full CI passed the same counts on both engines. Analysis passes on 50 PowerShell files with zero parse errors/new findings and 5 PS7 / 4 native baseline warnings.
+Audio selection/canonical extensions, byte validation, stable dates, original media, recorded destinations, history schemas 1/2, writer locks, strict provisional-path resume, legacy review and private diagnostics remain protected. No runtime package or launcher/result overhaul is introduced; explicit 0/1/2/130 mapping remains UPD-0301.
 
-Local Windows 10.0.26300.0; PowerShell 7.6.5 / 5.1.26100.9444; Pester 5.7.1; PSScriptAnalyzer 1.24.0; bundled Python 3.12.14. CI Python stays pinned to 3.14.7. Use the bundled Python directory via process-only PATH because the ambient alias is unusable. Tests isolate logs and archives in marked owned temporary data.
+## Verification and limits
 
-A001-A024 passed; A025-A060 remain not_run. The policy intentionally rejects compressed metadata and unsupported text encodings. A selected metadata URL can itself return audio; preview never initiates planned enclosure transfers. Body/XML size limits do not provide idle/total transfer deadlines; UPD-0201 owns retry/timeout work. No proven prior external XML exploit, real-archive testing, manual launcher verification, merge, history rewrite, persistent settings change, release or publication is claimed.
+Settled inventory: **1,272 checks** = **1,012 units** (1,002 product units plus ten runner guards) + **260 integrations**. Full local Unit passed **1,012/0/0/0 each**, PS7 231.20 s/native 173.05 s. Pagination units passed **72/0/0/940 each**; real pagination focus passed **16/0/0/244 each**, PS7 146.11 s/native 105.23 s. Existing discovery passed **29/0/0/231 each**, PS7 167.83 s/native 94.01 s. Existing history passed **18/0/0/242 each**, PS7 228.95 s/native 138.33 s. Date/audio affected checks passed **28/0/0/218 each** at the earlier 246-integration snapshot. Counts are passed/failed/skipped/not_run. No local full All was performed; exact-head full CI is recorded separately in the PR/final handoff.
 
+Final analyzers: **72 files**, parse/new findings zero, baseline **2 PS7/1 native warnings**. Fixture helpers: **57/0**, separate from product acceptance. Local Windows **10.0.26300.0**, PowerShell **7.6.5 / 5.1.26100.9444**, Pester **5.7.1**, PSScriptAnalyzer **1.24.0**, bundled Python **3.12.14**. Process-only runtime handling stays in DEVELOPMENT.md. [UPD-0206 evidence](evidence/UPD-0206.md) records baseline failures, intermediate snapshots, exact commands, results and limits.
 
-## GitHub checkpoint and continuation
-
-Implementation `388054d439ac3ee7ee336297148c5dd58683f2fa` is pushed and independently equals the remote. [CI 37012792338](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37012792338) passed both Windows jobs at that exact SHA: 612/0/0/0 each, 50 analyzed files, zero parse errors/new findings and 5/4 baseline warnings. CI engines are PowerShell 7.6.6 and Windows PowerShell 5.1.20348.5622. The final documentation checkpoint and exact-head CI are verified separately in draft PR #2/final handoff; runtime and tests are unchanged.
-
-M1 implementation tasks are complete; the PR remains draft and unmerged. Stop after UPD-0107. NEXT_THREAD_PROMPT.md describes UPD-0201 and the M2 branch/stacked-PR procedure; M2 is unstarted.
+A001-A038 passed; A039-A060 remain not_run. Mock/synthetic/owned loopback outputs only. No real archive/private feed, live publisher consistency, every pagination mechanism, historical completeness, universal crash/power-loss guarantee, merge, history rewrite, persistent settings change or publication was tested/performed. Stop after UPD-0206; NEXT_THREAD_PROMPT.md describes UPD-0301.

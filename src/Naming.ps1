@@ -67,7 +67,8 @@ function Get-EpisodeMetadataKey {
 
     $title = [string]$Episode.Title
     $url = [string]$Episode.Url
-    $date = if ($Episode.PubDate) { ([datetime]$Episode.PubDate).ToString('o', [Globalization.CultureInfo]::InvariantCulture) } else { '' }
+    $publication = Get-PodcastPublicationUtc -Value $Episode.PubDate
+    $date = if ($null -ne $publication) { $publication.ToString('o', [Globalization.CultureInfo]::InvariantCulture) } else { '' }
     # Length prefixes keep embedded delimiters unambiguous without exposing them in names.
     return ('{0}:{1}{2}:{3}{4}:{5}' -f $title.Length, $title, $date.Length, $date, $url.Length, $url)
 }
@@ -87,22 +88,27 @@ function New-EpisodeFileName {
         [Parameter(Mandatory)]$Episode,
         [int]$Index,
         [ValidateRange(1, 255)][int]$MaxLength = 180,
-        [ValidatePattern('^[0-9a-f]{64}$')][string]$IdentityHash
+        [ValidatePattern('^[0-9a-f]{64}$')][string]$IdentityHash,
+        [ValidateSet('mp3', 'm4a', 'ogg', 'wav', 'flac')][string]$Extension
     )
 
     # Index is accepted for compatibility, but never participates in stable identity.
     $null = $Index
-    $extension = 'mp3'
-    if ([string]$Episode.Url -match '\.(mp3|m4a)(?:$|[?#])') { $extension = $Matches[1].ToLowerInvariant() }
+    $selectedExtension = $Extension
+    if (-not $selectedExtension -and $Episode.PSObject.Properties['MediaExtension']) { $selectedExtension = [string]$Episode.MediaExtension }
+    if (-not $selectedExtension) { $selectedExtension = (Get-PodcastAudioHint -Url $Episode.Url).Extension }
+    if (-not $selectedExtension) { $selectedExtension = 'mp3' }
+    if ($selectedExtension -notin @('mp3', 'm4a', 'ogg', 'wav', 'flac')) { throw 'Unsupported planned audio extension.' }
     $hash = if ($IdentityHash) { $IdentityHash } else { Get-PodcastNameHash -IdentityKey (Get-EpisodeIdentityKey -Episode $Episode) }
-    $suffix = '-' + $hash + '.' + $extension
+    $suffix = '-' + $hash + '.' + $selectedExtension
     $titleBudget = $MaxLength - $suffix.Length
     if ($titleBudget -lt 1) {
         throw 'The filename length budget cannot retain a title, the full episode identifier and extension. Choose a shorter output root.'
     }
 
     $title = Sanitize-ForWindowsName -Name ([string]$Episode.Title) -FallbackName 'Episode'
-    $prefix = if ($Episode.PubDate) { ([datetime]$Episode.PubDate).ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
+    $publication = Get-PodcastPublicationUtc -Value $Episode.PubDate
+    $prefix = if ($null -ne $publication) { $publication.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
     if ($titleBudget -le $prefix.Length) { $prefix = '' }
     $title = Get-ShortenedNameText -Text $title -MaxLength ($titleBudget - $prefix.Length)
     if ([string]::IsNullOrEmpty($title)) { $title = '_' }

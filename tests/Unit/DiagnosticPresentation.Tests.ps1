@@ -7,6 +7,21 @@ BeforeAll {
 }
 
 Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
+    It 'A025 renders only fixed transport categories despite a private error message' -ForEach @(
+        @{ Kind = 'Deferred'; Expected = '*deferred*' },
+        @{ Kind = 'HeaderTimeout'; Expected = '*connection/header timeout*' },
+        @{ Kind = 'IdleTimeout'; Expected = '*idle transfer timeout*' },
+        @{ Kind = 'Connection'; Expected = '*network connection failed*' },
+        @{ Kind = 'HttpStatus'; Expected = '*unsuccessful HTTP status*' },
+        @{ Kind = 'IncompleteBody'; Expected = '*body was incomplete*' },
+        @{ Kind = 'Permanent'; Expected = '*network policy*' }
+    ) {
+        $errorValue = New-PodcastTransportException -Kind $Kind -Message 'privateTransportCanary https://feed.invalid/token'
+        $publicMessage = Get-PodcastDiagnosticError -Error $errorValue
+        $publicMessage | Should -BeLike $Expected
+        $publicMessage | Should -Not -Match 'privateTransportCanary|feed.invalid|token'
+    }
+
     BeforeEach {
         Mock Read-Host { throw 'Unit tests must not prompt.' }
         Mock Write-Progress {}
@@ -73,7 +88,7 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
         }
         catch { $caught = $_ }
         $caught | Should -Not -BeNullOrEmpty
-        $caught.Exception.Message | Should -Match '^No episodes found in the feed\.'
+        $caught.Exception.Message | Should -Match 'privateErrorCanary'
         $caught.ErrorDetails.Message | Should -Not -Match 'privateErrorCanary|privateExceptionPath|privateFeedCanary'
         Test-Path -LiteralPath $root | Should -BeFalse
     }

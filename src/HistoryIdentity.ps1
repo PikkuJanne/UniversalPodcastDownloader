@@ -142,6 +142,7 @@ function New-PodcastHistoryPlan {
             IdentitySource = $identity.Source
             IdentityFingerprint = $identity.Fingerprint
             StateRecord = $record
+            MaxFileNameLength = $MaxFileNameLength
         })
     }
     return ,($plan.ToArray())
