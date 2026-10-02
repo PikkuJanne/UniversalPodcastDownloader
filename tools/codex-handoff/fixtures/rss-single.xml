@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Fixture Podcast</title><link>https://podcast.example.invalid/</link><description>Synthetic test feed</description>
+<item><title>One synthetic episode</title><guid isPermaLink="false">fixture-001</guid><pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3" type="audio/mpeg" length="{{AUDIO_BYTES}}"/></item>
+</channel></rss>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Media candidates</title><link>https://podcast.example.invalid/</link><description>Synthetic media metadata; not every URL has downloadable bytes</description>
+<item><title>Audio after video</title><guid isPermaLink="false">media-one</guid><enclosure url="https://video.example.invalid/trailer.mp4" type="video/mp4"/><enclosure url="{{BASE_URL}}/media/octet-stream" type="audio/mpeg"/></item>
+<item><title>M4A metadata only</title><guid isPermaLink="false">media-two</guid><enclosure url="https://audio.example.invalid/download?id=2" type="audio/mp4"/></item>
+<item><title>Ogg metadata only</title><guid isPermaLink="false">media-three</guid><enclosure url="https://audio.example.invalid/item.ogg" type="audio/ogg"/></item>
+</channel></rss>

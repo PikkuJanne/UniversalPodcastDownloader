@@ -1,0 +1,86 @@
+name: Test foundations
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows / ${{ matrix.engine }}
+    runs-on: windows-2022
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - engine: Windows PowerShell 5.1
+            shell: powershell
+          - engine: PowerShell 7
+            shell: pwsh
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          clean: false
+
+      - name: Set up fixture Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14.7'
+          architecture: x64
+          check-latest: false
+
+      - name: Install pinned development modules
+        shell: pwsh
+        run: ./scripts/Install-DevTools.ps1
+
+      - name: Run product unit and loopback integration tests
+        run: ./scripts/Test.ps1 -Suite All
+
+      - name: Analyze PowerShell
+        if: ${{ !cancelled() }}
+        run: ./scripts/Analyze.ps1
+
+      - name: Record runtime inventory
+        if: ${{ always() }}
+        run: |
+          $lines = @(
+            '## Runtime inventory'
+            "- OS: $([Environment]::OSVersion.VersionString)"
+            "- PowerShell: $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+            "- Runner image: $env:ImageOS $env:ImageVersion"
+          )
+          $python = Get-Command python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($python) {
+            $pythonVersion = & $python.Source --version
+            $lines += "- Python: $pythonVersion"
+          } else {
+            $lines += '- Python: unavailable; integration prerequisite not verified'
+          }
+          foreach ($name in @('Pester', 'PSScriptAnalyzer')) {
+            $manifests = @(Get-ChildItem -Path ".dev-tools/Modules/$name/*/$name.psd1" -File -ErrorAction SilentlyContinue)
+            if ($manifests.Count -eq 1) {
+              $metadata = Import-PowerShellDataFile -LiteralPath $manifests[0].FullName
+              $lines += "- ${name}: $($metadata.ModuleVersion) (repository-local manifest)"
+            } else {
+              $lines += "- ${name}: pinned installation not verified"
+            }
+          }
+          $lines += ''
+          $lines += 'Test and analysis steps report their actual counts separately. Runtime inventory is not a test result.'
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

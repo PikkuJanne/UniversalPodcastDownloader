@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Atom fixture</title><id>urn:fixture:feed</id><updated>2026-09-30T12:00:00Z</updated>
+<entry><title>Old entry recently edited</title><id>urn:fixture:old</id><published>2020-01-01T12:00:00Z</published><updated>2026-09-30T12:00:00Z</updated><link rel="enclosure" href="{{BASE_URL}}/media/ok.mp3?id=old" type="audio/mpeg"/></entry>
+<entry><title>Actual newest publication</title><id>urn:fixture:new</id><published>2026-09-29T12:00:00+02:00</published><updated>2026-09-29T12:00:00+02:00</updated><link rel="enclosure" href="{{BASE_URL}}/media/ok.mp3?id=new" type="audio/mpeg"/></entry>
+</feed>

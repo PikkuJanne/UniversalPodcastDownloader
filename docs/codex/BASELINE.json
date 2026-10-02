@@ -1,0 +1,47 @@
+{
+  "repository": "PikkuJanne/UniversalPodcastDownloader",
+  "review_date": "2026-10-01",
+  "branch": "main",
+  "commit": "2ac82614493be7196c9ebee116f23fec07368b50",
+  "tree": "a46e7bb21432a64581fb9c3d0d3ed3286102e61f",
+  "source": "GitHub connector branch and recursive tree reads on 2026-10-01",
+  "runtime_review": "Source inspection only; no downloader execution performed while preparing bundle.",
+  "files": [
+    {
+      "path": "LICENSE",
+      "git_blob_sha1": "d8cca2639474e791c0aaa4d77aac79d8c8900359",
+      "bytes": 1070
+    },
+    {
+      "path": "README.md",
+      "git_blob_sha1": "6856bf567e2c619b3d1bfdf60bf84273c309cb05",
+      "bytes": 6283
+    },
+    {
+      "path": "UniversalPodcastDownloader.bat",
+      "git_blob_sha1": "7e5f5b9b433eac3a4f2285396ba573aa95ba1bea",
+      "bytes": 319
+    },
+    {
+      "path": "UniversalPodcastDownloader.ico",
+      "git_blob_sha1": "8e4ad59ccda46392e8f8179bf6e40f6525a45fb1",
+      "bytes": 21640
+    },
+    {
+      "path": "UniversalPodcastDownloader.ps1",
+      "git_blob_sha1": "82fb8188c3f227b286e93cff9bd571fec60275d6",
+      "bytes": 24778
+    },
+    {
+      "path": "UniversalPodcastDownloader_icon.png",
+      "git_blob_sha1": "7260ddd08203ae20d06c3e3868f5d3b7c06099d3",
+      "bytes": 10750
+    },
+    {
+      "path": "UniversalPodcastDownloader_poster.png",
+      "git_blob_sha1": "ef4201b9334964d2f8da653727eca3e16caa1dfd",
+      "bytes": 6097149
+    }
+  ],
+  "drift_policy": "Fetch and compare. Newer code is authoritative; do not reset to the reviewed commit. Reconcile findings and preserve local changes."
+}

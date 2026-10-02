@@ -164,14 +164,6 @@ param(
     [string]$FeedUrl
 )
 
-# --- Global config ---
-$ErrorActionPreference = 'Stop'
-$prevProgress = $global:ProgressPreference
-$global:ProgressPreference = 'Continue'
-
-# Log file path, set later once we know the podcast folder
-$script:LogFile = $null
-
 function Write-Log {
     param(
         [Parameter(Mandatory)][string]$Message,
@@ -417,6 +409,17 @@ function New-EpisodeFileName {
 
     return $name
 }
+
+# Dot-sourcing exposes helpers for tests without starting the downloader.
+if ($MyInvocation.InvocationName -eq '.') { return }
+
+# --- Global config ---
+$ErrorActionPreference = 'Stop'
+$prevProgress = $global:ProgressPreference
+$global:ProgressPreference = 'Continue'
+
+# Log file path, set later once we know the podcast folder
+$script:LogFile = $null
 
 # --- Main ---
 try {

@@ -1,0 +1,19 @@
+# Primary sources and audit provenance
+
+Retrieved/checked 1 October 2026. These references support specific technical observations, not claims that the proposed implementation already works. Source versions can change; verify compatible APIs/tooling at implementation time. Descriptions below are intentionally short; the architecture, cases and task plans are original project recommendations.
+
+- **R1 — Reviewed source and tree.** https://github.com/PikkuJanne/UniversalPodcastDownloader/tree/2ac82614493be7196c9ebee116f23fec07368b50 — Code/README/launcher/license inspected through the connected GitHub tool; baseline branch/tree rechecked during handoff preparation. Blob identities are recorded in BASELINE.json. Source copies are not bundled.
+- **S1 — OpenAI, project instructions.** https://developers.openai.com/codex/agent-configuration/agents-md — Codex reads repository AGENTS.md guidance; keep persistent instructions focused and put long task details in linked files. This handoff does not modify global Codex configuration or approval settings.
+- **S2 — Microsoft, about_PSCustomObject.** https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pscustomobject?view=powershell-7.6 — Describes the Count/Length difference for PSCustomObject in Windows PowerShell versus PowerShell 6+; explicit arrays avoid depending on singleton behavior.
+- **S3 — Microsoft Support, PowerShell 5.1 Invoke-WebRequest security change.** https://support.microsoft.com/en-us/servicing/os/windows/2025/12/powershell-5-1-invoke-webrequest-preventing-script-execution-from-web-content — Updates on/after 9 December 2025 introduced a warning/confirmation for legacy web parsing; UseBasicParsing avoids that parsing path.
+- **S4 — Microsoft, Windows file/path naming.** https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file — Reserved names, prohibited characters and dot path semantics inform safe destinations.
+- **S5 — Microsoft, XmlReaderSettings.** https://learn.microsoft.com/en-us/dotnet/api/system.xml.xmlreadersettings — Explicit DTD/resolver/resource settings are available. Check corresponding .NET Framework APIs for 5.1 rather than assuming the latest .NET-only overloads.
+- **S6 — IETF, RFC 9110: HTTP Semantics.** https://www.rfc-editor.org/rfc/rfc9110.html — References for response framing metadata, range/validator semantics, Retry-After, status codes and conditional requests. This project's conservative recovery/acceptance policy is specified in its own design documents.
+- **S7 — Microsoft, ShouldProcess.** https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-shouldprocess — SupportsShouldProcess supplies the interface; application-side ShouldProcess decisions are needed to guard operations.
+- **S8 — Pester, mocking.** https://pester.dev/docs/usage/mocking — Function/command mocking and invocation assertions support deterministic isolated tests. Pin a compatible development version at implementation time.
+- **S9 — IETF, RFC 4287: Atom.** https://www.rfc-editor.org/rfc/rfc4287.html — Atom id, published and updated have distinct semantics. The choice to sort by original publication is this project's desired behavior.
+- **S10 — GitHub, secure workflow use.** https://docs.github.com/en/actions/reference/security/secure-use — Use reviewed immutable action references, limited privileges and careful handling of untrusted input. No repository security-setting mutation is authorized by this reference.
+
+## Preparation limitations
+
+No PowerShell runtime was available in the preparation environment. No downloader execution, actual Windows archive migration, patched-Windows prompt reproduction, Authenticode signing, GitHub write or live website action was performed. The bundle validation report separately records structural and helper-only checks actually run.
