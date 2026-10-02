@@ -1,5 +1,6 @@
 BeforeAll {
     $script:RepositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+    . (Join-Path $script:RepositoryRoot 'src/NetworkPolicy.ps1')
     . (Join-Path $script:RepositoryRoot 'src/MediaRequest.ps1')
     Add-Type -AssemblyName System.Net.Http
     Mock Invoke-WebRequest { throw 'Media units must not use the external network.' }
@@ -37,6 +38,60 @@ BeforeAll {
         }
         $client | Add-Member ScriptMethod Dispose { $this.Disposed = $true }
         return $client
+    }
+}
+
+Describe 'A023: media transport shares the HTTP policy' -Tag 'Unit', 'A023' {
+    BeforeEach {
+        $script:Client = Get-MediaTestClient
+        $script:Destination = [IO.MemoryStream]::new()
+        $script:RedirectResponse = $null
+        Mock Get-PodcastHttpClient { return $script:Client }
+    }
+    AfterEach {
+        $script:Destination.Dispose()
+        $script:Client.Response.Content.Source.Dispose()
+        if ($null -ne $script:RedirectResponse) { $script:RedirectResponse.Content.Source.Dispose() }
+    }
+
+    It 'rejects unsupported media targets before creating a client or writing bytes' -ForEach @(
+        @{ Uri = 'file:///private-path' },
+        @{ Uri = 'https://private-user:private-token@media.invalid/episode.mp3' }
+    ) {
+        { Invoke-PodcastMediaRequest -Uri $Uri -DestinationStream $script:Destination } | Should -Throw
+        Should -Invoke Get-PodcastHttpClient -Times 0 -Exactly
+        $script:Destination.Length | Should -Be 0
+        $script:Destination.CanWrite | Should -BeTrue
+    }
+
+    It 'downloads only the final body after an allowed media redirect' {
+        $script:RedirectResponse = (Get-MediaTestClient -Status 302).Response
+        $script:RedirectResponse | Add-Member NoteProperty Headers ([pscustomobject]@{ Location = [Uri]::new('/final.mp3', [UriKind]::Relative) })
+        $script:Client | Add-Member NoteProperty RedirectResponse $script:RedirectResponse
+        $script:Client | Add-Member ScriptMethod SendAsync {
+            param($request, $completion)
+            $this.Request = $request
+            $this.Completion = $completion
+            $this.Calls++
+            if ($this.Calls -eq 1) { return (Get-MediaTestTask $this.RedirectResponse) }
+            return (Get-MediaTestTask $this.Response)
+        } -Force
+        $result = Invoke-PodcastMediaRequest -Uri 'https://media.invalid/start.mp3' -DestinationStream $script:Destination
+        $result.Bytes | Should -Be 4
+        $script:Destination.ToArray() | Should -Be @(1, 2, 3, 4)
+        $script:Client.Calls | Should -Be 2
+        $script:Client.Request.RequestUri.AbsoluteUri | Should -Be 'https://media.invalid/final.mp3'
+        $script:RedirectResponse.Disposed | Should -BeTrue
+    }
+
+    It 'rejects an HTTPS media downgrade before reading or writing a response body' {
+        $script:Client.Response.StatusCode = 302
+        $script:Client.Response | Add-Member NoteProperty Headers ([pscustomobject]@{ Location = [Uri]'http://media.invalid/final.mp3' })
+        { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/start.mp3' -DestinationStream $script:Destination } | Should -Throw '*failed before completion*'
+        $script:Client.Calls | Should -Be 1
+        $script:Destination.Length | Should -Be 0
+        $script:Client.Response.Disposed | Should -BeTrue
+        $script:Client.Disposed | Should -BeTrue
     }
 }
 

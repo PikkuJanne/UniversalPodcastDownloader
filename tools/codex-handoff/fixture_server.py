@@ -12,7 +12,7 @@ from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, Optional, Tuple
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 FIXTURES = Path(__file__).resolve().parent / 'fixtures'
 FEEDS = {
@@ -110,6 +110,58 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')
             return
+        if path == '/entity/never':
+            self._send(200, b'ENTITY_MUST_NOT_BE_READ', head, 'text/plain')
+            return
+        boundary_xml = {
+            '/feeds/external-http.xml', '/feeds/external-file.xml',
+            '/feeds/internal-dtd.xml', '/feeds/oversized.xml',
+            '/feeds/oversized-no-length.xml', '/feeds/deep.xml',
+            '/feeds/many-nodes.xml', '/feeds/redirect-media.xml',
+            '/feeds/redirect-file-media.xml', '/feeds/no-cookie.xml',
+        }
+        if path in boundary_xml:
+            declaration = ''
+            title = 'Input boundary fixture'
+            extra_xml = ''
+            media_path = '/media/ok.mp3'
+            if path in ('/feeds/external-http.xml', '/feeds/external-file.xml'):
+                target = self.server.base_url + '/entity/never'
+                if path.endswith('external-file.xml'):
+                    # Reflect a bounded URI into XML only. Never open the path.
+                    target = parse_qs(urlsplit(self.path).query).get('file', ['file:///synthetic/never'])[0]
+                    if len(target) > 4096 or not target.startswith('file:///'):
+                        self._send(400, b'Expected a bounded synthetic file URI', head, 'text/plain')
+                        return
+                declaration = '<!DOCTYPE rss [<!ENTITY xxe SYSTEM "{}">]>'.format(escape(target, quote=True))
+                title = '&xxe;'
+            elif path.endswith('internal-dtd.xml'):
+                declaration = '<!DOCTYPE rss [<!ENTITY x "synthetic"><!ENTITY y "&x;&x;&x;&x;">]>'
+                title = '&y;'
+            elif 'oversized' in path:
+                extra_xml = '<description>' + ('x' * (8 * 1024 * 1024 + 64)) + '</description>'
+            elif path.endswith('deep.xml'):
+                extra_xml = '<n>' * 70 + 'bounded depth fixture' + '</n>' * 70
+            elif path.endswith('many-nodes.xml'):
+                extra_xml = '<n/>' * 100010
+            elif path.endswith('redirect-media.xml'):
+                media_path = '/media/redirect.mp3'
+            elif path.endswith('redirect-file-media.xml'):
+                media_path = '/media/redirect-file.mp3'
+            elif path.endswith('no-cookie.xml'):
+                if self.headers.get('Cookie') or self.headers.get('Authorization'):
+                    self.server.count('/credential-received')
+            body = ('{}<rss version="2.0"><channel><title>{}</title>{}'
+                    '<item><title>Boundary episode</title><guid>boundary-001</guid>'
+                    '<enclosure url="{}{}" type="audio/mpeg"/></item></channel></rss>').format(
+                        declaration, title, extra_xml, self.server.base_url, media_path).encode('utf-8')
+            if path.endswith('oversized-no-length.xml'):
+                self._headers(200, None, 'application/xml; charset=utf-8')
+                if not head:
+                    self.wfile.write(body)
+            else:
+                self._send(200, body, head, 'application/xml; charset=utf-8')
+            return
         if path in ('/feeds/history.xml', '/feeds/legacy-changing.xml'):
             changed = self.server.recovered.is_set()
             title = 'Renamed history show' if changed else 'Original history show'
@@ -177,6 +229,20 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path in ('/redirect/show', '/redirect/loop'):
             target = '/show' if path == '/redirect/show' else '/redirect/loop'
             self._send(302, b'', head, 'text/plain', {'Location': target})
+            return
+        redirects = {
+            '/redirect/feed': '../feeds/single.xml',
+            '/redirect/file': 'file:///synthetic/never',
+            '/redirect/userinfo': self.server.base_url.replace('http://', 'http://fake:FAKE_TOKEN@') + '/feeds/single.xml',
+            '/media/redirect.mp3': '/media/ok.mp3',
+            '/media/redirect-file.mp3': 'file:///synthetic/never',
+            '/redirect/cookie': 'http://localhost:{}/feeds/no-cookie.xml'.format(self.server.server_address[1]),
+        }
+        if path in redirects:
+            headers = {'Location': redirects[path]}
+            if path == '/redirect/cookie':
+                headers['Set-Cookie'] = 'synthetic=FAKE_COOKIE; Path=/'
+            self._send(302, b'', head, 'text/plain', headers)
             return
         if path in ('/status/403', '/status/404', '/status/429', '/status/503'):
             status = int(path.rsplit('/', 1)[1])

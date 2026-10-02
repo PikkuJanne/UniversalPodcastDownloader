@@ -3,6 +3,8 @@ BeforeAll {
     Mock Read-Host { throw 'Unexpected unit prompt.' }
     Mock Invoke-WebRequest { throw 'Unexpected network request.' }
     . $script:DownloaderPath -OutputPath $TestDrive
+    Mock Get-PodcastHttpClient { throw 'Unit tests must not create a network client.' }
+    Mock Invoke-PodcastMetadataRequest { throw 'Unexpected metadata request in unit test.' }
     $script:FixtureMedia = [IO.File]::ReadAllBytes((Join-Path (Split-Path $script:DownloaderPath -Parent) 'tools/codex-handoff/fixtures/silence.mp3'))
     Mock Invoke-PodcastMediaRequest { throw 'Unexpected media request.' }
 }
@@ -78,7 +80,7 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
     ) {
         Mock Write-Host {}
         $response = [pscustomobject]@{ Content = '<rss><channel><title>Show</title>' + $Items + '</channel></rss>' }
-        Mock Invoke-WebRequest { $response }
+        Mock Invoke-PodcastMetadataRequest { $response }
         { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All } |
             Should -Throw
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Force).Count | Should -Be 0
@@ -89,7 +91,7 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
         Mock Write-Host {}
         Mock Write-Progress {}
         $response = [pscustomobject]@{ Content = '<rss><channel><title>Show</title><item><title>Episode</title><guid>one</guid><pubDate>2026-09-01</pubDate><enclosure url="https://media.example.invalid/one.mp3" /></item></channel></rss>' }
-        Mock Invoke-WebRequest { $response }
+        Mock Invoke-PodcastMetadataRequest { $response }
         Mock Invoke-PodcastMediaRequest {
             $DestinationStream.Write($fixtureMedia, 0, $fixtureMedia.Length)
             [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }

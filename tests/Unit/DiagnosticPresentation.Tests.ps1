@@ -1,6 +1,8 @@
 BeforeAll {
     $script:DownloaderPath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'UniversalPodcastDownloader.ps1'
     . $script:DownloaderPath
+    Mock Get-PodcastHttpClient { throw 'Unit tests must not create a network client.' }
+    Mock Invoke-PodcastMetadataRequest { throw 'Unexpected metadata request in unit test.' }
     $script:diagnosticMedia = [IO.File]::ReadAllBytes((Join-Path (Split-Path $script:DownloaderPath -Parent) 'tools/codex-handoff/fixtures/silence.mp3'))
 }
 
@@ -10,7 +12,7 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
         Mock Write-Progress {}
         Mock Start-Sleep {}
         $media = $script:diagnosticMedia
-        Mock Invoke-WebRequest {
+        Mock Invoke-PodcastMetadataRequest {
             [pscustomobject]@{ Content = '<rss><channel><title>privateTitleCanary</title><item><title>privateEpisodeCanary</title><guid>privateGuidCanary</guid><enclosure url="https://media.example.invalid/privatePathCanary?credential=privateQueryCanary" /></item></channel></rss>' }
         }
         Mock Invoke-PodcastMediaRequest {
@@ -28,8 +30,8 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
         $publicText | Should -Not -Match 'private(?:Title|Episode|Guid|Path|Query|Directory|Feed|FeedQuery)Canary'
         $publicText | Should -Match 'feed.example.invalid'
         $publicText | Should -Match 'media.example.invalid'
-        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter {
-            $Uri -eq 'https://feed.example.invalid/privateFeedCanary?token=privateFeedQueryCanary' -and -not $Verbose -and -not $Debug
+        Should -Invoke Invoke-PodcastMetadataRequest -Times 1 -Exactly -ParameterFilter {
+            $Uri -eq 'https://feed.example.invalid/privateFeedCanary?token=privateFeedQueryCanary'
         }
         Should -Invoke Invoke-PodcastMediaRequest -Times 1 -Exactly -ParameterFilter {
             $Uri -eq 'https://media.example.invalid/privatePathCanary?credential=privateQueryCanary' -or $DestinationStream
@@ -63,7 +65,7 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
     }
 
     It 'preserves the primary exception when optional export fails' {
-        Mock Invoke-WebRequest { throw [InvalidOperationException]::new('privateErrorCanary https://example.invalid/privateExceptionPath') }
+        Mock Invoke-PodcastMetadataRequest { throw [InvalidOperationException]::new('privateErrorCanary https://example.invalid/privateExceptionPath') }
         $root = Join-Path $TestDrive 'failure-output'
         $caught = $null
         try {

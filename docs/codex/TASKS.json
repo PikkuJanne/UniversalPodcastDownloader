@@ -271,7 +271,7 @@
       "id": "UPD-0107",
       "milestone": "M1",
       "title": "Enforce preview and untrusted-input boundaries",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0106"
       ],
@@ -295,9 +295,11 @@
         "A023",
         "A024"
       ],
-      "evidence": [],
+      "evidence": [
+        "docs/codex/evidence/UPD-0107.md"
+      ],
       "implementation_commit": null,
-      "pr": null
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0201",

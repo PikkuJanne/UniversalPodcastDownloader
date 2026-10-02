@@ -71,7 +71,7 @@ SETUP
          - Permission to write to the default output:
              %USERPROFILE%\Downloads\Podcasts
            or whichever OutputPath you configure.
-    4) No external binaries required. Relies on Invoke-WebRequest
+    4) No external binaries required. Relies on the built-in .NET HTTP client
        and the built-in XML parser in PowerShell.
 
 USAGE
@@ -187,6 +187,8 @@ param(
 . (Join-Path $PSScriptRoot 'src/HistoryStore.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryIdentity.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
+. (Join-Path $PSScriptRoot 'src/NetworkPolicy.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedXml.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaTransfer.ps1')
@@ -204,16 +206,11 @@ function Write-Log {
 }
 
 function Invoke-PodcastWebRequest {
-    param(
-        [Parameter(Mandatory)][string]$Uri,
-        [string]$OutFile
-    )
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Uri)
 
-    # Avoid the legacy DOM parser and its security prompt in Windows PowerShell.
-    # The web cmdlet's own verbose/debug/progress records can include the full
-    # request URL or response. Keep those private; author our own safe messages.
-    $ProgressPreference = 'SilentlyContinue'
-    Invoke-WebRequest @PSBoundParameters -UseBasicParsing -Verbose:$false -Debug:$false -ErrorAction Stop
+    # Metadata stays in memory. Media writes use the confirmed transfer path.
+    Invoke-PodcastMetadataRequest -Uri $Uri
 }
 
 # --- RSS autodetect helpers ---
@@ -223,28 +220,32 @@ function Find-RssInHtml {
         [Parameter(Mandatory)][string]$BaseUrl
     )
 
+    if ($Html.Length -gt 8388608) { throw 'HTML metadata exceeds the safe character limit.' }
     $pattern = '<link[^>]+type=["'']application/(rss|atom)\+xml["''][^>]*>'
     $matches = [System.Text.RegularExpressions.Regex]::Matches(
         $Html,
         $pattern,
-        [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+        [System.Text.RegularExpressions.RegexOptions]::IgnoreCase,
+        [TimeSpan]::FromMilliseconds(250)
     )
 
     foreach ($m in $matches) {
         $hrefMatch = [System.Text.RegularExpressions.Regex]::Match(
             $m.Value,
             'href=["''](?<url>[^"\'']+)["'']',
-            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase,
+            [TimeSpan]::FromMilliseconds(250)
         )
 
         if ($hrefMatch.Success) {
             $href = $hrefMatch.Groups['url'].Value
             try {
-                $base = [Uri]$BaseUrl
+                if ($href -match '[\\\x00-\x20\x7f]') { throw 'Invalid discovered target.' }
+                $base = Get-PodcastRequestUri -Uri $BaseUrl
                 $uri  = [Uri]::new($base, $href)
-                return $uri.AbsoluteUri
+                return (Get-PodcastRequestUri -Uri $uri.AbsoluteUri).AbsoluteUri
             } catch {
-                return $href
+                throw 'Discovered feed URL is not allowed by the network policy.'
             }
         }
     }
@@ -271,10 +272,6 @@ function Get-FeedUrlInteractive {
             continue
         }
 
-        if ($inputUrl -notmatch '^https?://') {
-            Write-Host "Note: URLs usually start with http:// or https://. Continuing anyway..." -ForegroundColor DarkYellow
-        }
-
         try {
             Write-Host "  Fetching URL..." -ForegroundColor DarkCyan
             $resp = Invoke-PodcastWebRequest -Uri $inputUrl
@@ -285,7 +282,9 @@ function Get-FeedUrlInteractive {
                 return $inputUrl
             }
 
-            $rssUrl = Find-RssInHtml -Html $html -BaseUrl $inputUrl
+            $pageBase = $inputUrl
+            if ($resp.FinalUri) { $pageBase = $resp.FinalUri.AbsoluteUri }
+            $rssUrl = Find-RssInHtml -Html $html -BaseUrl $pageBase
             if ($rssUrl) {
                 Write-Host ("  Found RSS candidate: " + (Get-PodcastSafeUrl -Url $rssUrl)) -ForegroundColor Green
                 $ans = Read-Host "Use this feed? (Y/n)"
@@ -312,7 +311,7 @@ function Resolve-PodcastItems {
         Write-Verbose ("Trying feed: " + (Get-PodcastSafeUrl -Url $u))
         try {
             $resp = Invoke-PodcastWebRequest -Uri $u
-            $xml  = [xml]$resp.Content
+            $xml  = ConvertFrom-PodcastFeedXml -Content $resp.Content
 
             $items = $xml.SelectNodes('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="item"]')
             if (-not $items -or $items.Count -eq 0) {
@@ -549,6 +548,9 @@ try {
     if ($episodeCount -eq 0) {
         throw 'Feed parsed, but no downloadable enclosure URLs were found.'
     }
+    # Validate enclosure targets during planning, before any archive write or
+    # media request. The transport validates the original target and every hop again.
+    foreach ($episode in $episodes) { $null = Get-PodcastRequestUri -Uri $episode.Url }
     $allEpisodes = $episodes
     if ($legacyRequested) {
         Invoke-PodcastLegacyMigration -Root $baseOutputPath -LegacyRoot $LegacyPath -FeedUrl $resolved.Url `

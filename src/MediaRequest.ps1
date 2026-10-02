@@ -1,25 +1,5 @@
 #requires -Version 5.1
 
-function Get-PodcastHttpClient {
-    [CmdletBinding()]
-    param()
-
-    # System.Net.Http ships with both supported engines. Load it only when a
-    # transfer starts; importing the downloader must remain free of side effects.
-    Add-Type -AssemblyName System.Net.Http -ErrorAction Stop
-    $handler = [Net.Http.HttpClientHandler]::new()
-    try {
-        # Preserve the representation's byte count. Proxy and TLS validation
-        # retain the platform defaults; no process-wide options are changed.
-        $handler.AutomaticDecompression = [Net.DecompressionMethods]::None
-        return [Net.Http.HttpClient]::new($handler, $true)
-    }
-    catch {
-        $handler.Dispose()
-        throw 'Could not initialize the media request client.'
-    }
-}
-
 function Invoke-PodcastMediaRequest {
     [CmdletBinding()]
     param(
@@ -27,6 +7,7 @@ function Invoke-PodcastMediaRequest {
         [Parameter(Mandatory)][IO.Stream]$DestinationStream
     )
 
+    $target = Get-PodcastRequestUri -Uri $Uri
     $client = $null
     $request = $null
     $response = $null
@@ -38,11 +19,11 @@ function Invoke-PodcastMediaRequest {
             throw $failure
         }
         $client = Get-PodcastHttpClient
-        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $Uri)
-        $request.Headers.AcceptEncoding.ParseAdd('identity')
         # The default 100-second HttpClient timeout covers headers only here.
         # Reading the response does not impose a total-duration audio limit.
-        $response = $client.SendAsync($request, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+        $exchange = Invoke-PodcastHttpGet -Uri $target.AbsoluteUri -Client $client
+        $request = $exchange.Request
+        $response = $exchange.Response
         $status = [int]$response.StatusCode
         if ($status -ne 200 -or $response.Content.Headers.Contains('Content-Range')) {
             $failure = 'Media response must be a complete HTTP 200 body; partial responses are unsupported.'

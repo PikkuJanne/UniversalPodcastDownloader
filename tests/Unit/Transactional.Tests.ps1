@@ -1,6 +1,8 @@
 BeforeAll {
     $script:DownloaderPath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'UniversalPodcastDownloader.ps1'
     . $script:DownloaderPath -OutputPath $TestDrive
+    Mock Get-PodcastHttpClient { throw 'Unit tests must not create a network client.' }
+    Mock Invoke-PodcastMetadataRequest { throw 'Unexpected metadata request in unit test.' }
     Mock Read-Host { throw 'Unexpected unit prompt.' }
     Mock Invoke-WebRequest { throw 'Unexpected network request.' }
     Mock Invoke-PodcastMediaRequest { throw 'Unexpected media request.' }
@@ -17,7 +19,7 @@ Describe 'A012: publisher enclosure length is advisory metadata' -Tag 'Unit', 'A
     ) {
         [xml]$xml = '<item><title>Synthetic</title><enclosure url="https://media.example.invalid/audio.mp3" length="' + $Value + '" /></item>'
         (Get-EpisodeData -XmlItem $xml.DocumentElement).EnclosureLength | Should -Be $Expected
-        Should -Invoke Invoke-WebRequest -Times 0 -Exactly
+        Should -Invoke Invoke-PodcastMetadataRequest -Times 0 -Exactly
     }
 
     It 'takes the length from the selected Atom enclosure link' {
@@ -38,7 +40,7 @@ Describe 'A011: failed transfer attempts cannot become completed episodes' -Tag 
             throw 'Unexpected media request.'
         }
         $response = [pscustomobject]@{ Content = '<rss><channel><title>Failure fixture</title><item><title>Synthetic</title><guid>one</guid><enclosure url="https://media.example.invalid/audio.mp3"/></item></channel></rss>' }
-        Mock Invoke-WebRequest { $response }
+        Mock Invoke-PodcastMetadataRequest { $response }
     }
 
     It 'retries invalid empty responses using new owned files and reports an incomplete run' {

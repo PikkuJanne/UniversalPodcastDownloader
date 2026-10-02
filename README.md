@@ -24,10 +24,10 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Place these files together:
   - UniversalPodcastDownloader.ps1
   - UniversalPodcastDownloader.bat (wrapper for double-click)
-  - src/ (all included naming, path safety, media, identity, history and diagnostic helpers)
+  - src/ (all included network, XML, naming, path safety, media, identity, history and diagnostic helpers)
 - Default output root is:
   - %USERPROFILE%\Downloads\Podcasts
-- No external binaries are required; the script uses PowerShell XML parsing, Invoke-WebRequest for pages/feeds and the built-in .NET HttpClient for streamed media.
+- No external binaries are required; the script uses the built-in .NET HttpClient for pages, feeds and streamed media, and a bounded XML reader for feeds.
 
 Usage  
 1. TUI via .bat (my default)
@@ -169,11 +169,17 @@ $rollback
 
 Rollback never deletes, renames or restores media bytes. Original files and separate downloads survive; files whose records were removed return to review. Schema 2 and the feed association remain, including when rolling back the first adoption to an empty history. Rollback itself saves another checkpoint. A corrupt checkpoint or one from a different feed is refused; copying `.bak` over live state is not an automatic recovery procedure.
 
-An ordinary download also supports a preview that leaves the output tree unchanged:
+## Preview and network boundaries
+
+An ordinary download supports `-WhatIf`. It may retrieve the feed or selected show page and read local history/media to build a plan. It makes no enclosure request and creates no output folders, media, history, checkpoints, configuration, logs, exports or lock files. It makes no keep-awake or power-setting change and does not print a completed-download banner. The same policy applies to legacy `Preview` and changing legacy actions run with `-WhatIf`.
 
 ```powershell
 & .\UniversalPodcastDownloader.ps1 -FeedUrl $legacy.FeedUrl -OutputPath $legacy.OutputPath -Mode All -WhatIf
 ```
+
+Feed, page and enclosure targets must be absolute HTTP or HTTPS URLs without a username/password component. Private-network and loopback hosts are allowed. Up to five redirects are followed after validating each target; an HTTPS-to-HTTP downgrade is refused. Windows credentials and cookies are not automatically sent, and platform TLS verification and proxy defaults remain in use. Signed path/query values stay in the actual requests while diagnostic displays omit them.
+
+Feed/page responses are limited to 8 MiB and must use an uncompressed complete HTTP 200 body. Feed XML rejects DTDs and external resource resolution, with explicit size and structure limits. Oversized or unsupported input fails before archive execution. A supplied metadata URL or permitted redirect can still return unexpected content, including audio; preview reads that response through the bounded metadata path and does not start enclosure transfers. See [input and preview boundaries](docs/codex/INPUT_BOUNDARIES.md) for exact limits and compatibility details.
 
 ## Diagnostics and privacy
 
@@ -200,7 +206,9 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
   - Direct RSS/Atom content is detected via <rss> / <feed>.
   - For normal HTML pages, the tool scans for:
     - <link type="application/rss+xml" ... href="..."> or Atom equivalents.
+  - Relative discovered links use the final page URL after validated redirects. Redirects alone do not change a stored feed identity.
 - Episode parsing:
+  - Uses explicit XML reader limits with DTD processing prohibited and external resolution disabled.
   - Reads title and publication date (<title>, <pubDate>, <updated>, <published>).
   - Tries to find an audio URL via:
     - <enclosure url="...">
@@ -228,6 +236,9 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
 - “Feed parsed, but no downloadable enclosure URLs were found”:
   - The feed might not expose direct audio URLs, or it uses a custom format.
   - Some feeds only link to web players, not direct files.
+- Input rejected by the network or XML policy:
+  - Use an absolute HTTP(S) URL without user information. A feed requiring browser cookies or automatic Windows authentication is unsupported.
+  - Redirect loops, more than five redirects, HTTPS-to-HTTP redirects, oversized metadata and XML containing a DTD are refused. Ask the publisher for a direct supported feed if needed.
 - Only some episodes downloaded:
   - Open the latest .log file in the podcast folder.
   - Look for failed attempts and safe error categories. Raw server error details are deliberately omitted.

@@ -19,7 +19,7 @@ The authoritative download URLs and package hashes are in [tools/devtools.json](
 
 Runners import these exact repository-local manifests. They fail if a pinned module is missing instead of selecting an unrelated globally installed version. Their output records PowerShell, OS and loaded module versions.
 
-Python is needed only by the synthetic loopback integration server. The local foundation checks use Python 3.14.7; CI pins the same version. Unit tests and the downloader do not require Python. No application runtime packages were introduced.
+Python is needed only by the synthetic loopback integration server. The historical foundation checks used Python 3.14.7, which CI still pins. Current local checks use the bundled Python 3.12.14 runtime as described below. Unit tests and the downloader do not require Python. No application runtime packages were introduced.
 
 ## Focused and full runs
 
@@ -61,13 +61,13 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## What the current suite covers
 
-After UPD-0106, the full suite contains **521 checks per engine**:
+The settled UPD-0107 suite contains **612 checks per engine**. This is the suite inventory; full-run results remain pending at this documentation checkpoint.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
-| Product unit checks | 420 | Import safety, parsing, selection/web regressions, naming/containment, streamed requests, body validation, transactional failures, identity, state storage, legacy inventory/schema, migration safety, diagnostic privacy/lifecycle/export and presentation; includes two remaining parser characterizations |
+| Product unit checks | 491 | Import safety, parsing, selection/web regressions, naming/containment, streamed requests, body validation, transactional failures, identity, state storage, legacy inventory/schema, migration safety, diagnostic privacy/lifecycle/export, presentation, shared URL/redirect policy, bounded metadata and explicit XML limits; includes two remaining parser characterizations |
 | Runner guards | 10 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
-| Product integration checks | 91 | HTML/RSS/Atom, modes, naming/junctions, media validation, interrupted transfers, state/finalization crashes, disk reconciliation, real process locks, legacy previews/adoption/redownload, metadata rollback, startup fallback, UTF-8, concurrent log IDs and preview privacy |
+| Product integration checks | 111 | HTML/RSS/Atom, modes, naming/junctions, media validation, interrupted transfers, state/finalization crashes, disk reconciliation, real process locks, legacy previews/adoption/redownload, metadata rollback, startup fallback, UTF-8, concurrent log IDs, preview persistence/request boundaries, redirect/credential policy, metadata limits and rejection of DTD/entity input |
 
 Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper functions and returns before startup preferences, logging, prompts and downloads. It is the import seam; no separate runtime module or package is required. A004 tests this against the actual script. Normal invocation with `&` retains the entry-point behavior.
 
@@ -75,7 +75,7 @@ Unit network access is mocked; synthetic external URLs use `.invalid`. Integrati
 
 The two remaining unit characterizations assert Atom updated-before-published behavior and first-enclosure selection even when it is video. Passing those assertions means the defect was reproduced. UPD-0104 replaced the missing Atom ID characterization with desired-behavior identity regressions; broader date/media parsing acceptance remains pending.
 
-UPD-0101 replaces both PS5.1 failure characterizations with desired-behavior regressions. Page/feed requests use `Invoke-PodcastWebRequest`, which always passes `-UseBasicParsing` to the existing network cmdlet. UPD-0103 media requests use the built-in .NET HttpClient with one streamed GET and headers from that same response; no DOM parsing occurs. The worker supplies no parsing default. Its HTML discovery check supplies only two exact application UI responses; the hidden child remains `-NonInteractive`, so the web cmdlet's legacy confirmation would fail. Harness control traffic retains its own safe parsing switch.
+UPD-0101 replaced both PS5.1 failure characterizations with desired-behavior regressions by routing page/feed requests through `Invoke-PodcastWebRequest`, which supplied `-UseBasicParsing` to `Invoke-WebRequest`; that implementation remains recorded in its historical evidence. UPD-0107 retains the helper name but delegates metadata to the built-in .NET HttpClient with explicit HTTP(S), redirect and body limits. Media uses the same request policy and keeps its streamed completion checks from UPD-0103. Product requests no longer use the legacy web DOM parser. Feed XML uses bounded XmlReader settings with DTD prohibited and external resolution disabled. The HTML discovery worker supplies only the exact application UI responses; its hidden child remains `-NonInteractive`. Harness control traffic retains its own safe parsing switch.
 
 `Select-PodcastEpisode` returns an array for zero, one or many entries. Unit cases cover Latest, All and Custom counts of 1, 2 and 5, null input, invalid Custom counts, sorting, URL filtering, counts, download/skip progress, and explicit empty/no-enclosure errors. The entry point still rejects an empty feed or a feed without downloadable URLs before episode progress/media requests. A006 covers valid arithmetic; byte-level progress timing and other UX changes remain UPD-0303.
 
@@ -90,15 +90,40 @@ Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008,
 
 Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 169 not_run. Run `-Suite Integration` for all 40 loopback cases. Transaction tests kill only their owned worker process after an actual stream write or immediately before/after File.Move. Process-local debugger breakpoints also insert a competing final file and verify the temporary stream has closed; product code has no test hook. Reruns preserve abandoned partials and begin a fresh request. Signature validation is bounded and is not full decoding.
 
-UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` is the final shared count above.
+UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current suite inventory above; historical counts belong to their recorded task snapshots.
 
 UPD-0105 legacy units use `-Suite Unit -Filter '*A01[78]*'` (71 checks); focused integration uses `-Suite Integration -Filter '*A01[78]*'` (25 checks, including the updated A009/A017 historical-folder guard and A016/A017 unknown-destination guard). CLI tests hash every copied original before/after operations, assert unchanged preview trees, require exact reviewed adoption digests, distinguish adoption from observed transfers, preserve remote-changed originals, choose one redownload from a multi-episode feed, and restore only metadata from explicit checkpoints. Ordinary WhatIf now performs no filesystem writes; early invalid feeds/identities leave the output root absent. Schema-1 behavior stays supported alongside explicit schema-2 migration.
 
 UPD-0106 units use `-Suite Unit -Filter '*A020*'` (38 checks); diagnostics integrations use `-Suite Integration -Filter '*A019/A021*'` (10 checks). They cover URL/userinfo/path/query/header redaction, native error formatting while preserving the exception, strict UTF-8 including emoji, unique concurrent log names, startup fallback, failed append/export, restricted export fields and no-write previews. The runner isolates both LOCALAPPDATA and TEMP/TMP in a short, exclusively created and marked temporary directory (under an existing RUNNER_TEMP when supplied by CI, otherwise platform TEMP); it restores the process environment and removes only that verified owned directory. No user diagnostic directory is a test target.
 
+### UPD-0107 focused checks
+
+Use fresh processes and the native child wrapper above for Windows PowerShell 5.1:
+
+```powershell
+pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Unit -Filter '*A023*'
+pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Unit -Filter '*A02[34]*'
+pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Unit -Filter '*A024*'
+pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Integration -Filter '*A02[234]*'
+pwsh -NoProfile -NonInteractive -File .\scripts\Analyze.ps1
+python -B -m unittest discover -s .\tools\codex-handoff\selftests -v
+```
+
+The current focused checkpoint records these passed/failed/skipped/not-run counts. The early XML result used a smaller intermediate suite; its filtered-out count is preserved rather than recalculated against the settled inventory.
+
+| Check | Engine | Passed / failed / skipped / not_run |
+| --- | --- | --- |
+| A023 request-policy units | PS7 and PS5.1, each | 66 / 0 / 0 / 435 |
+| Combined A023/A024 units | PS7 | 76 / 0 / 0 / 425 |
+| A024 XML units, early snapshot | PS5.1 | 10 / 0 / 0 / 432 |
+| A022/A023/A024 integrations | PS7 and PS5.1, each | 20 / 0 / 0 / 91 |
+| Python fixture-helper self-tests | Bundled Python 3.12.14 | 28 passed; separate from product acceptance |
+
+The new cases check both initial and redirected request targets, disabled request credentials/cookies, unchanged TLS/proxy defaults, bounded metadata and decoding, DTD/entity rejection, XML structure limits and valid-feed compatibility. Actual entry-point previews leave archive/diagnostic trees unchanged, create no export or lock, make no planned enclosure request and print no completion banner. Metadata retrieval can still receive arbitrary content from the supplied URL or a permitted redirect; the no-media guarantee covers planned enclosure requests and media-transfer execution. No keep-awake feature is introduced. The exact policy is in [INPUT_BOUNDARIES.md](INPUT_BOUNDARIES.md).
+
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; current task evidence is [UPD-0106](evidence/UPD-0106.md).
+These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; current task evidence is [UPD-0107](evidence/UPD-0107.md). Full 612-check runs and the final native analysis result are pending at this checkpoint; focused passes do not stand in for them.
 
 ## Static analysis policy
 
@@ -113,7 +138,7 @@ These checks do not validate the whole application, launcher UX, catchable cance
 | `PSAvoidUsingEmptyCatchBlock` | 2 | Feed-title extraction and date parsing |
 | `PSUseSingularNouns` | 1 | `Resolve-PodcastItems` |
 
-The local PS7 analysis reports 5 known warnings; PS5.1 reports 4 because its analyzer built-in command profile does not emit the `Write-Log` override warning. Both observations have zero new findings and zero parse errors. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances; UPD-0104 added the main script's UTF-8 BOM and removed that allowance. Pure helpers use narrow, documented suppressions for their retained names. Analysis includes all bundled `src/` helpers, totaling 44 PowerShell files.
+The known baseline is 5 warnings on PS7 and 4 on PS5.1, whose analyzer built-in command profile does not emit the `Write-Log` override warning. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances; UPD-0104 added the main script's UTF-8 BOM and removed that allowance. Pure helpers use narrow, documented suppressions for their retained names. The UPD-0107 analysis covers 50 PowerShell files. Current full PS7 analysis has zero parse errors, zero new findings and 5 baseline warnings; full native PS5.1 analysis is pending at this checkpoint. The network/media implementation and test subset has passed analysis in both engines with zero findings or parse errors.
 
 ## CI and verified sources
 

@@ -112,6 +112,61 @@ class HelperTests(unittest.TestCase):
         self.assertIn('<!DOCTYPE', data)
         self.assertIn('entity-must-never-be-fetched.invalid', data)
 
+    def test_entity_routes_only_return_xml_and_do_not_read_external_resources(self):
+        _, _, http_xml = self.request('/feeds/external-http.xml')
+        self.assertIn(b'<!DOCTYPE rss', http_xml)
+        self.assertIn((self.server.base_url + '/entity/never').encode(), http_xml)
+        _, _, file_xml = self.request('/feeds/external-file.xml?file=file%3A%2F%2F%2Fsynthetic%2Fdoes-not-exist')
+        self.assertIn(b'file:///synthetic/does-not-exist', file_xml)
+        self.assertIn(b'&xxe;', file_xml)
+        self.assertEqual(self.request('/feeds/external-file.xml?file=https%3A%2F%2Fexample.invalid')[0], 400)
+
+    def test_internal_dtd_fixture_has_an_entity_reference(self):
+        _, _, data = self.request('/feeds/internal-dtd.xml')
+        self.assertIn(b'<!ENTITY', data)
+        self.assertIn(b'<title>&y;</title>', data)
+
+    def test_oversized_metadata_is_finite_with_both_framing_variants(self):
+        _, headers, data = self.request('/feeds/oversized.xml')
+        self.assertGreater(len(data), 8 * 1024 * 1024)
+        self.assertLess(len(data), 8 * 1024 * 1024 + 4096)
+        self.assertEqual(int(headers['Content-Length']), len(data))
+        _, headers, unframed = self.request('/feeds/oversized-no-length.xml')
+        self.assertNotIn('Content-Length', headers)
+        self.assertEqual(unframed, data)
+
+    def test_depth_and_node_fixtures_are_well_formed_but_exceed_policy_budgets(self):
+        _, _, deep = self.request('/feeds/deep.xml')
+        self.assertEqual(deep.count(b'<n>'), 70)
+        ET.fromstring(deep)
+        _, _, wide = self.request('/feeds/many-nodes.xml')
+        self.assertEqual(wide.count(b'<n/>'), 100010)
+        ET.fromstring(wide)
+
+    def test_boundary_redirect_routes_expose_controlled_locations(self):
+        cases = {
+            '/redirect/feed': '../feeds/single.xml',
+            '/redirect/file': 'file:///synthetic/never',
+            '/media/redirect.mp3': '/media/ok.mp3',
+            '/media/redirect-file.mp3': 'file:///synthetic/never',
+        }
+        for route, location in cases.items():
+            with self.subTest(route=route):
+                status, headers, body = self.request(route)
+                self.assertEqual((status, headers['Location'], body), (302, location, b''))
+        _, headers, _ = self.request('/redirect/userinfo')
+        self.assertIn('fake:FAKE_TOKEN@127.0.0.1', headers['Location'])
+        _, headers, _ = self.request('/redirect/cookie')
+        self.assertIn('localhost:', headers['Location'])
+        self.assertEqual(headers['Set-Cookie'], 'synthetic=FAKE_COOKIE; Path=/')
+
+    def test_redirect_media_feed_points_to_its_controlled_redirect(self):
+        for route, target in (
+                ('/feeds/redirect-media.xml', '/media/redirect.mp3'),
+                ('/feeds/redirect-file-media.xml', '/media/redirect-file.mp3')):
+            tree = ET.fromstring(self.request(route)[2])
+            self.assertEqual(tree.find('./channel/item/enclosure').attrib['url'], self.server.base_url + target)
+
     def test_normal_media_and_head(self):
         status, hdr, data = self.request('/media/ok.mp3')
         self.assertEqual((status, data), (200, self.audio))

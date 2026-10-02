@@ -3,6 +3,8 @@ BeforeAll {
     Mock Read-Host { throw 'Unit tests must not prompt.' }
     Mock Invoke-WebRequest { throw 'Unexpected network request in unit test.' }
     . (Join-Path $script:RepositoryRoot 'UniversalPodcastDownloader.ps1') -OutputPath $TestDrive
+    Mock Get-PodcastHttpClient { throw 'Unit tests must not create a network client.' }
+    Mock Invoke-PodcastMetadataRequest { throw 'Unexpected metadata request in unit test.' }
     . (Join-Path $script:RepositoryRoot 'src/HistoryStore.ps1')
     . (Join-Path $script:RepositoryRoot 'src/HistoryIdentity.ps1')
     $script:FeedIdentity = Get-PodcastNameHash -IdentityKey 'feed:https://feed.example.invalid/one'
@@ -245,7 +247,7 @@ Describe 'A014 entrypoint identity boundaries' -Tag 'Unit' {
         Mock Start-Sleep {}
         $identityFeedResponse = [pscustomobject]@{ Content = '' }
         $identityMedia = $script:IdentityMedia
-        Mock Invoke-WebRequest { $identityFeedResponse }
+        Mock Invoke-PodcastMetadataRequest { $identityFeedResponse }
         Mock Invoke-PodcastMediaRequest {
             $DestinationStream.Write($identityMedia, 0, $identityMedia.Length)
             [pscustomobject]@{ Completed = $true; Bytes = $identityMedia.Length; ContentLength = $identityMedia.Length; ContentType = 'audio/mpeg' }
@@ -270,7 +272,7 @@ Describe 'A014 entrypoint identity boundaries' -Tag 'Unit' {
         $state.feed_id | Should -BeExactly $expected
         $state.feed_alias_fingerprints.Count | Should -Be 1
         $state.feed_alias_fingerprints[0] | Should -BeExactly $expected
-        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter { $Uri -ceq $exactUrl }
+        Should -Invoke Invoke-PodcastMetadataRequest -Times 1 -Exactly -ParameterFilter { $Uri -ceq $exactUrl }
         $saved = Get-Content -LiteralPath (Join-Path $show.FullName '.upd/state.json') -Raw
         $saved | Should -Not -Match 'signature=|https://|feedId='
     }

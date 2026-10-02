@@ -3,6 +3,8 @@ BeforeAll {
     Mock Read-Host { throw 'Unit tests must not prompt.' }
     Mock Invoke-WebRequest { throw 'Unexpected network request in unit test.' }
     . $script:DownloaderPath -OutputPath $TestDrive
+    Mock Get-PodcastHttpClient { throw 'Unit tests must not create a network client.' }
+    Mock Invoke-PodcastMetadataRequest { throw 'Unexpected metadata request in unit test.' }
     $script:FixtureMedia = [IO.File]::ReadAllBytes((Join-Path (Split-Path $script:DownloaderPath -Parent) 'tools/codex-handoff/fixtures/silence.mp3'))
 }
 
@@ -36,7 +38,7 @@ Describe 'A006: array selection for every supported mode' -Tag 'Unit', 'A006' {
         }
         $episodes.Count | Should -Be $InputCount
         if ($InputCount -gt 0) { $episodes[0].Title | Should -Be 'Episode 0' }
-        Should -Invoke Invoke-WebRequest -Times 0 -Exactly
+        Should -Invoke Invoke-PodcastMetadataRequest -Times 0 -Exactly
     }
 
     It 'treats null input as an empty array' {
@@ -58,7 +60,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         Mock Write-Progress {}
         Mock Start-Sleep {}
         $feedResponse = [pscustomobject]@{ Content = '' }
-        Mock Invoke-WebRequest { $feedResponse }
+        Mock Invoke-PodcastMetadataRequest { $feedResponse }
         Mock Invoke-PodcastMediaRequest {
             $DestinationStream.Write($fixtureMedia, 0, $fixtureMedia.Length)
             [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }

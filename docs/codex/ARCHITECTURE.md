@@ -46,7 +46,7 @@ Do not hold an archive lock during interactive questions, HTML/feed discovery or
 
 ## Transport design
 
-Small early tasks may retain Invoke-WebRequest with safe parsing. The later transport should expose feed retrieval and streamed media transfer separately behind one policy layer. A .NET HttpClient adapter is a reasonable candidate when it simplifies idle timeouts/resume, but verify every API used on .NET Framework/PowerShell 5.1 and the selected PowerShell 7 runtime. Do not maintain two diverging engines without evidence that it is necessary.
+UPD-0107 uses the built-in .NET HttpClient for metadata and streamed media behind one URL/redirect policy. `src/NetworkPolicy.ps1` provides `Get-PodcastRequestUri`, `Invoke-PodcastHttpGet` and `Invoke-PodcastMetadataRequest`; `src/MediaRequest.ps1` retains media framing and streaming checks. No runtime package is added. Later timeout/retry/resume work should reuse these boundaries and verify APIs in both .NET Framework/PowerShell 5.1 and PowerShell 7.
 
 Keep connect/headers, idle-body and optional total-budget settings explicit. A slow but progressing long episode should not hit an arbitrary short total request limit. Dispose responses/streams on all paths. Inject retry waits/clock for fast unit tests. Use the fixture server for byte-level integration checks. Preserve default proxy and certificate validation behavior unless the user explicitly configures supported alternatives; never bypass TLS for convenience.
 
@@ -54,11 +54,19 @@ HTTP-specific mechanics must follow the primary references in SOURCES.md [S6]. I
 
 ## Untrusted content and privacy
 
-Treat RSS/Atom/HTML, headers, filenames, URLs, saved config and history as untrusted data. Configure explicit XML limits; prohibit DTDs and external resolution [S5]. Use a bounded metadata/HTML response size separately from large streamed audio. Validate URL scheme at entry and redirect boundaries. Respect an original HTTP feed with a clear policy; do not silently disable valid user input, but warn/refuse HTTPS-to-HTTP downgrade according to a documented security policy.
+Treat RSS/Atom/HTML, headers, filenames, URLs, saved config and history as untrusted data. UPD-0107 validates absolute HTTP(S) targets without user information at entry, discovery, enclosure planning and redirect boundaries. Private/loopback hosts and initial HTTP requests remain supported. At most five manually checked redirects are allowed; HTTPS-to-HTTP downgrade is refused. Automatic cookies, default request credentials and automatic redirects are disabled. Platform TLS verification and proxy defaults remain unchanged [S11-S12].
+
+Metadata responses are bounded to 8 MiB before XML parsing. `src/FeedXml.ps1` uses explicit XmlReader settings: DTD prohibited, null resolver, 8,388,608 document characters, and `MaxCharactersFromEntities` set to 1,024. Built-in character references remain subject to the document limit. A first streaming pass checks depth at most 64 and at most 100,000 reader nodes plus attributes; a second pass loads a DOM with the same settings and its own null resolver. HTML discovery also limits direct input to 8,388,608 characters and uses 250 ms regex timeouts. These are explicit input limits, not a claim that the earlier default parser had a demonstrated exploit [S5, S13-S14].
 
 Feed titles and server Content-Disposition names are never arbitrary paths. Canonical path containment is necessary but not sufficient against junction/reparse-point races; fail safely for unsupported cases. Do not claim a perfect sandbox against a concurrent privileged local adversary. Validate output components and existing ancestors at relevant write boundaries [S4].
 
 Private subscriptions may encode secrets anywhere in URLs. Default diagnostics retain only hostname plus a random request ID, omitting all user information, path, query and fragment content. Do not log Authorization, cookie values, raw signed URLs, raw response bodies or full exception objects. An explicit local sensitive debug mode, if later added, needs clear consent and must not be included in shareable exports.
+
+## Implemented preview boundary (UPD-0107)
+
+The script resolves and parses metadata, validates all parsed enclosure targets, reads local state and builds a plan before archive execution. Normal WhatIf returns a diagnostic projection of that plan, or a local legacy inventory when review is required. Legacy Preview returns that review inventory, and changing legacy WhatIf validates the requested choice. Each path exits before writer locks, directory creation, history/checkpoint updates and enclosure transfer. It never reaches the completed-download banner. There is no implemented keep-awake or power-setting mutation. Metadata retrieval can receive arbitrary server content, including audio returned by the supplied URL or an allowed redirect; it remains bounded by the metadata reader.
+
+Normal execution passes ShouldProcess before archive writes; legacy changes have their own ShouldProcess decision. After acceptance, both reread and validate relevant state under writer protection. Diagnostics remain in memory for preview, including the finally/export path. Metadata reads and local hashing are allowed, so preview is not an offline operation. Original feed identity is retained across redirects; relative discovered HTML links use the effective page URI. The complete [input and preview policy](INPUT_BOUNDARIES.md) records limits and remaining scope.
 
 ## Implemented diagnostics (UPD-0106)
 
