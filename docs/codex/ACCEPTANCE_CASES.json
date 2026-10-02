@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A024 passed through UPD-0107; A025-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A026 passed through UPD-0201; A027-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -278,8 +278,8 @@
       "when": "Run retry policy with test-injected delay/clock.",
       "expected": "Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed.",
       "fixture": "http:/retry/once.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0201.md"
     },
     {
       "id": "A026",
@@ -289,8 +289,8 @@
       "when": "Download using configured timeouts.",
       "expected": "Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout.",
       "fixture": "http:/media/stall.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0201.md"
     },
     {
       "id": "A027",

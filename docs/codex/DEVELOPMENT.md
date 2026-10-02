@@ -61,13 +61,13 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## What the current suite covers
 
-The settled UPD-0107 suite contains **612 checks per engine**. Full local and implementation CI runs pass all 612 checks on each supported engine.
+The UPD-0201 suite contains **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for the completed runs and exact snapshot counts; adding a test does not make an earlier run cover it.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
-| Product unit checks | 491 | Import safety, parsing, selection/web regressions, naming/containment, streamed requests, body validation, transactional failures, identity, state storage, legacy inventory/schema, migration safety, diagnostic privacy/lifecycle/export, presentation, shared URL/redirect policy, bounded metadata and explicit XML limits; includes two remaining parser characterizations |
+| Product unit checks | 542 | Import safety, parsing, selection/web regressions, naming/containment, streamed requests, body validation, transactional failures, identity, state storage, legacy inventory/schema, migration safety, diagnostic privacy/lifecycle/export, presentation, shared URL/redirect policy, bounded metadata and explicit XML limits, transient/permanent retry policy, shared server-delay budgets, cancellation and private transport categories; includes two remaining parser characterizations |
 | Runner guards | 10 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
-| Product integration checks | 111 | HTML/RSS/Atom, modes, naming/junctions, media validation, interrupted transfers, state/finalization crashes, disk reconciliation, real process locks, legacy previews/adoption/redownload, metadata rollback, startup fallback, UTF-8, concurrent log IDs, preview persistence/request boundaries, redirect/credential policy, metadata limits and rejection of DTD/entity input |
+| Product integration checks | 153 | HTML/RSS/Atom, modes, naming/junctions, media validation, interrupted transfers, state/finalization crashes, disk reconciliation, real process locks, legacy previews/adoption/redownload, metadata rollback, startup fallback, UTF-8, concurrent log IDs, preview persistence/request boundaries, redirect/credential policy, metadata limits and rejection of DTD/entity input, real server delays/retry counts, header/idle deadlines, progressing long responses and truncated-response recovery |
 
 Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper functions and returns before startup preferences, logging, prompts and downloads. It is the import seam; no separate runtime module or package is required. A004 tests this against the actual script. Normal invocation with `&` retains the entry-point behavior.
 
@@ -123,7 +123,7 @@ The new cases check both initial and redirected request targets, disabled reques
 
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; current task evidence is [UPD-0107](evidence/UPD-0107.md). Both full local runs and implementation CI passed 612/0/0/0 per engine. Full analysis passed on both engines.
+These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; UPD-0107 evidence records its historical 612/0/0/0 local/CI snapshot. Current task evidence is [UPD-0201](evidence/UPD-0201.md), including the final 705-check inventory, local snapshot/supplemental commands and CI results.
 
 ## Static analysis policy
 
@@ -152,3 +152,14 @@ Action references were verified against the official release tags and source on 
 | setup-python v7.0.0 | `5fda3b95a4ea91299a34e894583c3862153e4b97` | [Release](https://github.com/actions/setup-python/releases/tag/v7.0.0), [commit](https://github.com/actions/setup-python/commit/5fda3b95a4ea91299a34e894583c3862153e4b97) |
 
 Both use Node 24 and require an Actions runner version of at least 2.327.1. Reviewed sources include their action metadata, entry points, checkout credential handling and Python version selection/install flow. The pinned [Python 3.14.7 release](https://github.com/actions/python-versions/releases/tag/3.14.7-31064857500) supplies the Windows x64 distribution. CI does not install or upgrade the user's local Python or PowerShell.
+
+## UPD-0201 focused checks
+
+Use fresh processes and the native wrapper above:
+
+```powershell
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit -Filter '*A02[56]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A025/A026*'
+```
+
+The settled selections contain 51 units and 42 integrations. Units inject clock/delay and simulate token-ignoring streams; integrations use real loopback request counts/timestamps, exact media hashes and failed/completed history evidence. Fixture selftests remain separate helper checks. The final Framework regression permits bare IOException retries only while reading the HTTP response source, leaving local destination/history errors permanent. Retry settings and elapsed-window semantics are in [TRANSPORT_POLICY.md](TRANSPORT_POLICY.md).

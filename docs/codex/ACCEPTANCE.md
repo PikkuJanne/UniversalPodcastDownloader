@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A021 passed; A022-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0106.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A026 passed; A027-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0201.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -25,11 +25,11 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A021 passed; A022-A060 rem
 | A019 | UPD-0106 | integration | passed | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |
 | A020 | UPD-0106 | unit | passed | Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports. |
 | A021 | UPD-0106 | integration | passed | Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear. |
-| A022 | UPD-0107 | integration | not_run | Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion. |
-| A023 | UPD-0107 | unit | not_run | Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible. |
-| A024 | UPD-0107 | integration | not_run | DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse. |
-| A025 | UPD-0201 | integration | not_run | Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed. |
-| A026 | UPD-0201 | integration | not_run | Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout. |
+| A022 | UPD-0107 | integration | passed | Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion. |
+| A023 | UPD-0107 | unit | passed | Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible. |
+| A024 | UPD-0107 | integration | passed | DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse. |
+| A025 | UPD-0201 | integration | passed | Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed. |
+| A026 | UPD-0201 | integration | passed | Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout. |
 | A027 | UPD-0202 | integration | not_run | Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer. |
 | A028 | UPD-0202 | integration | not_run | Never blindly append; safely restart with explicit logging or leave partial for review. |
 | A029 | UPD-0202 | integration | not_run | No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only. |

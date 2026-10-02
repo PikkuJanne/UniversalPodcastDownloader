@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0201",
+  "current_task": "UPD-0202",
   "status_values": [
     "todo",
     "ready",
@@ -305,7 +305,7 @@
       "id": "UPD-0201",
       "milestone": "M2",
       "title": "Implement bounded retry and timeout policy",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0107"
       ],
@@ -327,15 +327,17 @@
         "A025",
         "A026"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0201.md"
+      ],
+      "implementation_commit": "22632b891c455f82a9bba9b9a7b8d48f9f3de5c6",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3"
     },
     {
       "id": "UPD-0202",
       "milestone": "M2",
       "title": "Add validator-aware safe resume",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0201"
       ],

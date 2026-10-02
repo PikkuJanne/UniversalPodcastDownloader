@@ -57,6 +57,11 @@ BeforeAll {
         if ($Kind -eq 'Metadata') {
             $Run.Result.Bytes | Should -BeGreaterThan 0
             $Run.Result.Content | Should -Match '<title>Transport fixture</title>'
+            # These fixture bytes contain no DTD. Parsing the whole document
+            # rejects a partial prefix accidentally retained across retries.
+            [xml]$document = $Run.Result.Content
+            @($document.rss.channel.item).Count | Should -Be 1
+            $document.rss.channel.item.guid | Should -Be 'transport-001'
             Test-Path -LiteralPath $Run.OutputPath | Should -BeFalse
             return
         }
