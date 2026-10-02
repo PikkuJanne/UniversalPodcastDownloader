@@ -24,7 +24,7 @@ function Assert-PodcastHistory {
     param([Parameter(Mandatory)]$State, [Parameter(Mandatory)][string]$Root, [switch]$AllowInitial)
 
     Assert-PodcastHistoryProperty -Value $State -Names @('schema_version', 'feed_id', 'feed_alias_fingerprints', 'generation', 'episodes')
-    if (-not (Test-PodcastHistoryInteger $State.schema_version) -or $State.schema_version -ne 1) {
+    if (-not (Test-PodcastHistoryInteger $State.schema_version) -or @(1, 2) -notcontains $State.schema_version) {
         throw 'Unsupported history schema version. Preserve the history and use a compatible downloader.'
     }
     if ($State.feed_id -isnot [string] -or $State.feed_id -cnotmatch '^[a-f0-9]{64}$') { throw 'History has an invalid feed identity.' }
@@ -56,7 +56,9 @@ function Assert-PodcastHistory {
         Assert-PodcastPathComponent -Component $episode.relative_path
         if ($episode.relative_path -ieq '.upd' -or -not $destinations.Add($episode.relative_path)) { throw 'History contains colliding relative destinations.' }
         $null = Get-PodcastDestination -Root $Root -RelativePath $episode.relative_path
-        if ($episode.status -isnot [string] -or @('prepared', 'transfer_verified', 'missing', 'conflict', 'failed') -cnotcontains $episode.status) { throw 'History contains an unsupported episode status.' }
+        $allowedStatuses = @('prepared', 'transfer_verified', 'missing', 'conflict', 'failed')
+        if ($State.schema_version -eq 2) { $allowedStatuses += @('adopted', 'unverified') }
+        if ($episode.status -isnot [string] -or $allowedStatuses -cnotcontains $episode.status) { throw 'History contains an unsupported episode status.' }
         if ($null -ne $episode.bytes -and (-not (Test-PodcastHistoryInteger $episode.bytes) -or $episode.bytes -lt 0)) { throw 'History contains an invalid byte count.' }
         if ($null -ne $episode.local_sha256 -and ($episode.local_sha256 -isnot [string] -or $episode.local_sha256 -cnotmatch '^[a-f0-9]{64}$')) { throw 'History contains an invalid local digest.' }
         if ($null -ne $episode.completed_utc) {
@@ -66,7 +68,7 @@ function Assert-PodcastHistory {
                 throw 'History contains an invalid UTC completion timestamp.'
             }
         }
-        if (@('prepared', 'transfer_verified') -ccontains $episode.status) {
+        if (@('prepared', 'transfer_verified', 'adopted') -ccontains $episode.status) {
             if ($null -eq $episode.bytes -or $episode.bytes -le 0 -or $null -eq $episode.local_sha256 -or $null -eq $episode.completed_utc) {
                 throw 'History completion evidence is incomplete.'
             }
@@ -85,6 +87,13 @@ function Assert-PodcastHistory {
         if ($episode.verification.notes -isnot [array] -or $episode.verification.notes.Count -gt 16) { throw 'History contains invalid verification notes.' }
         foreach ($note in $episode.verification.notes) {
             if ($note -isnot [string] -or $note.Length -gt 256 -or $note -match '://|@|[\x00-\x1f]') { throw 'History contains unsafe or overlong verification notes.' }
+        }
+        if ($episode.status -ceq 'adopted') {
+            if ($episode.verification.method -cne 'owner-approved-local-signature' -or
+                @('mpeg-audio', 'wave', 'flac', 'ogg-container', 'mp4-container') -cnotcontains $episode.verification.media_kind -or
+                $episode.verification.notes -cnotcontains 'local-signature-only; transfer-completeness-unverified') {
+                throw 'History adoption evidence must record owner approval and unverified transfer completeness.'
+            }
         }
     }
 }
@@ -167,7 +176,7 @@ function Read-PodcastHistory {
     $state = Read-PodcastHistoryFile -Root $Root -RelativePath '.upd\state.json'
     $backup = Read-PodcastHistoryFile -Root $Root -RelativePath '.upd\state.json.bak'
     if ($null -eq $state -and $null -ne $backup) { throw 'History primary is missing while a backup exists. Preserve both paths and inspect before retrying.' }
-    if ($null -ne $state -and $null -ne $backup -and ($state.feed_id -cne $backup.feed_id -or $backup.generation -ge $state.generation)) {
+    if ($null -ne $state -and $null -ne $backup -and ($state.feed_id -cne $backup.feed_id -or $backup.generation -ge $state.generation -or $backup.schema_version -gt $state.schema_version)) {
         throw 'History backup contradicts the current state. Preserve both files and inspect before retrying.'
     }
     return $state
@@ -176,15 +185,56 @@ function Read-PodcastHistory {
 function New-PodcastHistory {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Constructs an in-memory value; does not write state.')]
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$FeedId, [Parameter(Mandatory)][string]$FeedAliasFingerprint)
+    param(
+        [Parameter(Mandatory)][string]$FeedId,
+        [Parameter(Mandatory)][string]$FeedAliasFingerprint,
+        [ValidateSet(1, 2)][int]$SchemaVersion = 1
+    )
 
     return [pscustomobject]@{
-        schema_version = 1
+        schema_version = $SchemaVersion
         feed_id = $FeedId
         feed_alias_fingerprints = @($FeedId, $FeedAliasFingerprint | Select-Object -Unique)
         generation = 0
         episodes = @()
     }
+}
+
+function ConvertTo-PodcastHistoryV2 {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$State, [Parameter(Mandatory)][string]$Root)
+
+    # Migration is an explicit in-memory operation. Normal history writes retain
+    # their version, and this copy leaves the source and its generation intact.
+    Assert-PodcastHistory -State $State -Root $Root -AllowInitial
+    $episodes = @(
+        foreach ($episode in $State.episodes) {
+            [pscustomobject]@{
+                episode_id = $episode.episode_id
+                identity_source = $episode.identity_source
+                identity_fingerprint = $episode.identity_fingerprint
+                relative_path = $episode.relative_path
+                status = $episode.status
+                bytes = $episode.bytes
+                local_sha256 = $episode.local_sha256
+                completed_utc = $episode.completed_utc
+                verification = [pscustomobject]@{
+                    method = $episode.verification.method
+                    media_kind = $episode.verification.media_kind
+                    notes = @($episode.verification.notes)
+                }
+            }
+        }
+    )
+    $promoted = [pscustomobject]@{
+        schema_version = 2
+        feed_id = $State.feed_id
+        feed_alias_fingerprints = @($State.feed_alias_fingerprints)
+        generation = $State.generation
+        episodes = $episodes
+    }
+    Assert-PodcastHistory -State $promoted -Root $Root -AllowInitial
+    return $promoted
 }
 
 function Enter-PodcastHistoryLock {
@@ -224,6 +274,7 @@ function Write-PodcastHistory {
     $generation = if ($null -eq $current) { 0 } else { $current.generation }
     if ($Lock.Generation -ne $generation -or $State.generation -ne ($generation + 1)) { throw 'History generation changed; refusing a stale update.' }
     if ($null -ne $current -and $State.feed_id -cne $current.feed_id) { throw 'History cannot change the archive feed identity.' }
+    if ($null -ne $current -and $State.schema_version -lt $current.schema_version) { throw 'History cannot downgrade its schema version.' }
     $json = ConvertTo-Json -InputObject $State -Depth 8 -Compress
     $encoding = New-Object Text.UTF8Encoding($false, $true)
     $bytes = $encoding.GetBytes($json)

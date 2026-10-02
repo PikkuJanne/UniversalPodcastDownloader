@@ -74,6 +74,14 @@ function Resolve-PodcastHistoryItem {
     }
     # Clone the record so a failed commit cannot change the last read state.
     $record = $record.PSObject.Copy()
+    if ($record.status -eq 'adopted') {
+        if ($null -ne $evidence -and $record.bytes -eq $evidence.Bytes -and $record.local_sha256 -ceq $evidence.Sha256) {
+            return 'adopted_skip'
+        }
+        # Adoption never becomes transfer evidence or permission to redownload.
+        return 'conflict'
+    }
+    if ($record.status -eq 'unverified') { return 'conflict' }
     if ($null -eq $evidence) {
         if ($record.status -ne 'missing') {
             $record.status = 'missing'

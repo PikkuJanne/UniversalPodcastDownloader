@@ -142,7 +142,7 @@ Describe 'Durable history against actual processes and loopback transfers' {
         (Get-UpdFixtureState -Context $context).'/media/history.mp3' | Should -Be 1
     }
 
-    It 'A016 preserves an unknown destination and unrelated media without adopting either' {
+    It 'A016 A017 preserves an unknown destination and unrelated media without creating history or logs' {
         $first = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $first.Result.Succeeded | Should -BeTrue -Because ($first.Stdout + $first.Stderr + $first.Result.ErrorMessage)
         $archive = Get-UpdRecordedArchive -OutputPath $first.OutputPath
@@ -151,18 +151,24 @@ Describe 'Durable history against actual processes and loopback transfers' {
         $unrelated = Join-Path $archive.Root 'unrelated-user-recording.mp3'
         [IO.File]::WriteAllText($unrelated, 'Synthetic user-owned recording. Preserve these bytes.')
         $unknownHash = (Get-FileHash -LiteralPath $unrelated -Algorithm SHA256).Hash
+        $snapshot = {
+            param([string]$Root)
+            @(Get-ChildItem -LiteralPath $Root -Recurse -Force | Sort-Object FullName | ForEach-Object {
+                if ($_.PSIsContainer) { 'directory|' + $_.FullName }
+                else { 'file|' + $_.FullName + '|' + $_.Length + '|' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
+            })
+        }
+        $before = & $snapshot $first.OutputPath
         $second = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $second.Result.Succeeded | Should -BeFalse
         $second.ExitCode | Should -Be 1
-        $second.Stdout | Should -Match 'Downloaded\s+: 0'
-        $second.Stdout | Should -Match 'Skipped\s+: 0'
-        $second.Stdout | Should -Match 'Failed\s+: 1'
-        ($second.Stdout + $second.Result.ErrorMessage) | Should -Match 'unverified|unknown|conflict'
+        ($second.Stdout + $second.Result.ErrorMessage) | Should -Match 'legacy|unverified|review'
         (Get-FileHash -LiteralPath $archive.MediaPath -Algorithm SHA256).Hash | Should -Be $script:historyMediaHash
         (Get-FileHash -LiteralPath $unrelated -Algorithm SHA256).Hash | Should -Be $unknownHash
         (Get-UpdFixtureState -Context $context).'/media/history.mp3' | Should -Be 1
-        $newState = Get-UpdRecordedArchive -OutputPath $second.OutputPath
-        @($newState.State.episodes | Where-Object { $_.status -eq 'transfer_verified' }).Count | Should -Be 0
+        Test-Path -LiteralPath $archive.Path | Should -BeFalse
+        Test-Path -LiteralPath $archive.BackupPath | Should -BeFalse
+        ((& $snapshot $second.OutputPath) -join "`n") | Should -Be ($before -join "`n")
     }
 
     It 'A015 preserves <Problem> history and its valid backup instead of resetting it' -TestCases @(

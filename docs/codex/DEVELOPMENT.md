@@ -61,13 +61,13 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## What the current suite covers
 
-After UPD-0104, the full suite contains **379 checks per engine**:
+After UPD-0105, the full suite contains **473 checks per engine**:
 
 | Group | Count | Scope |
 | --- | ---: | --- |
-| Product unit checks | 311 | Import safety, parsing, selection/web regressions, naming/containment, streamed requests, body validation, transactional failures, identity and state storage; includes two remaining parser characterizations |
+| Product unit checks | 382 | Import safety, parsing, selection/web regressions, naming/containment, streamed requests, body validation, transactional failures, identity, state storage, legacy inventory/schema and migration safety; includes two remaining parser characterizations |
 | Runner guards | 10 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
-| Product integration checks | 58 | HTML/RSS/Atom, modes, naming/junctions, media validation, interrupted transfers, state/finalization crashes, disk reconciliation and real process locks |
+| Product integration checks | 81 | HTML/RSS/Atom, modes, naming/junctions, media validation, interrupted transfers, state/finalization crashes, disk reconciliation, real process locks, legacy previews/adoption/redownload and metadata rollback |
 
 Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper functions and returns before startup preferences, logging, prompts and downloads. It is the import seam; no separate runtime module or package is required. A004 tests this against the actual script. Normal invocation with `&` retains the entry-point behavior.
 
@@ -92,7 +92,9 @@ Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 1
 
 UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` is the final shared count above.
 
-These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume, legacy migration or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; current task evidence is [UPD-0104](evidence/UPD-0104.md).
+UPD-0105 legacy units use `-Suite Unit -Filter '*A01[78]*'` (71 checks); focused integration uses `-Suite Integration -Filter '*A01[78]*'` (25 checks, including the updated A009/A017 historical-folder guard and A016/A017 unknown-destination guard). CLI tests hash every copied original before/after operations, assert unchanged preview trees, require exact reviewed adoption digests, distinguish adoption from observed transfers, preserve remote-changed originals, choose one redownload from a multi-episode feed, and restore only metadata from explicit checkpoints. Ordinary WhatIf now performs no filesystem writes; early invalid feeds/identities leave the output root absent. Schema-1 behavior stays supported alongside explicit schema-2 migration.
+
+These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; current task evidence is [UPD-0105](evidence/UPD-0105.md).
 
 ## Static analysis policy
 
@@ -107,7 +109,7 @@ These checks do not validate the whole application, launcher UX, catchable cance
 | `PSAvoidUsingEmptyCatchBlock` | 2 | Feed-title extraction and date parsing |
 | `PSUseSingularNouns` | 1 | `Resolve-PodcastItems` |
 
-The local PS7 analysis reports 5 known warnings; PS5.1 reports 4 because its analyzer built-in command profile does not emit the `Write-Log` override warning. Both observations have zero new findings and zero parse errors. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances; UPD-0104 added the main script's UTF-8 BOM and removed that allowance. Pure helpers use narrow, documented suppressions for their retained names. Analysis includes all bundled `src/` helpers, totaling 32 PowerShell files.
+The local PS7 analysis reports 5 known warnings; PS5.1 reports 4 because its analyzer built-in command profile does not emit the `Write-Log` override warning. Both observations have zero new findings and zero parse errors. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances; UPD-0104 added the main script's UTF-8 BOM and removed that allowance. Pure helpers use narrow, documented suppressions for their retained names. Analysis includes all bundled `src/` helpers, totaling 39 PowerShell files.
 
 ## CI and verified sources
 

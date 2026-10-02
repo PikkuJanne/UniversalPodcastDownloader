@@ -82,6 +82,27 @@ class HelperTests(unittest.TestCase):
             with self.subTest(name=name):
                 ET.fromstring((KIT / 'fixtures' / name).read_bytes())
 
+    def test_legacy_remote_change_preserves_guid_but_changes_url_bytes_and_validator(self):
+        self.server.recovered.clear()
+        try:
+            before = ET.fromstring(self.request('/feeds/legacy-changing.xml')[2])
+            old_path = before.find('./channel/item/enclosure').attrib['url'].removeprefix(self.server.base_url)
+            status, old_headers, old_body = self.request(old_path)
+            self.assertEqual((status, old_body), (200, self.audio))
+            self.request('/__recover', method='POST')
+            after = ET.fromstring(self.request('/feeds/legacy-changing.xml')[2])
+            new_path = after.find('./channel/item/enclosure').attrib['url'].removeprefix(self.server.base_url)
+            self.assertNotEqual(old_path, new_path)
+            self.assertEqual(before.find('./channel/item/guid').text, after.find('./channel/item/guid').text)
+            status, new_headers, new_body = self.request(new_path)
+            self.assertEqual(status, 200)
+            self.assertNotEqual(old_body, new_body)
+            self.assertNotEqual(old_headers['ETag'], new_headers['ETag'])
+            self.assertEqual(int(new_headers['Content-Length']), len(new_body))
+            self.assertEqual(self.request(old_path)[0], 403)
+        finally:
+            self.server.recovered.clear()
+
     def test_malformed_fixture_really_is_malformed(self):
         with self.assertRaises(ET.ParseError):
             ET.fromstring((KIT / 'fixtures/xml-malformed.xml').read_bytes())

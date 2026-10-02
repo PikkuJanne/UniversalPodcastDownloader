@@ -257,7 +257,7 @@ Describe 'A014 entrypoint identity boundaries' -Tag 'Unit' {
         $downloader = Join-Path $script:RepositoryRoot 'UniversalPodcastDownloader.ps1'
         { & $downloader -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $output -Mode Latest } | Should -Throw '*Conflicting episode metadata*'
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
-        @(Get-ChildItem -LiteralPath $output -Recurse -Force).Count | Should -Be 0
+        Test-Path -LiteralPath $output | Should -BeFalse
     }
     It 'binds initial history to the complete exact feed URL fingerprint' {
         $identityFeedResponse.Content = '<rss><channel><title>Identity show</title><item><guid>first</guid><title>Episode</title><enclosure url="https://media.example.invalid/audio.mp3"/></item></channel></rss>'

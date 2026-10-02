@@ -45,7 +45,7 @@ Describe 'A015: strict versioned history validation' -Tag 'Unit', 'A015' {
     }
 
     It 'rejects invalid state field <Case>' -ForEach @(
-        @{ Case = 'unknown version'; Change = { param($s) $s.schema_version = 2 } },
+        @{ Case = 'unknown version'; Change = { param($s) $s.schema_version = 3 } },
         @{ Case = 'text version'; Change = { param($s) $s.schema_version = '1' } },
         @{ Case = 'fractional generation'; Change = { param($s) $s.generation = 1.5 } },
         @{ Case = 'text generation'; Change = { param($s) $s.generation = '1' } },
@@ -112,7 +112,7 @@ Describe 'A015: strict versioned history validation' -Tag 'Unit', 'A015' {
 
     It 'preserves corrupt or ambiguous JSON <Case>' -ForEach @(
         @{ Case = 'truncated'; Json = '{"schema_version":1' },
-        @{ Case = 'unknown version'; Json = '{"schema_version":2,"feed_id":"a","feed_alias_fingerprints":[],"generation":1,"episodes":[]}' },
+        @{ Case = 'unknown version'; Json = '{"schema_version":3,"feed_id":"a","feed_alias_fingerprints":[],"generation":1,"episodes":[]}' },
         @{ Case = 'duplicate property'; Json = '{"schema_version":1,"schema_version":2}' },
         @{ Case = 'escaped property'; Json = '{"schema_vers\u0069on":1}' },
         @{ Case = 'mixed case property'; Json = '{"schema_version":1,"SCHEMA_VERSION":1}' },

@@ -112,7 +112,8 @@ NOTES
     - New folder and file names include deterministic SHA-256 identity suffixes.
     - Windows names are sanitized and shortened to fit the selected output root.
     - Unsafe paths fail before writes; failures before folder creation have no log.
-    - Existing final files are preserved; current skips do not verify their contents.
+    - Recorded transfer skips check local size and SHA-256. Adopted files stay distinct.
+    - Use -LegacyPath for a read-only inventory and explicit adoption/redownload choices.
     - The tool does not transcode or modify audio, it saves whatever the feed serves,
       but uses the .mp3 extension by default for naming.
 
@@ -161,7 +162,20 @@ param(
 
     [string]$OutputPath = "$env:USERPROFILE\Downloads\Podcasts",
 
-    [string]$FeedUrl
+    [string]$FeedUrl,
+
+    [string]$LegacyPath,
+
+    [ValidateSet('Preview','Adopt','Redownload','Rollback')]
+    [string]$LegacyAction = 'Preview',
+
+    [string]$LegacyEpisodeId,
+
+    [string]$LegacyFile,
+
+    [string]$LegacySha256,
+
+    [string]$LegacyCheckpoint
 )
 
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
@@ -172,6 +186,8 @@ param(
 . (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaTransfer.ps1')
+. (Join-Path $PSScriptRoot 'src/LegacyInventory.ps1')
+. (Join-Path $PSScriptRoot 'src/LegacyMigration.ps1')
 
 function Write-Log {
     param(
@@ -440,8 +456,18 @@ $archiveLock = $null
 
 # --- Main ---
 try {
+    $legacyRequested = $PSBoundParameters.ContainsKey('LegacyPath')
+    foreach ($option in @('LegacyAction', 'LegacyEpisodeId', 'LegacyFile', 'LegacySha256', 'LegacyCheckpoint')) {
+        if ($PSBoundParameters.ContainsKey($option) -and -not $legacyRequested) {
+            throw 'Legacy options require -LegacyPath and an explicit -FeedUrl.'
+        }
+    }
+    if ($legacyRequested -and ([string]::IsNullOrWhiteSpace($LegacyPath) -or
+            -not $PSBoundParameters.ContainsKey('FeedUrl') -or [string]::IsNullOrWhiteSpace($FeedUrl))) {
+        throw 'Legacy review requires an existing -LegacyPath and an explicit -FeedUrl.'
+    }
     $needFeed  = -not $PSBoundParameters.ContainsKey('FeedUrl')
-    $needCount = -not $PSBoundParameters.ContainsKey('Mode') -and -not $PSBoundParameters.ContainsKey('CustomCount')
+    $needCount = -not $legacyRequested -and -not $PSBoundParameters.ContainsKey('Mode') -and -not $PSBoundParameters.ContainsKey('CustomCount')
 
     if ($needFeed) {
         $FeedUrl = Get-FeedUrlInteractive
@@ -484,7 +510,7 @@ try {
         throw "No feed URL specified. Use -FeedUrl or paste it via the TUI."
     }
 
-    if ($Mode -eq 'Custom' -and (-not $CustomCount -or $CustomCount -lt 1)) {
+    if (-not $legacyRequested -and $Mode -eq 'Custom' -and (-not $CustomCount -or $CustomCount -lt 1)) {
         throw "Mode 'Custom' requires -CustomCount with a value >= 1."
     }
 
@@ -494,12 +520,6 @@ try {
         $rootInput = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($rootInput)
     }
     $baseOutputPath = Assert-PodcastDestination -Root $rootInput -Directory
-    if (-not (Test-Path -LiteralPath $baseOutputPath)) {
-        Write-Host "[*] Creating base output directory: $baseOutputPath"
-        $null = Assert-PodcastDestination -Root $baseOutputPath -Directory
-        $null = [IO.Directory]::CreateDirectory($baseOutputPath)
-    }
-
     $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
 
     Write-Host "[*] Fetching podcast feed..."
@@ -523,6 +543,20 @@ try {
         Write-Host "    Feed title: (unknown)"
     }
 
+    $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
+    $episodes = @($episodes | Where-Object { $_.Url })
+    $episodeCount = $episodes.Count
+    if ($episodeCount -eq 0) {
+        throw 'Feed parsed, but no downloadable enclosure URLs were found.'
+    }
+    $allEpisodes = $episodes
+    if ($legacyRequested) {
+        Invoke-PodcastLegacyMigration -Root $baseOutputPath -LegacyRoot $LegacyPath -FeedUrl $resolved.Url `
+            -Episodes $allEpisodes -Action $LegacyAction -EpisodeId $LegacyEpisodeId -FileName $LegacyFile `
+            -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint
+        return
+    }
+
     # Reserve room for both identifiers, separators and an episode's date/extension.
     $folderBudget = [Math]::Min(100, 259 - $baseOutputPath.TrimEnd('\').Length - 2 - 84)
     if ($folderBudget -lt 66) {
@@ -533,13 +567,6 @@ try {
     $safeFeedTitle = $archive.FolderName
 
     $OutputPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
-    $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
-    $episodes = @($episodes | Where-Object { $_.Url })
-    $episodeCount = $episodes.Count
-    if ($episodeCount -eq 0) {
-        throw 'Feed parsed, but no downloadable enclosure URLs were found.'
-    }
-    $allEpisodes = $episodes
     $episodes = Select-PodcastEpisode -Episodes $allEpisodes -Mode $Mode -CustomCount $CustomCount
     $fileBudget = [Math]::Min(180, 259 - $OutputPath.Length - 1)
     $historyState = $archive.State
@@ -548,6 +575,21 @@ try {
     }
     $null = New-PodcastHistoryPlan -Episodes $allEpisodes -State $historyState -MaxFileNameLength $fileBudget
     $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+
+    $legacyReview = Find-PodcastLegacyReview -Root $baseOutputPath -ArchiveRoot $OutputPath -FeedTitle $feedTitle `
+        -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+    if ($null -ne $legacyReview) {
+        if ($WhatIfPreference) { return $legacyReview }
+        throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.'
+    }
+    if (-not $PSCmdlet.ShouldProcess($OutputPath, 'Update archive history and logs; download selected missing episodes')) {
+        return $destinationPlan
+    }
+    if (-not (Test-Path -LiteralPath $baseOutputPath)) {
+        Write-Host "[*] Creating base output directory: $baseOutputPath"
+        $null = Assert-PodcastDestination -Root $baseOutputPath -Directory
+        $null = [IO.Directory]::CreateDirectory($baseOutputPath)
+    }
 
     # Serialize discovery and first state creation across title changes. This
     # short root lock is released before media transfer; the show lock remains.
@@ -561,6 +603,9 @@ try {
         $historyState = New-PodcastHistory -FeedId $archive.FeedId -FeedAliasFingerprint (Get-PodcastNameHash -IdentityKey ('feed:' + $resolved.Url))
     }
     $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+    $legacyReview = Find-PodcastLegacyReview -Root $baseOutputPath -ArchiveRoot $OutputPath -FeedTitle $feedTitle `
+        -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+    if ($null -ne $legacyReview) { throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.' }
     if (-not (Test-Path -LiteralPath $OutputPath)) {
         Write-Host "[*] Creating podcast folder: $OutputPath"
         $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
@@ -577,6 +622,9 @@ try {
         throw 'Feed identity changed while acquiring archive writer protection; preserving history.'
     }
     $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+    $legacyReview = Find-PodcastLegacyReview -Root $baseOutputPath -ArchiveRoot $OutputPath -FeedTitle $feedTitle `
+        -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+    if ($null -ne $legacyReview) { throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.' }
     if ($historyState.generation -eq 0) {
         $historyState.generation = 1
         $historyState = Write-PodcastHistory -Lock $historyLock -State $historyState
@@ -608,6 +656,7 @@ try {
 
     $downloaded = @()
     $skipped    = @()
+    $adopted    = @()
     $failed     = @()
     $maxRetries = 3
 
@@ -627,6 +676,14 @@ try {
             Write-Host "[-] Skipping (verified history): $fileName"
             $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
             Write-Log ("Verified history and on-disk SHA-256: {0}" -f $destFile)
+            continue
+        }
+        if ($historyAction -eq 'adopted_skip') {
+            Write-Progress -Activity "Podcast downloads" -Status "Skipping (owner-adopted local file): $fileName" `
+                -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
+            Write-Host "[-] Skipping (owner-adopted local file): $fileName"
+            $adopted += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
+            Write-Log ("Owner-adopted local file is unchanged: {0}; transfer completeness remains unverified." -f $destFile)
             continue
         }
         if ($historyAction -eq 'conflict') {
@@ -705,9 +762,10 @@ try {
     Write-Host "-------"
     Write-Host ("Downloaded : {0}" -f $downloaded.Count)
     Write-Host ("Skipped    : {0}" -f $skipped.Count)
+    Write-Host ("Adopted    : {0}" -f $adopted.Count)
     Write-Host ("Failed     : {0}" -f $failed.Count)
 
-    Write-Log ("Summary: Downloaded={0}, Skipped={1}, Failed={2}" -f $downloaded.Count, $skipped.Count, $failed.Count)
+    Write-Log ("Summary: Downloaded={0}, Skipped={1}, Failed={2}, Adopted={3}" -f $downloaded.Count, $skipped.Count, $failed.Count, $adopted.Count)
 
     if ($failed.Count -gt 0) {
         Write-Host ""

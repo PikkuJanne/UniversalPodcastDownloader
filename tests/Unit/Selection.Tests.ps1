@@ -125,6 +125,6 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
             Should -Throw $Message
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
         Should -Invoke Write-Progress -Times 0 -Exactly
-        @(Get-ChildItem -LiteralPath $output -Filter '*.mp3' -Recurse).Count | Should -Be 0
+        Test-Path -LiteralPath $output | Should -BeFalse
     }
 }

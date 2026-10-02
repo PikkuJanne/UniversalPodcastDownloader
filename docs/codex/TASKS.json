@@ -207,7 +207,7 @@
       "id": "UPD-0105",
       "milestone": "M1",
       "title": "Protect and migrate legacy archives",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0104"
       ],

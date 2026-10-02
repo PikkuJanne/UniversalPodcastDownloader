@@ -110,17 +110,18 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')
             return
-        if path == '/feeds/history.xml':
+        if path in ('/feeds/history.xml', '/feeds/legacy-changing.xml'):
             changed = self.server.recovered.is_set()
             title = 'Renamed history show' if changed else 'Original history show'
             episode = 'Renamed episode' if changed else 'Original episode'
             token = 'renewed' if changed else 'original'
+            media_name = 'legacy-changing' if path == '/feeds/legacy-changing.xml' else 'history'
             body = ('<rss version="2.0"><channel><title>{}</title>'
                     '<item><title>{}</title><guid isPermaLink="false">history-stable-001</guid>'
                     '<pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate>'
-                    '<enclosure url="{}/media/history.mp3?signature={}&amp;part=1" '
+                    '<enclosure url="{}/media/{}.mp3?signature={}&amp;part=1" '
                     'type="audio/mpeg" length="{}"/></item></channel></rss>').format(
-                        title, episode, self.server.base_url, token, len(self.server.audio))
+                        title, episode, self.server.base_url, media_name, token, len(self.server.audio))
             self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
             return
         transaction_media = {
@@ -193,17 +194,21 @@ class FixtureHandler(BaseHTTPRequestHandler):
             '/media/stall.mp3', '/media/stall-headers.mp3', '/retry/once.mp3',
             '/media/recover.mp3', '/media/interrupt.mp3', '/media/json.mp3',
             '/media/xml.mp3', '/media/unsolicited-partial.mp3', '/media/history.mp3',
+            '/media/legacy-changing.mp3',
         }
         if path not in known:
             self._send(404, b'Unknown fixture route', head, 'text/plain')
             return
-        if path == '/media/history.mp3':
+        if path in ('/media/history.mp3', '/media/legacy-changing.mp3'):
             token = 'renewed' if self.server.recovered.is_set() else 'original'
             if urlsplit(self.path).query != 'signature={}&part=1'.format(token):
                 self._send(403, b'Synthetic signature mismatch', head, 'text/plain')
                 return
         data = self.server.audio
         etag = '"fixture-v1"'
+        if path == '/media/legacy-changing.mp3' and self.server.recovered.is_set():
+            data = data + b'\0' * 32
+            etag = '"legacy-changed-v2"'
         if path == '/media/changed.mp3':
             # Still MP3 data, but a different representation and validator.
             data = data + b'\0' * 16

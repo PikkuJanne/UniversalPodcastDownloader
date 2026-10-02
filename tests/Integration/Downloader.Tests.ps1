@@ -138,7 +138,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $run.Result.ErrorMessage | Should -Not -Match 'divide by zero|null'
         $run.Stdout | Should -Not -Match 'Feed failed:'
         $run.Stdout | Should -Not -Match 'Security Warning|Script Execution Risk|UseBasicParsing|divide by zero'
-        @(Get-ChildItem -LiteralPath $run.OutputPath -Recurse -Filter '*.mp3').Count | Should -Be 0
+        Test-Path -LiteralPath $run.OutputPath | Should -BeFalse
         $stats = Get-UpdFixtureState -Context $context
         $stats.'/feeds/empty.xml' | Should -Be 1
         $stats.'/media/ok.mp3' | Should -BeNullOrEmpty
@@ -284,7 +284,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -Be $Count
     }
 
-    It 'A009 keeps feeds with the same title in distinct podcast folders without changing a legacy folder' {
+    It 'A009 A017 stops for review when a title matches legacy media and preserves that folder' {
         $legacy = Join-Path (Join-Path $context.Root 'output') 'Fixture Podcast'
         $null = New-Item -ItemType Directory -Path $legacy -Force
         $sentinel = Join-Path $legacy '2026-09-01 - One synthetic episode.mp3'
@@ -293,15 +293,14 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $stamp = (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc
         foreach ($feed in '/feeds/single.xml', '/feeds/single-alias.xml') {
             $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath $feed
-            $run.Result.Succeeded | Should -BeTrue -Because ($run.Stdout + $run.Stderr + $run.Result.ErrorMessage)
-            $run.ExitCode | Should -Be 0
-            $run.Stdout | Should -Match 'Downloaded\s+: 1'
+            $run.Result.Succeeded | Should -BeFalse
+            $run.Stdout | Should -Match 'review'
         }
         $folders = @(Get-ChildItem -LiteralPath (Join-Path $context.Root 'output') -Directory)
-        $folders.Count | Should -Be 3
-        @($folders | Where-Object { $_.Name -match '-[a-f0-9]{64}$' }).Count | Should -Be 2
+        $folders.Count | Should -Be 1
+        @($folders | Where-Object { $_.Name -match '-[a-f0-9]{64}$' }).Count | Should -Be 0
         (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
         (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc | Should -Be $stamp
-        (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -Be 2
+        @((Get-UpdFixtureState -Context $context).PSObject.Properties | Where-Object { $_.Name -like '/media/*' }).Count | Should -Be 0
     }
 }

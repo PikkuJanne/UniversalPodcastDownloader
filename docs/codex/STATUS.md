@@ -1,6 +1,6 @@
 # Current implementation status
 
-Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0104 only**.
+Updated 2026-10-02 (Europe/Berlin). Active scope: **UPD-0105**; implementation and validation in progress. The UPD-0104 checkpoint below is historical until the new evidence is finalized.
 
 - UPD-0001, UPD-0002 and UPD-0101 through UPD-0103: done; historical evidence preserved.
 - UPD-0104: **done**; implementation pushed/verified, all local checks and both GitHub jobs passed.
