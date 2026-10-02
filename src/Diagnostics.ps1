@@ -86,7 +86,21 @@ function Get-PodcastDiagnosticError {
         }
     }
     $depth = 0
-    while ($cause -is [Exception] -and $null -ne $cause.InnerException -and $depth -lt 16) {
+    while ($cause -is [Exception] -and $depth -lt 16) {
+        if ($cause.Data['PodcastTransport'] -eq $true) {
+            # Map fixed categories only; never print the tagged message, header,
+            # retry date or any arbitrary data that an exception may carry.
+            switch ([string]$cause.Data['Kind']) {
+                'Deferred' { return 'The request was deferred because its retry budget could not allow another attempt.' }
+                'HeaderTimeout' { return 'The request exceeded the connection/header timeout.' }
+                'IdleTimeout' { return 'The response body exceeded the idle transfer timeout.' }
+                'Connection' { return 'The network connection failed before the transfer completed.' }
+                'HttpStatus' { return 'The server returned an unsuccessful HTTP status.' }
+                'IncompleteBody' { return 'The response body was incomplete.' }
+                'Permanent' { return 'The request was rejected by the network policy.' }
+            }
+        }
+        if ($null -eq $cause.InnerException) { break }
         $cause = $cause.InnerException
         $depth++
     }

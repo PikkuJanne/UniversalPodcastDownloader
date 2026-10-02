@@ -43,15 +43,15 @@ Describe 'A011: failed transfer attempts cannot become completed episodes' -Tag 
         Mock Invoke-PodcastMetadataRequest { $response }
     }
 
-    It 'retries invalid empty responses using new owned files and reports an incomplete run' {
+    It 'stops on an invalid empty response and reports an incomplete run' {
         Mock Invoke-PodcastMediaRequest {
             $temporaryNames.Add($DestinationStream.Name)
             [pscustomobject]@{ Completed = $true; Bytes = 0L; ContentLength = 0L; ContentType = 'audio/mpeg' }
         }
         { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All } |
             Should -Throw '*Download incomplete: 1 episode(s) failed*'
-        Should -Invoke Invoke-PodcastMediaRequest -Times 3 -Exactly
-        @($temporaryNames | Select-Object -Unique).Count | Should -Be 3
+        Should -Invoke Invoke-PodcastMediaRequest -Times 1 -Exactly
+        @($temporaryNames | Select-Object -Unique).Count | Should -Be 1
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.mp3').Count | Should -Be 0
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.tmp' -Force).Count | Should -Be 0
         Should -Invoke Write-Host -Times 0 -Exactly -ParameterFilter { $Object -like '[[]OK[]]*' }
@@ -78,5 +78,28 @@ Describe 'A011: failed transfer attempts cannot become completed episodes' -Tag 
         $stream.Dispose()
         [IO.File]::ReadAllText($unknown) | Should -Be 'unowned bytes'
         Test-Path -LiteralPath (Join-Path $script:OutputRoot 'episode.mp3') | Should -BeFalse
+    }
+
+    It 'A025 retries transient requests in fresh owned files with no nested retry loop' {
+        Mock Invoke-PodcastMediaRequest {
+            $temporaryNames.Add($DestinationStream.Name)
+            $DestinationStream.WriteByte(255)
+            throw (New-PodcastTransportException -Kind IncompleteBody -Message 'The response body was incomplete.' -Retryable $true)
+        }
+        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All -MaxAttempts 2 -BaseDelaySeconds 0 } |
+            Should -Throw '*Download incomplete: 1 episode(s) failed*'
+        Should -Invoke Invoke-PodcastMediaRequest -Times 2 -Exactly
+        @($temporaryNames | Select-Object -Unique).Count | Should -Be 2
+        @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.tmp' -Force).Count | Should -Be 0
+        @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.mp3').Count | Should -Be 0
+        Should -Invoke Write-Host -Times 0 -Exactly -ParameterFilter { $Object -like '[[]OK[]]*' }
+    }
+
+    It 'A025 never retries an unclassified destination or validation failure' {
+        Mock Invoke-PodcastMediaRequest { throw [IO.IOException]::new('Synthetic local failure') }
+        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All -MaxAttempts 3 -BaseDelaySeconds 0 } |
+            Should -Throw '*Download incomplete: 1 episode(s) failed*'
+        Should -Invoke Invoke-PodcastMediaRequest -Times 1 -Exactly
+        @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.tmp' -Force).Count | Should -Be 0
     }
 }

@@ -221,8 +221,10 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
     - Custom = first N
     - All = everything
 - Download robustness:
-  - Each episode is attempted up to 3 times.
-  - Short sleep between retries.
+  - Metadata and episodes get up to 3 attempts for transient failures. Permanent HTTP, validation and local-file errors stop immediately.
+  - Exponential backoff respects `Retry-After`. A server delay beyond the retry budget reports a deferred failure.
+  - Separate 30-second header and body-idle timeouts allow long downloads that keep making progress.
+  - Configure `-MaxAttempts`, `-HeaderTimeoutSeconds`, `-IdleTimeoutSeconds`, `-RetryBudgetSeconds`, `-BaseDelaySeconds` and `-MaxDelaySeconds` when needed. See [retry and timeout policy](docs/codex/TRANSPORT_POLICY.md) for defaults and limits.
   - Media failures use local error categories; a run with failed episodes reports an error without an “[OK]” completion message.
   - HTTP Content-Length is checked against bytes received when the platform exposes it. Original media bytes are kept; unexpected HTTP content encodings are rejected.
 

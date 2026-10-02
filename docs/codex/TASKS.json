@@ -305,7 +305,7 @@
       "id": "UPD-0201",
       "milestone": "M2",
       "title": "Implement bounded retry and timeout policy",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0107"
       ],

@@ -52,6 +52,10 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/retry/once.mp3` | First request 503 with Retry-After: 1, then successful media |
 | `/status/403`, `/status/404`, `/status/429`, `/status/503` | Status tests; transient codes include Retry-After |
 | `/__stats` | Loopback-only path request counters (no query values) |
+| `/transport/feed/<scenario>` | RSS pointing to the same named media scenario; ordinary successful metadata |
+| `/transport/metadata/<scenario>`, `/transport/media/<scenario>` | Bounded transient/permanent status, Retry-After delta/date, header/idle stall, active progress and one-time truncated response fixtures |
+| `/transport/{metadata,media}/redirect-wait`, `/transport/{metadata,media}/redirect-defer` | Relative redirects with a one-second or five-second Retry-After; named `redirect-target` returns complete content |
+| `/__transport` | Fixed transport route names, request arrival timestamps and advertised earliest retry times; no query/header values |
 | `POST /__reset` | Resets test counters; unsupported otherwise |
 
 The fixed short delay exists to make tests quick. Configure a suitably smaller idle timeout only in the integration test. Inject clocks/delays for unit tests rather than waiting real long intervals. HEAD returns headers without a media body. The server handles HTTP/1.0 close-delimited responses intentionally; it is not a full production HTTP implementation.

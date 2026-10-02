@@ -10,6 +10,7 @@ import time
 import threading
 import unittest
 import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
 
 KIT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('upd_fixture_server', KIT / 'fixture_server.py')
@@ -296,6 +297,59 @@ class HelperTests(unittest.TestCase):
     def test_stall_routes_finish(self):
         self.assertEqual(self.request('/media/stall.mp3')[2], self.audio)
         self.assertEqual(self.request('/media/stall-headers.mp3')[2], self.audio)
+
+    def test_transport_feed_only_points_to_named_synthetic_media(self):
+        tree = ET.fromstring(self.request('/transport/feed/once-503')[2])
+        self.assertEqual(tree.find('./channel/item/enclosure').attrib['url'],
+                         self.server.base_url + '/transport/media/once-503')
+        self.assertEqual(self.request('/transport/media/not-a-scenario')[0], 404)
+
+    def test_transport_status_routes_recover_only_when_configured(self):
+        self.request('/__reset', method='POST')
+        for kind in ('metadata', 'media'):
+            for code in (408, 429, 500, 502, 503, 504):
+                route = '/transport/{}/once-{}'.format(kind, code)
+                self.assertEqual(self.request(route)[0], code)
+                self.assertEqual(self.request(route)[0], 200)
+            for code in (400, 403, 404, 501):
+                route = '/transport/{}/permanent-{}'.format(kind, code)
+                self.assertEqual(self.request(route)[0], code)
+                self.assertEqual(self.request(route)[0], code)
+
+    def test_transport_retry_after_events_preserve_actual_server_deadline(self):
+        self.request('/__reset', method='POST')
+        for scenario in ('retry-delta', 'retry-date', 'defer-delta', 'defer-date'):
+            route = '/transport/media/' + scenario
+            status, headers, _ = self.request(route + '?fake_token=DO_NOT_RECORD')
+            self.assertEqual(status, 429)
+            events_raw = self.request('/__transport')[2]
+            self.assertNotIn(b'DO_NOT_RECORD', events_raw)
+            event = next(event for event in json.loads(events_raw) if event['path'] == route)
+            if scenario.endswith('-date'):
+                self.assertEqual(event['not_before'], parsedate_to_datetime(headers['Retry-After']).timestamp())
+            else:
+                self.assertGreaterEqual(event['not_before'] - event['received'], int(headers['Retry-After']))
+            self.assertEqual(self.request(route)[2], self.audio)
+
+    def test_transport_truncation_exposes_half_then_complete_original(self):
+        self.request('/__reset', method='POST')
+        with self.assertRaises(http.client.IncompleteRead) as caught:
+            self.request('/transport/media/truncated-once')
+        self.assertEqual(caught.exception.partial, self.audio[:len(self.audio) // 2])
+        self.assertEqual(self.request('/transport/media/truncated-once')[2], self.audio)
+
+    def test_transport_redirect_exposes_server_wait_and_owned_target(self):
+        for scenario, delay in (('redirect-wait', '1'), ('redirect-defer', '5')):
+            status, headers, body = self.request('/transport/media/' + scenario)
+            self.assertEqual((status, body), (302, b''))
+            self.assertEqual(headers['Retry-After'], delay)
+            self.assertEqual(headers['Location'], '/transport/media/redirect-target')
+        self.assertEqual(self.request('/transport/media/redirect-target')[2], self.audio)
+
+    def test_transport_active_progress_delivers_the_original_body(self):
+        started = time.monotonic()
+        self.assertEqual(self.request('/transport/media/progress')[2], self.audio)
+        self.assertGreater(time.monotonic() - started, 1.0)
 
 
 if __name__ == '__main__':

@@ -6,7 +6,8 @@ function Invoke-PodcastMediaTransfer {
         [Parameter(Mandatory)][string]$Root,
         [Parameter(Mandatory)][string]$RelativePath,
         [Nullable[long]]$EnclosureLength,
-        [scriptblock]$BeforeFinalize
+        [scriptblock]$BeforeFinalize,
+        $Policy
     )
 
     $destination = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
@@ -21,7 +22,7 @@ function Invoke-PodcastMediaTransfer {
         $owned = $true
         try {
             $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
-            $transfer = Invoke-PodcastMediaRequest -Uri $Uri -DestinationStream $destinationStream
+            $transfer = Invoke-PodcastMediaRequest -Uri $Uri -DestinationStream $destinationStream -Policy $Policy
             $destinationStream.Flush($true)
         }
         finally { $destinationStream.Dispose() }

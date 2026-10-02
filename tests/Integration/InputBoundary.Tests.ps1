@@ -202,7 +202,7 @@ Describe 'A022/A024: real preview and untrusted-input boundaries' -Tag 'Integrat
         $run.ExitCode | Should -Be 1
         @(Get-ChildItem -LiteralPath (Join-Path $run.Root 'out') -Recurse -Filter '*.mp3' -File).Count | Should -Be 0
         $stats = Get-UpdFixtureState -Context $context
-        $stats.'/media/redirect-file.mp3' | Should -Be 3
+        $stats.'/media/redirect-file.mp3' | Should -Be 1
         $stats.'/media/ok.mp3' | Should -BeNullOrEmpty
     }
 }

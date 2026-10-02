@@ -178,7 +178,14 @@ param(
 
     [string]$LegacyCheckpoint,
 
-    [string]$DiagnosticExportPath
+    [string]$DiagnosticExportPath,
+
+    [ValidateRange(1, 10)][int]$MaxAttempts = 3,
+    [ValidateRange(0.001, 86400)][double]$HeaderTimeoutSeconds = 30,
+    [ValidateRange(0.001, 86400)][double]$IdleTimeoutSeconds = 30,
+    [ValidateRange(0, 86400)][double]$RetryBudgetSeconds = 120,
+    [ValidateRange(0, 3600)][double]$BaseDelaySeconds = 1,
+    [ValidateRange(0, 3600)][double]$MaxDelaySeconds = 30
 )
 
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
@@ -195,6 +202,10 @@ param(
 . (Join-Path $PSScriptRoot 'src/LegacyInventory.ps1')
 . (Join-Path $PSScriptRoot 'src/LegacyMigration.ps1')
 
+$script:PodcastTransportPolicy = New-PodcastTransportPolicy -MaxAttempts $MaxAttempts `
+    -HeaderTimeoutSeconds $HeaderTimeoutSeconds -IdleTimeoutSeconds $IdleTimeoutSeconds `
+    -RetryBudgetSeconds $RetryBudgetSeconds -BaseDelaySeconds $BaseDelaySeconds -MaxDelaySeconds $MaxDelaySeconds
+
 function Write-Log {
     param(
         [Parameter(Mandatory)][string]$Message,
@@ -210,7 +221,7 @@ function Invoke-PodcastWebRequest {
     param([Parameter(Mandatory)][string]$Uri)
 
     # Metadata stays in memory. Media writes use the confirmed transfer path.
-    Invoke-PodcastMetadataRequest -Uri $Uri
+    Invoke-PodcastMetadataRequest -Uri $Uri -Policy $script:PodcastTransportPolicy
 }
 
 # --- RSS autodetect helpers ---
@@ -322,6 +333,8 @@ function Resolve-PodcastItems {
                 return [PSCustomObject]@{ Url = $u; Xml = $xml; Items = $items }
             }
         } catch {
+            $transportFailure = Get-PodcastTransportFailure -ErrorObject $_
+            if ($null -ne $transportFailure) { throw $transportFailure }
             Write-Verbose ("Feed failed: {0} ({1})" -f (Get-PodcastSafeUrl -Url $u), (Get-PodcastDiagnosticError -Error $_))
         }
     }
@@ -555,7 +568,7 @@ try {
     if ($legacyRequested) {
         Invoke-PodcastLegacyMigration -Root $baseOutputPath -LegacyRoot $LegacyPath -FeedUrl $resolved.Url `
             -Episodes $allEpisodes -Action $LegacyAction -EpisodeId $LegacyEpisodeId -FileName $LegacyFile `
-            -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint
+            -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint -Policy $script:PodcastTransportPolicy
         return
     }
 
@@ -662,7 +675,6 @@ try {
     $skipped    = @()
     $adopted    = @()
     $failed     = @()
-    $maxRetries = 3
 
     $index = 0
     foreach ($planned in $destinationPlan) {
@@ -711,28 +723,28 @@ try {
         if ($ep.PubDate) { Write-Log ("PubDate   : {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
 
         $success   = $false
-        $attempt   = 0
+        $attempt   = 1
         $lastError = $null
 
-        while (-not $success -and $attempt -lt $maxRetries) {
-            $attempt++
-            Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
-
-            try {
-                $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned
-                $success = $true
-            } catch {
-                $lastError = $_
-                # A path that became unsafe is fatal, not a retryable network error.
-                $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
-                $msg = Get-PodcastDiagnosticError -Error $lastError
-                Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $msg)
-                Write-Log ("Attempt failed: {0}" -f $msg) 'WARN'
-                # A final file may exist when the history commit failed. Leave
-                # its prepared evidence for reconciliation on the next run.
-                if (Test-Path -LiteralPath $destFile) { break }
-                if ($attempt -lt $maxRetries) { Start-Sleep -Seconds 3 }
+        try {
+            $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned -Policy $script:PodcastTransportPolicy
+            $success = $true
+            $attempt = $transferResult.Attempts
+        } catch {
+            $lastError = $_
+            # Revalidate paths before recording failure. Prepared evidence for
+            # an already placed final file remains for the next run to reconcile.
+            $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
+            $transportFailure = Get-PodcastTransportFailure -ErrorObject $lastError
+            if ($null -ne $transportFailure -and $transportFailure.Data.Contains('Attempts')) {
+                $attempt = [int]$transportFailure.Data['Attempts']
             }
+            elseif ($lastError.Exception.Data.Contains('PodcastAttempts')) {
+                $attempt = [int]$lastError.Exception.Data['PodcastAttempts']
+            }
+            $msg = Get-PodcastDiagnosticError -Error $lastError
+            Write-Warning ("    Transfer failed: {0}" -f $msg)
+            Write-Log ("Transfer failed: {0}" -f $msg) 'WARN'
         }
 
         if ($success) {

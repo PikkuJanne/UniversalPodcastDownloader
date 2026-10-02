@@ -4,10 +4,12 @@ function Invoke-PodcastMediaRequest {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Uri,
-        [Parameter(Mandatory)][IO.Stream]$DestinationStream
+        [Parameter(Mandatory)][IO.Stream]$DestinationStream,
+        $Policy
     )
 
     $target = Get-PodcastRequestUri -Uri $Uri
+    if ($null -eq $Policy) { $Policy = New-PodcastTransportPolicy }
     $client = $null
     $request = $null
     $response = $null
@@ -19,9 +21,7 @@ function Invoke-PodcastMediaRequest {
             throw $failure
         }
         $client = Get-PodcastHttpClient
-        # The default 100-second HttpClient timeout covers headers only here.
-        # Reading the response does not impose a total-duration audio limit.
-        $exchange = Invoke-PodcastHttpGet -Uri $target.AbsoluteUri -Client $client
+        $exchange = Invoke-PodcastHttpGet -Uri $target.AbsoluteUri -Client $client -Policy $Policy
         $request = $exchange.Request
         $response = $exchange.Response
         $status = [int]$response.StatusCode
@@ -44,7 +44,7 @@ function Invoke-PodcastMediaRequest {
         $source = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
         $buffer = New-Object byte[] 65536
         [long]$bytes = 0
-        while (($read = $source.Read($buffer, 0, $buffer.Length)) -gt 0) {
+        while (($read = Read-PodcastResponseChunk -Source $source -Buffer $buffer -Count $buffer.Length -Policy $Policy) -gt 0) {
             $DestinationStream.Write($buffer, 0, $read)
             $bytes += $read
         }
@@ -52,7 +52,7 @@ function Invoke-PodcastMediaRequest {
         # ends before its advertised length. Count bytes explicitly in both engines.
         if ($null -ne $contentLength -and $bytes -ne [long]$contentLength) {
             $failure = 'Media response Content-Length does not match the received byte count.'
-            throw $failure
+            throw (New-PodcastTransportException -Kind IncompleteBody -Message $failure -Retryable ($bytes -lt $contentLength))
         }
         return [pscustomobject]@{
             Completed = $true
@@ -64,6 +64,8 @@ function Invoke-PodcastMediaRequest {
         }
     }
     catch {
+        $transportFailure = Get-PodcastTransportFailure -ErrorObject $_
+        if ($null -ne $transportFailure) { throw $transportFailure }
         # Transport exceptions can contain a signed URL, credentials, or body
         # text. Expose only messages defined here, without the original exception.
         throw $failure

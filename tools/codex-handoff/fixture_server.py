@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import socket
 import threading
 import time
+from email.utils import formatdate
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -33,6 +35,7 @@ class FixtureServer(ThreadingHTTPServer):
 
     def __init__(self, port: int = 0):
         self.counts: Dict[str, int] = {}
+        self.transport_events = []
         self.count_lock = threading.Lock()
         self.recovered = threading.Event()
         self.audio = (FIXTURES / 'silence.mp3').read_bytes()
@@ -76,6 +79,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
             return
         with self.server.count_lock:
             self.server.counts.clear()
+            self.server.transport_events.clear()
         self._send(200, b'{"reset":true}', False, 'application/json')
 
     def _safe_dispatch(self, head: bool) -> None:
@@ -104,11 +108,100 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if not head:
             self.wfile.write(body)
 
+    def _transport(self, path: str, number: int, head: bool) -> None:
+        # Only these named, bounded scenarios exist. Never proxy or read a path
+        # supplied by the caller. Events contain fixed route names, not queries.
+        match = re.fullmatch(r'/transport/(feed|metadata|media)/([a-z0-9-]+)', path)
+        if not match:
+            self._send(404, b'Unknown transport fixture', head, 'text/plain')
+            return
+        kind, scenario = match.groups()
+        scenarios = {'once-' + str(code) for code in (408, 429, 500, 502, 503, 504)}
+        scenarios.update('permanent-' + str(code) for code in (400, 403, 404, 501))
+        scenarios.update(('always-503', 'retry-delta', 'retry-date', 'defer-delta',
+                          'defer-date', 'delay-headers', 'stall-body', 'progress',
+                          'truncated-once', 'redirect-wait', 'redirect-defer', 'redirect-target'))
+        if scenario not in scenarios:
+            self._send(404, b'Unknown transport fixture', head, 'text/plain')
+            return
+        body = ('<rss version="2.0"><channel><title>Transport fixture</title>'
+                '<item><title>Original synthetic audio</title><guid>transport-001</guid>'
+                '<enclosure url="{}/transport/media/{}" type="audio/mpeg" '
+                'length="{}"/></item></channel></rss>').format(
+                    self.server.base_url, scenario, len(self.server.audio)).encode('utf-8')
+        content_type = 'application/xml; charset=utf-8'
+        if kind == 'feed':
+            self._send(200, body, head, content_type)
+            return
+        if kind == 'media':
+            body, content_type = self.server.audio, 'audio/mpeg'
+        event = {'path': path, 'number': number, 'received': time.time()}
+        with self.server.count_lock:
+            self.server.transport_events.append(event)
+        if scenario in ('redirect-wait', 'redirect-defer'):
+            delay = 5 if scenario == 'redirect-defer' else 1
+            with self.server.count_lock:
+                event['not_before'] = time.time() + delay
+            self._send(302, b'', head, 'text/plain', {
+                'Location': '/transport/{}/redirect-target'.format(kind),
+                'Retry-After': str(delay),
+            })
+            return
+        if scenario.startswith('permanent-') or scenario == 'always-503' or (
+                scenario.startswith('once-') and number == 1):
+            status = int(scenario.rsplit('-', 1)[1])
+            self._send(status, b'Synthetic response', head, 'text/plain')
+            return
+        if scenario.startswith(('retry-', 'defer-')) and number == 1:
+            delay = 5 if scenario.startswith('defer-') else 1
+            now = time.time()
+            not_before = math.ceil(now) + delay if scenario.endswith('-date') else now + delay
+            retry_after = formatdate(not_before, usegmt=True) if scenario.endswith('-date') else str(delay)
+            with self.server.count_lock:
+                event['not_before'] = not_before
+            self._send(429, b'Synthetic response', head, 'text/plain', {'Retry-After': retry_after})
+            return
+        if scenario == 'delay-headers':
+            time.sleep(1.0)
+        if scenario == 'stall-body':
+            self._headers(200, len(body), content_type)
+            if not head:
+                self.wfile.write(body[:10])
+                self.wfile.flush()
+                time.sleep(1.0)
+                self.wfile.write(body[10:])
+            return
+        if scenario == 'progress':
+            self._headers(200, len(body), content_type)
+            if not head:
+                width = max(1, len(body) // 20)
+                for offset in range(0, len(body), width):
+                    self.wfile.write(body[offset:offset + width])
+                    self.wfile.flush()
+                    time.sleep(0.075)
+            return
+        if scenario == 'truncated-once' and number == 1:
+            self._headers(200, len(body), content_type)
+            if not head:
+                self.wfile.write(body[:len(body) // 2])
+                self.wfile.flush()
+                self.connection.shutdown(socket.SHUT_WR)
+            return
+        self._send(200, body, head, content_type)
+
     def _dispatch(self, head: bool) -> None:
         path = urlsplit(self.path).path
         number = self.server.count(path)
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')
+            return
+        if path == '/__transport':
+            with self.server.count_lock:
+                events = list(self.server.transport_events)
+            self._send(200, json.dumps(events).encode(), head, 'application/json')
+            return
+        if path.startswith('/transport/'):
+            self._transport(path, number, head)
             return
         if path == '/entity/never':
             self._send(200, b'ENTITY_MUST_NOT_BE_READ', head, 'text/plain')

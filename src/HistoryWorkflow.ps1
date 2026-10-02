@@ -107,7 +107,24 @@ function Resolve-PodcastHistoryItem {
 
 function Invoke-PodcastRecordedTransfer {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned)
+    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy)
+
+    if ($null -eq $Policy) { $Policy = New-PodcastTransportPolicy }
+    $transferContext = $Context
+    $transferPlan = $Planned
+    Invoke-PodcastTransportOperation -Policy $Policy -Operation {
+        param($Attempt, $AttemptPolicy)
+        # Each retry repeats the transaction with a fresh owned temporary file.
+        # Untyped filesystem, validation and history errors are never retried.
+        $result = Invoke-PodcastRecordedTransferAttempt -Context $transferContext -Planned $transferPlan -Policy $AttemptPolicy
+        $result | Add-Member NoteProperty Attempts $Attempt -Force
+        return $result
+    }
+}
+
+function Invoke-PodcastRecordedTransferAttempt {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy)
 
     $beforeFinalize = {
         param($Evidence)
@@ -124,7 +141,7 @@ function Invoke-PodcastRecordedTransfer {
         Save-PodcastEpisodeRecord -Context $Context -Record $prepared
     }
     $result = Invoke-PodcastMediaTransfer -Uri $Planned.Episode.Url -Root $Context.Lock.Root `
-        -RelativePath $Planned.FileName -EnclosureLength $Planned.Episode.EnclosureLength -BeforeFinalize $beforeFinalize
+        -RelativePath $Planned.FileName -EnclosureLength $Planned.Episode.EnclosureLength -BeforeFinalize $beforeFinalize -Policy $Policy
     $completed = @($Context.State.episodes | Where-Object { $_.episode_id -ceq $Planned.EpisodeId })[0].PSObject.Copy()
     $completed.status = 'transfer_verified'
     Save-PodcastEpisodeRecord -Context $Context -Record $completed
