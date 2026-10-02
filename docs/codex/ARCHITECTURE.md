@@ -1,6 +1,6 @@
 # Implementation design and behavior contracts
 
-This document specifies proposed behavior. It is not a description of already implemented functions. Prefer the smallest change that satisfies each task; introduce seams early and consolidate after evidence. Keep root entry-point names and current simple default workflow.
+This document specifies proposed behavior except where a section explicitly identifies implemented work. Prefer the smallest change that satisfies each task; introduce seams early and consolidate after evidence. Keep root entry-point names and current simple default workflow.
 
 ## Suggested structure
 
@@ -58,7 +58,17 @@ Treat RSS/Atom/HTML, headers, filenames, URLs, saved config and history as untru
 
 Feed titles and server Content-Disposition names are never arbitrary paths. Canonical path containment is necessary but not sufficient against junction/reparse-point races; fail safely for unsupported cases. Do not claim a perfect sandbox against a concurrent privileged local adversary. Validate output components and existing ancestors at relevant write boundaries [S4].
 
-Private subscriptions may encode secrets anywhere in URLs. Default diagnostics should retain only hostname plus opaque request ID rather than a guessed list of safe path/query fields. Do not log Authorization, cookie values, raw signed URLs, raw response bodies or full exception objects. An explicit local sensitive debug mode, if later added, needs clear consent and must not be included in shareable exports.
+Private subscriptions may encode secrets anywhere in URLs. Default diagnostics retain only hostname plus a random request ID, omitting all user information, path, query and fragment content. Do not log Authorization, cookie values, raw signed URLs, raw response bodies or full exception objects. An explicit local sensitive debug mode, if later added, needs clear consent and must not be included in shareable exports.
+
+## Implemented diagnostics (UPD-0106)
+
+Bundled `src/Diagnostics.ps1` defines the run context, URL display, safe error formatting, file sinks and restricted JSON export. Importing it has no side effects. Normal startup initializes it before discovery and tries the local application-data log directory, then the temporary log directory. UTF-8 without BOM, UTC timestamps, random full run IDs and CreateNew avoid engine-specific encoding and accidental log replacement. Diagnostic writes are best effort; failure reports a safe notice on standard error and preserves the primary operation error.
+
+After a confirmed ordinary download creates or opens its show directory, the sink switches to a new same-run log there and replays at most 256 recent events. The original startup log remains. If the show sink fails, the startup sink continues. Legacy changes retain their startup sink. Preview and WhatIf keep only a bounded in-memory buffer. Explicit confirmation delays diagnostic writes until acceptance, then initializes a fresh run context and discards the pre-confirmation buffer.
+
+Application-authored messages use safe error categories and omit untrusted titles, publisher IDs, paths and headers. URL correlation IDs are random and scoped to an in-memory bounded run map; exact request strings stay separate from display values. The original exception remains available in process, while rendered errors use safe ErrorDetails. PowerShell caller inspection, transcripts, input history and legacy review objects are outside the shareable diagnostic boundary.
+
+`-DiagnosticExportPath` serializes a strict allowlist of run metadata and bounded event times, levels and fixed codes into a new UTF-8 JSON file. It never reads log files or serializes free text, arbitrary runtime properties, local history, inventory, configuration, checkpoints, media, request URLs or exceptions. Preview suppresses this write too. The complete [diagnostic and retention policy](DIAGNOSTICS.md) distinguishes logs from the smaller export and documents remaining hostname/identity correlation, sensitive local data and manual retention.
 
 ## Compatibility details
 

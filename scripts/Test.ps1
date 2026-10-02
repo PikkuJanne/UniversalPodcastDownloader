@@ -8,6 +8,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$diagnosticTestRoot = $null
+$previousLocalAppData = $env:LOCALAPPDATA
+$previousTemp = $env:TEMP
+$previousTmp = $env:TMP
+$diagnosticTestParent = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\', '/')
 try {
     $repo = Split-Path $PSScriptRoot -Parent
     if (-not $TestRoot) { $TestRoot = Join-Path $repo 'tests' }
@@ -30,6 +35,16 @@ try {
     $configuration.Run.Exit = $false
     $configuration.Filter.FullName = $Filter
     $configuration.Output.Verbosity = 'Detailed'
+    # Startup diagnostics must stay inside this runner's owned temporary data.
+    # A short, exclusively created name preserves the legacy MAX_PATH budget
+    # when Pester and loopback children allocate their own directories below it.
+    $candidate = Join-Path $diagnosticTestParent ('upd-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    $null = New-Item -ItemType Directory -Path $candidate -ErrorAction Stop
+    $diagnosticTestRoot = $candidate
+    [IO.File]::WriteAllText((Join-Path $diagnosticTestRoot '.upd-test-owner'), $diagnosticTestRoot)
+    $env:LOCALAPPDATA = $diagnosticTestRoot
+    $env:TEMP = $diagnosticTestRoot
+    $env:TMP = $diagnosticTestRoot
     $result = Invoke-Pester -Configuration $configuration
     $summary = ("RESULT suite={0} engine={1} total={2} passed={3} failed={4} skipped={5} not_run={6}" -f
         $Suite, $PSVersionTable.PSVersion, $result.TotalCount, $result.PassedCount,
@@ -53,4 +68,18 @@ try {
 catch {
     Write-Error -Message $_.Exception.Message -ErrorAction Continue
     exit 1
+}
+finally {
+    $env:LOCALAPPDATA = $previousLocalAppData
+    $env:TEMP = $previousTemp
+    $env:TMP = $previousTmp
+    if ($diagnosticTestRoot) {
+        $resolvedRoot = [IO.Path]::GetFullPath($diagnosticTestRoot)
+        $marker = Join-Path $resolvedRoot '.upd-test-owner'
+        if ([IO.Path]::GetDirectoryName($resolvedRoot) -eq $diagnosticTestParent -and
+            [IO.Path]::GetFileName($resolvedRoot) -match '^upd-[a-f0-9]{8}$' -and
+            (Test-Path -LiteralPath $marker) -and [IO.File]::ReadAllText($marker) -eq $resolvedRoot) {
+            Remove-Item -LiteralPath $resolvedRoot -Recurse -Force
+        }
+    }
 }

@@ -239,7 +239,7 @@
       "id": "UPD-0106",
       "milestone": "M1",
       "title": "Make startup diagnostics private and reliable",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0105"
       ],
@@ -261,9 +261,11 @@
         "A020",
         "A021"
       ],
-      "evidence": [],
+      "evidence": [
+        "docs/codex/evidence/UPD-0106.md"
+      ],
       "implementation_commit": null,
-      "pr": null
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0107",

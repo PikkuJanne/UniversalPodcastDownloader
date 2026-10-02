@@ -40,14 +40,15 @@ FEATURES
         - Up to 3 attempts per episode with short delay between tries.
         - Skips episodes only after checking recorded size and SHA-256 on disk.
         - Summarizes downloaded / skipped / failed at the end.
-    - Verbose, per-run log file:
-        - Stored in the podcast folder next to the audio files.
-        - Named: YYYYMMDD_HHMMSS_<unique run ID>.log
-        - Logs:
-            - Feed URL and resolved feed URL
-            - Mode, output folder, and counts
-            - Each episode download attempt and outcome
-            - Final summary, including failures and error messages
+    - Private per-run UTF-8 diagnostics:
+        - Startup: LOCALAPPDATA\UniversalPodcastDownloader\Logs (TEMP fallback).
+        - Confirmed downloads also keep a log in the podcast folder.
+        - Named: download-<UTC timestamp>-<unique run ID>.log
+        - Request displays contain only host and opaque per-run ID.
+        - Logs use counts, episode identities and safe error categories.
+        - Optional -DiagnosticExportPath saves a restricted JSON summary.
+        - WhatIf and legacy Preview create no diagnostic files.
+        - See docs/codex/DIAGNOSTICS.md for privacy and retention details.
 
 MY INTENDED USAGE
     - I double-click UniversalPodcastDownloader.bat.
@@ -87,7 +88,7 @@ USAGE
             - Audio files under:
                 %USERPROFILE%\Downloads\Podcasts\<FeedTitle>\
             - Log file:
-                YYYYMMDD_HHMMSS_<FeedTitle>.log
+                download-<UTC timestamp>-<unique run ID>.log
 
     B) Direct PowerShell (interactive TUI still available)
         - Run without parameters for the same guided TUI:
@@ -111,7 +112,7 @@ NOTES
     - Episodes are sorted by publication date (PubDate) newest first.
     - New folder and file names include deterministic SHA-256 identity suffixes.
     - Windows names are sanitized and shortened to fit the selected output root.
-    - Unsafe paths fail before writes; failures before folder creation have no log.
+    - Unsafe archive paths fail before archive writes; startup diagnostics use a separate safe location.
     - Recorded transfer skips check local size and SHA-256. Adopted files stay distinct.
     - Use -LegacyPath for a read-only inventory and explicit adoption/redownload choices.
     - The tool does not transcode or modify audio, it saves whatever the feed serves,
@@ -175,11 +176,14 @@ param(
 
     [string]$LegacySha256,
 
-    [string]$LegacyCheckpoint
+    [string]$LegacyCheckpoint,
+
+    [string]$DiagnosticExportPath
 )
 
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
 . (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
+. (Join-Path $PSScriptRoot 'src/Diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryStore.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryIdentity.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
@@ -196,13 +200,7 @@ function Write-Log {
         [string]$Level = 'INFO'
     )
 
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $line = "[{0}] [{1}] {2}" -f $timestamp, $Level, $Message
-
-    if ($script:LogFile) {
-        $null = Assert-PodcastDestination -Root $script:LogRoot -RelativePath $script:LogRelativePath
-        Add-Content -LiteralPath $script:LogFile -Value $line
-    }
+    Write-PodcastDiagnostic -Message $Message -Level $Level
 }
 
 function Invoke-PodcastWebRequest {
@@ -212,7 +210,10 @@ function Invoke-PodcastWebRequest {
     )
 
     # Avoid the legacy DOM parser and its security prompt in Windows PowerShell.
-    Invoke-WebRequest @PSBoundParameters -UseBasicParsing
+    # The web cmdlet's own verbose/debug/progress records can include the full
+    # request URL or response. Keep those private; author our own safe messages.
+    $ProgressPreference = 'SilentlyContinue'
+    Invoke-WebRequest @PSBoundParameters -UseBasicParsing -Verbose:$false -Debug:$false -ErrorAction Stop
 }
 
 # --- RSS autodetect helpers ---
@@ -286,7 +287,7 @@ function Get-FeedUrlInteractive {
 
             $rssUrl = Find-RssInHtml -Html $html -BaseUrl $inputUrl
             if ($rssUrl) {
-                Write-Host "  Found RSS candidate: $rssUrl" -ForegroundColor Green
+                Write-Host ("  Found RSS candidate: " + (Get-PodcastSafeUrl -Url $rssUrl)) -ForegroundColor Green
                 $ans = Read-Host "Use this feed? (Y/n)"
                 if ($ans -match '^(n|no)$') {
                     Write-Host "  Okay, let's try another URL." -ForegroundColor Yellow
@@ -298,7 +299,7 @@ function Get-FeedUrlInteractive {
             Write-Host "  Could not auto-detect an RSS feed on that page." -ForegroundColor Red
             Write-Host "  Try a different URL or copy a direct 'RSS' link." -ForegroundColor Yellow
         } catch {
-            Write-Host "  Failed to fetch URL: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host ("  Failed to fetch URL: " + (Get-PodcastDiagnosticError -Error $_)) -ForegroundColor Red
         }
     }
 }
@@ -308,7 +309,7 @@ function Resolve-PodcastItems {
     param([string[]]$Feeds)
 
     foreach ($u in $Feeds) {
-        Write-Verbose "Trying feed: $u"
+        Write-Verbose ("Trying feed: " + (Get-PodcastSafeUrl -Url $u))
         try {
             $resp = Invoke-PodcastWebRequest -Uri $u
             $xml  = [xml]$resp.Content
@@ -322,7 +323,7 @@ function Resolve-PodcastItems {
                 return [PSCustomObject]@{ Url = $u; Xml = $xml; Items = $items }
             }
         } catch {
-            Write-Verbose "Feed failed: $u  ($($_.Exception.Message))"
+            Write-Verbose ("Feed failed: {0} ({1})" -f (Get-PodcastSafeUrl -Url $u), (Get-PodcastDiagnosticError -Error $_))
         }
     }
 
@@ -447,16 +448,15 @@ $ErrorActionPreference = 'Stop'
 $prevProgress = $global:ProgressPreference
 $global:ProgressPreference = 'Continue'
 
-# Log file path, set later once we know the podcast folder
-$script:LogFile = $null
-$script:LogRoot = $null
-$script:LogRelativePath = $null
 $historyLock = $null
 $archiveLock = $null
+$legacyRequested = $PSBoundParameters.ContainsKey('LegacyPath')
+$diagnosticPreview = $WhatIfPreference -or ($legacyRequested -and $LegacyAction -eq 'Preview')
+$diagnosticConfirmation = $ConfirmPreference -in @('Low', 'Medium')
+$null = Initialize-PodcastDiagnostics -Preview:($diagnosticPreview -or $diagnosticConfirmation)
 
 # --- Main ---
 try {
-    $legacyRequested = $PSBoundParameters.ContainsKey('LegacyPath')
     foreach ($option in @('LegacyAction', 'LegacyEpisodeId', 'LegacyFile', 'LegacySha256', 'LegacyCheckpoint')) {
         if ($PSBoundParameters.ContainsKey($option) -and -not $legacyRequested) {
             throw 'Legacy options require -LegacyPath and an explicit -FeedUrl.'
@@ -524,7 +524,7 @@ try {
 
     Write-Host "[*] Fetching podcast feed..."
     $resolved = Resolve-PodcastItems -Feeds $candidateFeeds
-    Write-Host "    Using feed: $($resolved.Url)"
+    Write-Host ("    Using feed: " + (Get-PodcastSafeUrl -Url $resolved.Url))
 
     # Feed title, PS5.1-safe
     $feedTitle = $null
@@ -538,7 +538,7 @@ try {
     } catch {}
 
     if ($feedTitle) {
-        Write-Host "    Feed title: $feedTitle"
+        Write-Host '    Feed title available (kept in local archive metadata).'
     } else {
         Write-Host "    Feed title: (unknown)"
     }
@@ -582,11 +582,21 @@ try {
         if ($WhatIfPreference) { return $legacyReview }
         throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.'
     }
-    if (-not $PSCmdlet.ShouldProcess($OutputPath, 'Update archive history and logs; download selected missing episodes')) {
-        return $destinationPlan
+    if (-not $PSCmdlet.ShouldProcess('Selected podcast archive', 'Update archive history and logs; download selected missing episodes')) {
+        # Runtime plan items hold request credentials and mutable history. Return
+        # a diagnostic projection instead of serializing those internal objects.
+        return @($destinationPlan | ForEach-Object {
+            [pscustomobject]@{
+                EpisodeId = $_.EpisodeId
+                IdentitySource = $_.IdentitySource
+                Source = Get-PodcastSafeUrl -Url $_.Episode.Url
+                Recorded = ($null -ne $_.StateRecord)
+            }
+        })
     }
+    if ($diagnosticConfirmation) { $null = Initialize-PodcastDiagnostics }
     if (-not (Test-Path -LiteralPath $baseOutputPath)) {
-        Write-Host "[*] Creating base output directory: $baseOutputPath"
+        Write-Host '[*] Creating selected base output directory.'
         $null = Assert-PodcastDestination -Root $baseOutputPath -Directory
         $null = [IO.Directory]::CreateDirectory($baseOutputPath)
     }
@@ -607,7 +617,7 @@ try {
         -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
     if ($null -ne $legacyReview) { throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.' }
     if (-not (Test-Path -LiteralPath $OutputPath)) {
-        Write-Host "[*] Creating podcast folder: $OutputPath"
+        Write-Host '[*] Creating podcast folder.'
         $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
         $null = [IO.Directory]::CreateDirectory($OutputPath)
     }
@@ -633,20 +643,12 @@ try {
     $archiveLock.Dispose()
     $archiveLock = $null
 
-    $dateStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $script:LogRoot = $baseOutputPath
-    $script:LogRelativePath = [IO.Path]::Combine($safeFeedTitle, ($dateStamp + '_' + [guid]::NewGuid().ToString('N') + '.log'))
-    $logPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $script:LogRelativePath
-    $logStream = [IO.File]::Open($logPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
-    $logStream.Dispose()
-    $script:LogFile = $logPath
+    Set-PodcastDiagnosticArchive -Root $OutputPath
     Write-Log 'UniversalPodcastDownloader log'
-    Write-Log ("Feed URL     : {0}" -f $FeedUrl)
-    Write-Log ("Resolved URL : {0}" -f $resolved.Url)
-    Write-Log ("Feed title   : {0}" -f ($feedTitle -as [string]))
+    Write-Log ("Feed URL     : {0}" -f (Get-PodcastSafeUrl -Url $FeedUrl))
+    Write-Log ("Resolved URL : {0}" -f (Get-PodcastSafeUrl -Url $resolved.Url))
     Write-Log ("Mode         : {0}" -f $Mode)
     Write-Log ("CustomCount  : {0}" -f ($CustomCount -as [string]))
-    Write-Log ("Output folder: {0}" -f $OutputPath)
 
     Write-Log ("Feed items with valid URLs: {0}" -f $episodeCount)
 
@@ -671,41 +673,39 @@ try {
 
         $historyAction = Resolve-PodcastHistoryItem -Context $historyContext -Planned $planned
         if ($historyAction -eq 'verified_skip') {
-            Write-Progress -Activity "Podcast downloads" -Status "Skipping (verified history): $fileName" `
+            Write-Progress -Activity "Podcast downloads" -Status "Skipping (verified history): episode $index" `
                 -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
-            Write-Host "[-] Skipping (verified history): $fileName"
+            Write-Host "[-] Skipping (verified history): episode $index"
             $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
-            Write-Log ("Verified history and on-disk SHA-256: {0}" -f $destFile)
+            Write-Log ("Verified history and on-disk SHA-256: {0}" -f $planned.EpisodeId)
             continue
         }
         if ($historyAction -eq 'adopted_skip') {
-            Write-Progress -Activity "Podcast downloads" -Status "Skipping (owner-adopted local file): $fileName" `
+            Write-Progress -Activity "Podcast downloads" -Status "Skipping (owner-adopted local file): episode $index" `
                 -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
-            Write-Host "[-] Skipping (owner-adopted local file): $fileName"
+            Write-Host "[-] Skipping (owner-adopted local file): episode $index"
             $adopted += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
-            Write-Log ("Owner-adopted local file is unchanged: {0}; transfer completeness remains unverified." -f $destFile)
+            Write-Log ("Owner-adopted local file is unchanged: {0}; transfer completeness remains unverified." -f $planned.EpisodeId)
             continue
         }
         if ($historyAction -eq 'conflict') {
             $message = 'Existing media is unknown or changed; preserved for review.'
             Write-Warning $message
-            $failed += [PSCustomObject]@{ Title = $ep.Title; File = $destFile; Error = $message }
+            $failed += [PSCustomObject]@{ EpisodeId = $planned.EpisodeId; Error = $message }
             Write-Log $message 'ERROR'
             continue
         }
 
         $pct = [int](($index/$total)*100)
-        Write-Progress -Activity "Podcast downloads" -Status "Preparing: $fileName" -PercentComplete $pct `
+        Write-Progress -Activity "Podcast downloads" -Status "Preparing: episode $index" -PercentComplete $pct `
             -CurrentOperation "Episode $index of $total"
 
-        Write-Host "[+] Downloading ($index/$total): $($ep.Title)"
-        Write-Verbose "    URL: $($ep.Url)"
-        Write-Verbose "    OUT: $destFile"
+        Write-Host "[+] Downloading episode $index of $total"
+        Write-Verbose ("    URL: " + (Get-PodcastSafeUrl -Url $ep.Url))
+        Write-Verbose ("    Episode ID: " + $planned.EpisodeId)
 
-        Write-Log ("Starting download {0}/{1}: {2}" -f $index, $total, ($ep.Title -as [string]))
-        Write-Log ("Target file: {0}" -f $destFile)
-        Write-Log ("Source URL : {0}" -f $ep.Url)
-        if ($ep.Guid) { Write-Log ("GUID      : {0}" -f $ep.Guid) }
+        Write-Log ("Starting download {0}/{1}: {2}" -f $index, $total, $planned.EpisodeId)
+        Write-Log ("Source URL : {0}" -f (Get-PodcastSafeUrl -Url $ep.Url))
         if ($ep.PubDate) { Write-Log ("PubDate   : {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
 
         $success   = $false
@@ -723,7 +723,7 @@ try {
                 $lastError = $_
                 # A path that became unsafe is fatal, not a retryable network error.
                 $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
-                $msg = $lastError.Exception.Message
+                $msg = Get-PodcastDiagnosticError -Error $lastError
                 Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $msg)
                 Write-Log ("Attempt failed: {0}" -f $msg) 'WARN'
                 # A final file may exist when the history commit failed. Leave
@@ -734,9 +734,9 @@ try {
         }
 
         if ($success) {
-            Write-Host "    Saved: $fileName"
+            Write-Host "    Saved episode $index."
             $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
-            Write-Log ("Download succeeded: {0}" -f $destFile)
+            Write-Log ("Download succeeded: {0}" -f $planned.EpisodeId)
             Write-Log ("File size: {0} bytes; validation: {1}" -f $transferResult.Bytes, $transferResult.Verification)
             foreach ($validationWarning in $transferResult.Warnings) {
                 Write-Warning $validationWarning
@@ -748,9 +748,9 @@ try {
                 Save-PodcastEpisodeRecord -Context $historyContext -Record $failureRecord
             }
             Write-Warning ("    Giving up after {0} attempts." -f $attempt)
-            $errMsg = if ($lastError) { $lastError.Exception.Message } else { "Unknown error" }
-            $failed += [PSCustomObject]@{ Title = $ep.Title; File = $destFile; Error = $errMsg }
-            Write-Log ("Giving up after {0} attempts: {1}" -f $attempt, ($ep.Title -as [string])) 'ERROR'
+            $errMsg = if ($lastError) { Get-PodcastDiagnosticError -Error $lastError } else { "Unknown error" }
+            $failed += [PSCustomObject]@{ EpisodeId = $planned.EpisodeId; Error = $errMsg }
+            Write-Log ("Giving up after {0} attempts: {1}" -f $attempt, $planned.EpisodeId) 'ERROR'
             Write-Log ("Last error: {0}" -f $errMsg) 'ERROR'
         }
     }
@@ -771,8 +771,8 @@ try {
         Write-Host ""
         Write-Host "Failed episodes:" -ForegroundColor Yellow
         foreach ($f in $failed) {
-            Write-Host (" - {0}  ({1})" -f $f.Title, $f.Error)
-            Write-Log ("Failed: {0} ({1})" -f ($f.Title -as [string]), $f.Error) 'ERROR'
+            Write-Host (" - {0}  ({1})" -f $f.EpisodeId, $f.Error)
+            Write-Log ("Failed: {0} ({1})" -f $f.EpisodeId, $f.Error) 'ERROR'
         }
         throw ('Download incomplete: {0} episode(s) failed or require review; existing files were preserved.' -f $failed.Count)
     }
@@ -780,15 +780,28 @@ try {
     Write-Log "Run completed." 'INFO'
 
     Write-Host ""
-    Write-Host "[OK] Done. Files in: $OutputPath"
+    Write-Host '[OK] Done. Files are in the selected podcast archive.'
 }
 catch {
-    Write-Host ("ERROR: {0}" -f $_.Exception.Message) -ForegroundColor Red
-    Write-Log ("Fatal error: {0}" -f $_.Exception.Message) 'ERROR'
-    throw
+    $primaryError = $_
+    $safeFailure = Get-PodcastDiagnosticError -Error $primaryError
+    Write-Host ("ERROR: {0}" -f $safeFailure) -ForegroundColor Red
+    Write-Log ("Fatal error: {0}" -f $safeFailure) 'ERROR'
+    # Keep the exception instance for callers. Public formatting must not reveal
+    # its raw message, inner exceptions, target, or original invocation arguments.
+    $publicError = [Management.Automation.ErrorRecord]::new($primaryError.Exception,
+        'PodcastRunFailed', [Management.Automation.ErrorCategory]::NotSpecified, $null)
+    $publicError.ErrorDetails = [Management.Automation.ErrorDetails]::new($safeFailure)
+    $PSCmdlet.ThrowTerminatingError($publicError)
 }
 finally {
     if ($null -ne $historyLock) { $historyLock.Stream.Dispose() }
     if ($null -ne $archiveLock) { $archiveLock.Dispose() }
+    if ($DiagnosticExportPath) {
+        # Diagnostic export is optional and best effort, including on failure.
+        try { Export-PodcastDiagnostics -Path $DiagnosticExportPath }
+        catch { Write-PodcastDiagnosticFallback -Message 'Diagnostic export is unavailable; the original operation result is preserved.' }
+    }
+    Close-PodcastDiagnostics
     $global:ProgressPreference = $prevProgress
 }

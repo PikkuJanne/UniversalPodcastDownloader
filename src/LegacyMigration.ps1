@@ -152,7 +152,8 @@ function Invoke-PodcastLegacyMigration {
     $plan | Add-Member -NotePropertyName Operation -NotePropertyValue ([pscustomobject]@{
         Action = $Action; EpisodeId = $EpisodeId; File = $FileName; RestoreFrom = $Checkpoint; RestoreRecords = $restoreRecords
     })
-    if (-not $PSCmdlet.ShouldProcess($LegacyRoot, ($Action + ' selected legacy episode/history; preserve all media'))) { return $plan }
+    if (-not $PSCmdlet.ShouldProcess('Selected legacy archive', ($Action + ' selected legacy episode/history; preserve all media'))) { return $plan }
+    if ($script:PodcastDiagnostics -and $script:PodcastDiagnostics.Preview) { $null = Initialize-PodcastDiagnostics }
 
     $archiveLock = $null; $historyLock = $null; $fileGuard = $null
     try {

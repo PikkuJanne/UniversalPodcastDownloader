@@ -85,7 +85,7 @@ Describe 'Durable history against actual processes and loopback transfers' {
         $null = Invoke-WebRequest -Uri ($context.BaseUrl + '/__recover') -Method Post -UseBasicParsing
         $second = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $second.Result.Succeeded | Should -BeTrue -Because ($second.Stdout + $second.Stderr + $second.Result.ErrorMessage)
-        $second.Stdout | Should -Match 'Renamed history show'
+        $second.Stdout | Should -Match 'Feed title available'
         $second.Stdout | Should -Match 'Skipped\s+: 1'
         $recorded = Get-UpdRecordedArchive -OutputPath $second.OutputPath
         $recorded.Path | Should -Be $archive.Path

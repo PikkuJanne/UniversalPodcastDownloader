@@ -1,5 +1,5 @@
 # UniversalPodcastDownloader — Universal RSS podcast downloader for Win11 (PowerShell)
-Minimal, no-frills podcast downloader I use to archive my favorite shows for offline listening. It’s a personal, purpose-built tool, not a general “podcast manager”. It trades features for a simple TUI, predictable directory structure, and verbose logging so I can see exactly what happened overnight.
+Minimal, no-frills podcast downloader I use to archive my favorite shows for offline listening. It’s a personal, purpose-built tool, not a general “podcast manager”. It keeps a simple TUI, predictable directory structure, and local logs for reviewing completed runs and failures.
 
 **Synopsis**  
 - Accepts either:
@@ -11,8 +11,8 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
   - All (everything in the feed)
 - Creates per-podcast subfolders based on feed title:
   - `<OutputPath>\<SafeFeedTitle>-<feed hash>\YYYY-MM-DD - Episode title-<episode hash>.mp3`
-- Writes a per-run log file in the podcast folder:
-  - `YYYYMMDD_HHmmss_<unique run ID>.log` with detailed attempt-by-attempt info.
+- Starts a private local log before feed discovery, then continues it in the podcast folder after an ordinary download is confirmed.
+  - `download-<UTC timestamp>-<unique run ID>.log` records attempts, safe error categories and the run summary. Preview writes no log.
 
 **Requirements**  
 - Windows 11  
@@ -24,7 +24,7 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Place these files together:
   - UniversalPodcastDownloader.ps1
   - UniversalPodcastDownloader.bat (wrapper for double-click)
-  - src/ (all included naming, path safety, media, identity and history helpers)
+  - src/ (all included naming, path safety, media, identity, history and diagnostic helpers)
 - Default output root is:
   - %USERPROFILE%\Downloads\Podcasts
 - No external binaries are required; the script uses PowerShell XML parsing, Invoke-WebRequest for pages/feeds and the built-in .NET HttpClient for streamed media.
@@ -42,7 +42,7 @@ Usage
        - all = entire feed
    - The episodes are saved under:
      - `%USERPROFILE%\Downloads\Podcasts\<SafeFeedTitle>-<feed hash>\`
-   - A log file for the run is written next to the audio files.
+   - A log file for the run is written next to the audio files when that location is writable. Startup failures have a fallback log as described below.
 
 2. TUI via direct PowerShell
    - Run without parameters for the same guided flow:
@@ -115,6 +115,8 @@ $preview.Files | Select-Object RelativePath, Bytes, Sha256, Plausible, Classific
 
 The default action is `Preview`. It may fetch the feed, but creates no media, directories, state, logs, configuration or lock files. It inventories immediate files, hashes readable originals and performs a bounded local signature check. Empty files, text bodies, partial filenames and ambiguous matches remain conflicts. Unknown plausible media remains `unverified`. An existing binding appears as `recorded`, with its evidence level in `RecordedStatus`.
 
+The returned inventory is sensitive local review data: titles and exact filenames are needed to choose an adoption. Keep it local. Diagnostic exports exclude inventory, history and checkpoints.
+
 Historical title/date names and hash suffixes are only matching hints. A suggestion requires one file for one episode. Repeated titles or multiple copies require an explicit file choice. You may choose a differently named plausible file after reviewing it; a file already bound to another episode cannot be adopted for this one.
 
 ### Adopt one reviewed local file
@@ -173,19 +175,20 @@ An ordinary download also supports a preview that leaves the output tree unchang
 & .\UniversalPodcastDownloader.ps1 -FeedUrl $legacy.FeedUrl -OutputPath $legacy.OutputPath -Mode All -WhatIf
 ```
 
-**Logging**  
-- Each ordinary download run produces one log file in the podcast’s folder; legacy actions and previews do not:
-  - `YYYYMMDD_HHmmss_<unique run ID>.log`
-- Logged details include:
-  - Feed URL and resolved RSS URL
-  - Feed title, mode, and output folder
-  - Count of items in the feed and how many were selected
-  - For each episode:
-    - Target filename and full path
-    - Download attempts (up to 3) with errors per attempt
-    - Final result: downloaded / skipped / adopted / failed
-  - End-of-run summary (Downloaded / Skipped / Failed / Adopted) with error messages for failures
-- This is meant for “left it running overnight, what went wrong?” scenarios.
+## Diagnostics and privacy
+
+- Before feed discovery, writable runs try `%LOCALAPPDATA%\UniversalPodcastDownloader\Logs`, then `%TEMP%\UniversalPodcastDownloader\Logs`. If neither works, a safe notice goes to standard error. Logging failure never replaces the operation's original error.
+- An ordinary confirmed download continues logging in its show folder if possible, replaying up to 256 recent startup events. The startup copy remains in place. Legacy changes keep their startup log. Logs use UTF-8 without a BOM and a unique, no-overwrite filename: `download-<UTC timestamp>-<32-character run ID>.log`.
+- URLs displayed by the downloader use only the hostname and a random request ID. User information, paths, queries and fragments are omitted. Logs and routine console output omit raw titles, local paths, publisher IDs, response headers and raw exception messages. Hostnames and episode identity fingerprints can still reveal or correlate subscriptions; review any log before sharing it.
+- `-WhatIf`, legacy `Preview` and declined confirmation write no diagnostic files or exports. Explicit confirmation starts a fresh file log only after acceptance; pre-confirmation events stay in memory and are then discarded.
+- Optional `-DiagnosticExportPath` writes a new JSON file in an existing directory. It contains only a run ID, start time, PowerShell version and up to 256 event times, levels and fixed codes. It excludes message text, URLs, logs, inventory, state, checkpoints, media and configuration. Existing files are never overwritten.
+
+```powershell
+& .\UniversalPodcastDownloader.ps1 -FeedUrl 'https://example.com/feed.xml' -Mode Latest `
+    -DiagnosticExportPath "$env:TEMP\upd-diagnostic-review.json"
+```
+
+Nothing is uploaded automatically. Logs, startup copies and exports remain until you delete them; there is no automatic rotation or retention deadline. Older logs may contain credentials and are never read into new exports. Shell input history, transcripts, caller-inspected error objects and the legacy inventory remain sensitive local data. Keep archive history, backups and migration checkpoints for verification and recovery. See the [diagnostic and data retention policy](docs/codex/DIAGNOSTICS.md) for the exact boundaries.
 
 **Batch wrapper (included)**  
 - UniversalPodcastDownloader.bat (double-click launcher):
@@ -227,8 +230,10 @@ An ordinary download also supports a preview that leaves the output tree unchang
   - Some feeds only link to web players, not direct files.
 - Only some episodes downloaded:
   - Open the latest .log file in the podcast folder.
-  - Look for per-episode errors (timeouts, HTTP 403/404, connection resets).
+  - Look for failed attempts and safe error categories. Raw server error details are deliberately omitted.
   - Rerun the same feed; unchanged history-backed files are verified and skipped.
+- Failure before a podcast folder is available:
+  - Look in `%LOCALAPPDATA%\UniversalPodcastDownloader\Logs`, then `%TEMP%\UniversalPodcastDownloader\Logs`. A logging failure is reported on standard error without exposing the rejected path.
 - A file needs review:
   - Unknown or changed files are preserved. Use `-LegacyPath` to preview the archive, then explicitly adopt one reviewed file or redownload one episode to a separate target. Keep the originals, state, backup and returned checkpoints.
 
