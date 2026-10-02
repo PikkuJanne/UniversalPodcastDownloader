@@ -13,6 +13,7 @@ function New-UpdIntegrationContext {
         Token = $token
         RepositoryRoot = $RepositoryRoot
         Processes = New-Object 'System.Collections.Generic.List[object]'
+        Junctions = New-Object 'System.Collections.Generic.List[string]'
         BaseUrl = $null
     }
 }
@@ -91,11 +92,14 @@ function Invoke-UpdIntegrationWorker {
         [Parameter(Mandatory)][string]$FeedPath,
         [ValidateSet('Latest', 'Custom', 'All')][string]$Mode = 'All',
         [int]$CustomCount = 1,
-        [string]$OutputName = 'output'
+        [string]$OutputName = 'output',
+        [string]$BoundaryJunctionPath,
+        [string]$BoundaryJunctionTarget,
+        [ValidateSet('Preparing', 'AfterTransfer')][string]$BoundaryStage = 'Preparing'
     )
 
     if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -ne '/show') { throw 'Only named local feed or show fixtures are allowed.' }
-    if ($OutputName -notmatch '^[a-z0-9-]+$') { throw 'OutputName must be a simple test directory name.' }
+    if ($OutputName -notmatch '^[a-z0-9-]+(?:[\\/][a-z0-9-]+)*$') { throw 'OutputName must contain only simple relative test directory names.' }
     $identifier = [guid]::NewGuid().ToString('N')
     $resultPath = Join-Path $Context.Root ($identifier + '-result.json')
     $configPath = Join-Path $Context.Root ($identifier + '-config.json')
@@ -107,6 +111,18 @@ function Invoke-UpdIntegrationWorker {
         ResultPath = $resultPath
         Mode = $Mode
         CustomCount = $CustomCount
+    }
+    if ($BoundaryJunctionPath -or $BoundaryJunctionTarget) {
+        $prefix = [IO.Path]::GetFullPath($Context.Root).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+        foreach ($candidate in @($BoundaryJunctionPath, $BoundaryJunctionTarget)) {
+            if (-not $candidate -or -not [IO.Path]::GetFullPath($candidate).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Boundary injection must use two paths within the owned test root.'
+            }
+        }
+        $config.BoundaryJunctionPath = $BoundaryJunctionPath
+        $config.BoundaryJunctionTarget = $BoundaryJunctionTarget
+        $config.BoundaryStage = $BoundaryStage
+        $Context.Junctions.Add([IO.Path]::GetFullPath($BoundaryJunctionPath))
     }
     $config | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
     $engineName = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
@@ -141,6 +157,25 @@ function Get-UpdFixtureState {
     return ($response.Content | ConvertFrom-Json)
 }
 
+function New-UpdOwnedJunction {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Test harness creates a tracked junction between two canonical paths within its marked temporary root.')]
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Context,
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Target
+    )
+
+    $prefix = [IO.Path]::GetFullPath($Context.Root).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    foreach ($candidate in @($Path, $Target)) {
+        if (-not [IO.Path]::GetFullPath($candidate).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Test junction paths must remain inside the owned temporary root.'
+        }
+    }
+    $null = New-Item -ItemType Junction -Path $Path -Target $Target -ErrorAction Stop
+    $Context.Junctions.Add([IO.Path]::GetFullPath($Path))
+}
+
 function Remove-UpdIntegrationContext {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Mandatory test cleanup verifies canonical containment and a matching ownership marker, then stops only tracked child processes.')]
     [CmdletBinding()]
@@ -162,6 +197,23 @@ function Remove-UpdIntegrationContext {
     $marker = Join-Path $root '.upd-test-owner'
     if (-not (Test-Path -LiteralPath $marker) -or [IO.File]::ReadAllText($marker) -ne $Context.Token) {
         throw "Refusing cleanup without the matching integration ownership marker: $root"
+    }
+    # Remove only explicitly tracked junction entries, without following their
+    # targets. This happens before the recursive inventory/cleanup safety check.
+    foreach ($junction in $Context.Junctions) {
+        $canonical = [IO.Path]::GetFullPath($junction)
+        if (-not $canonical.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing junction cleanup outside the owned test root: $canonical"
+        }
+        if (Test-Path -LiteralPath $canonical) {
+            $entry = Get-Item -LiteralPath $canonical -Force
+            if (-not ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                # A planned injection may not run if the downloader exits early.
+                # Leave ordinary entries to the existing owned-root cleanup.
+                continue
+            }
+            [IO.Directory]::Delete($canonical, $false)
+        }
     }
     $entries = @(Get-Item -LiteralPath $root) + @(Get-ChildItem -LiteralPath $root -Force -Recurse)
     if ($entries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {

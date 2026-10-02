@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A007 passed; A008-A060 remain NOT RUN. Helper results and defect characterizations are separate from future downloader acceptance; see evidence/UPD-0001.md, evidence/UPD-0002.md and evidence/UPD-0101.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A010 passed; A011-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0102.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -11,9 +11,9 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A007 passed; A008-A060 rem
 | A005 | UPD-0002 | workflow | passed | Versions and engine are recorded; missing test tools produce a clear failure, not an empty green result; no runtime dependency added. |
 | A006 | UPD-0101 | unit | passed | Selections are arrays; valid counts and progress; empty input is handled explicitly; no null/divide-by-zero errors on either Windows engine. |
 | A007 | UPD-0101 | integration | passed | No legacy DOM parsing or security confirmation prompt; existing system security policy is not changed. |
-| A008 | UPD-0102 | unit | not_run | Valid deterministic components; identifiers retained after shortening; Windows limits handled clearly. |
-| A009 | UPD-0102 | integration | not_run | No escape from output root, no metadata-controlled drive/UNC path and no silent traversal through unsafe reparse points. |
-| A010 | UPD-0102 | unit | not_run | No accidental skip or overwrite; case-insensitive collisions also handled. |
+| A008 | UPD-0102 | unit | passed | Valid deterministic components; identifiers retained after shortening; Windows limits handled clearly. |
+| A009 | UPD-0102 | integration | passed | No escape from output root, no metadata-controlled drive/UNC path and no silent traversal through unsafe reparse points. |
+| A010 | UPD-0102 | unit | passed | No accidental skip or overwrite; case-insensitive collisions also handled. |
 | A011 | UPD-0103 | integration | not_run | Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete. |
 | A012 | UPD-0103 | integration | not_run | Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption. |
 | A013 | UPD-0103 | integration | not_run | No existing file is overwritten; temporary file is on destination volume; all streams close on failure. |

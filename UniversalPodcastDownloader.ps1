@@ -34,15 +34,15 @@ FEATURES
             - all    = whole feed
     - Per-podcast subfolders based on feed title:
         - Root:   <OutputPath> (default: %USERPROFILE%\Downloads\Podcasts)
-        - Folder: <FeedTitle> (sanitized)
-        - Files:  YYYY-MM-DD - Episode title.mp3
+        - Folder: <SafeFeedTitle>-<feed identity hash>
+        - Files:  YYYY-MM-DD - Episode title-<episode identity hash>.mp3
     - Robust download loop:
         - Up to 3 attempts per episode with short delay between tries.
         - Skips episodes where the target file already exists.
         - Summarizes downloaded / skipped / failed at the end.
     - Verbose, per-run log file:
         - Stored in the podcast folder next to the audio files.
-        - Named: YYYYMMDD_HHMMSS_<FeedTitle>.log
+        - Named: YYYYMMDD_HHMMSS_<unique run ID>.log
         - Logs:
             - Feed URL and resolved feed URL
             - Mode, output folder, and counts
@@ -63,6 +63,7 @@ SETUP
     1) Place these files together in a folder of your choice:
          - UniversalPodcastDownloader.ps1
          - UniversalPodcastDownloader.bat   (wrapper to allow double-click)
+         - src/                            (bundled PowerShell helper files)
     2) Optional: pin the .bat to Start or Taskbar for quick access.
     3) Ensure the machine has:
          - Working Internet connection.
@@ -108,11 +109,10 @@ USAGE
 
 NOTES
     - Episodes are sorted by publication date (PubDate) newest first.
-    - Files are named “YYYY-MM-DD - Title.mp3” when a date is available,
-      otherwise “Title.mp3”.
-    - Filename and folder names are sanitized for Windows (no : * ? " < > | etc.).
-    - The script always logs to the podcast folder for each run, even on failures.
-    - Existing files are never overwritten, they are just skipped and logged as such.
+    - New folder and file names include deterministic SHA-256 identity suffixes.
+    - Windows names are sanitized and shortened to fit the selected output root.
+    - Unsafe paths fail before writes; failures before folder creation have no log.
+    - Existing final files are preserved; current skips do not verify their contents.
     - The tool does not transcode or modify audio, it saves whatever the feed serves,
       but uses the .mp3 extension by default for naming.
 
@@ -164,6 +164,9 @@ param(
     [string]$FeedUrl
 )
 
+. (Join-Path $PSScriptRoot 'src/Naming.ps1')
+. (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
+
 function Write-Log {
     param(
         [Parameter(Mandatory)][string]$Message,
@@ -175,17 +178,9 @@ function Write-Log {
     $line = "[{0}] [{1}] {2}" -f $timestamp, $Level, $Message
 
     if ($script:LogFile) {
+        $null = Assert-PodcastDestination -Root $script:LogRoot -RelativePath $script:LogRelativePath
         Add-Content -LiteralPath $script:LogFile -Value $line
     }
-}
-
-function Sanitize-ForWindowsName {
-    param([string]$Name)
-
-    if ([string]::IsNullOrWhiteSpace($Name)) { return $null }
-    $safe = ($Name -replace '[\\\/\:\*\?\"<>\|]', '_').Trim()
-    if ([string]::IsNullOrWhiteSpace($safe)) { return $null }
-    return $safe
 }
 
 function Invoke-PodcastWebRequest {
@@ -196,6 +191,41 @@ function Invoke-PodcastWebRequest {
 
     # Avoid the legacy DOM parser and its security prompt in Windows PowerShell.
     Invoke-WebRequest @PSBoundParameters -UseBasicParsing
+}
+
+function Invoke-PodcastMediaTransfer {
+    param(
+        [Parameter(Mandatory)][string]$Uri,
+        [Parameter(Mandatory)][string]$Root,
+        [Parameter(Mandatory)][string]$RelativePath
+    )
+
+    $destination = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
+    if (Test-Path -LiteralPath $destination) { throw 'Media destination already exists; preserving it.' }
+    $relativeDirectory = [IO.Path]::GetDirectoryName($RelativePath)
+    $temporaryRelative = [IO.Path]::Combine($relativeDirectory, ('.upd-' + [guid]::NewGuid().ToString('N') + '.tmp'))
+    $temporary = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
+    $owned = $false
+    try {
+        # Reserve a unique sibling. Only this attempt's temporary file may be replaced.
+        $reservation = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $owned = $true
+        $reservation.Dispose()
+        $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
+        Invoke-PodcastWebRequest -Uri $Uri -OutFile $temporary
+        $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
+        $null = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
+        # The two-argument .NET operation fails if any final file already exists.
+        [IO.File]::Move($temporary, $destination)
+        $owned = $false
+    }
+    finally {
+        if ($owned) {
+            # An unsafe replacement is left untouched for inspection.
+            $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
+            [IO.File]::Delete($temporary)
+        }
+    }
 }
 
 # --- RSS autodetect helpers ---
@@ -405,42 +435,6 @@ function Select-PodcastEpisode {
     return ,$selected
 }
 
-function New-EpisodeFileName {
-    param(
-        [Parameter(Mandatory)]$Episode,
-        [Parameter(Mandatory)][int]$Index
-    )
-
-    $ext = 'mp3'
-    if ($Episode.Url -match '\.(mp3|m4a)($|\?)') { $ext = $Matches[1] }
-
-    $titleRaw  = if ([string]::IsNullOrWhiteSpace($Episode.Title)) { 'Episode' } else { $Episode.Title }
-    $safeTitle = (Sanitize-ForWindowsName $titleRaw)
-    if (-not $safeTitle) { $safeTitle = 'Episode' }
-
-    $prefix = ''
-    if ($Episode.PubDate) { $prefix = '{0:yyyy-MM-dd} - ' -f $Episode.PubDate }
-
-    $name = "$prefix$safeTitle.$ext"
-
-    if ($safeTitle -eq 'Episode' -or [string]::IsNullOrWhiteSpace($prefix)) {
-        $id = if ($Episode.Guid) { $Episode.Guid } elseif ($Episode.Url) { $Episode.Url } else { "$Index" }
-        $bytes = [Text.Encoding]::UTF8.GetBytes($id)
-
-        $sha = [Security.Cryptography.SHA1]::Create()
-        try {
-            $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
-        } finally {
-            $sha.Dispose()
-        }
-
-        $hash = $hash.Substring(0,8)
-        $name = "$prefix$safeTitle-$hash.$ext"
-    }
-
-    return $name
-}
-
 # Dot-sourcing exposes helpers for tests without starting the downloader.
 if ($MyInvocation.InvocationName -eq '.') { return }
 
@@ -451,6 +445,8 @@ $global:ProgressPreference = 'Continue'
 
 # Log file path, set later once we know the podcast folder
 $script:LogFile = $null
+$script:LogRoot = $null
+$script:LogRelativePath = $null
 
 # --- Main ---
 try {
@@ -502,10 +498,16 @@ try {
         throw "Mode 'Custom' requires -CustomCount with a value >= 1."
     }
 
-    $baseOutputPath = $OutputPath
+    # Resolve a user-selected relative root once; metadata is never resolved as a path.
+    $rootInput = $OutputPath
+    if (-not [IO.Path]::IsPathRooted($rootInput)) {
+        $rootInput = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($rootInput)
+    }
+    $baseOutputPath = Assert-PodcastDestination -Root $rootInput -Directory
     if (-not (Test-Path -LiteralPath $baseOutputPath)) {
         Write-Host "[*] Creating base output directory: $baseOutputPath"
-        New-Item -ItemType Directory -Path $baseOutputPath -Force | Out-Null
+        $null = Assert-PodcastDestination -Root $baseOutputPath -Directory
+        $null = [IO.Directory]::CreateDirectory($baseOutputPath)
     }
 
     $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
@@ -531,19 +533,39 @@ try {
         Write-Host "    Feed title: (unknown)"
     }
 
-    $safeFeedTitle = (Sanitize-ForWindowsName $feedTitle)
-    if (-not $safeFeedTitle) { $safeFeedTitle = 'UnknownPodcast' }
+    # Reserve room for both identifiers, separators and an episode's date/extension.
+    $folderBudget = [Math]::Min(100, 259 - $baseOutputPath.TrimEnd('\').Length - 2 - 84)
+    if ($folderBudget -lt 66) {
+        $folderBudget = [Math]::Min(100, 259 - $baseOutputPath.TrimEnd('\').Length - 2 - 70)
+    }
+    if ($folderBudget -lt 66) { throw 'Output root is too long to retain safe identifiers. Choose a shorter output path.' }
+    $safeFeedTitle = New-PodcastFolderName -FeedTitle $feedTitle -FeedUrl $resolved.Url -MaxLength $folderBudget
 
-    $OutputPath = Join-Path $baseOutputPath $safeFeedTitle
+    $OutputPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
+    $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
+    $episodes = @($episodes | Where-Object { $_.Url })
+    $episodeCount = $episodes.Count
+    if ($episodeCount -eq 0) {
+        throw 'Feed parsed, but no downloadable enclosure URLs were found.'
+    }
+    $episodes = Select-PodcastEpisode -Episodes $episodes -Mode $Mode -CustomCount $CustomCount
+    $fileBudget = [Math]::Min(180, 259 - $OutputPath.Length - 1)
+    $destinationPlan = New-PodcastDestinationPlan -Episodes $episodes -MaxFileNameLength $fileBudget
+
     if (-not (Test-Path -LiteralPath $OutputPath)) {
         Write-Host "[*] Creating podcast folder: $OutputPath"
-        New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+        $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
+        $null = [IO.Directory]::CreateDirectory($OutputPath)
     }
 
     $dateStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $script:LogFile = Join-Path $OutputPath ("{0}_{1}.log" -f $dateStamp, $safeFeedTitle)
-
-    Set-Content -LiteralPath $script:LogFile -Value "UniversalPodcastDownloader log"
+    $script:LogRoot = $baseOutputPath
+    $script:LogRelativePath = [IO.Path]::Combine($safeFeedTitle, ($dateStamp + '_' + [guid]::NewGuid().ToString('N') + '.log'))
+    $logPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $script:LogRelativePath
+    $logStream = [IO.File]::Open($logPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+    $logStream.Dispose()
+    $script:LogFile = $logPath
+    Write-Log 'UniversalPodcastDownloader log'
     Write-Log ("Feed URL     : {0}" -f $FeedUrl)
     Write-Log ("Resolved URL : {0}" -f $resolved.Url)
     Write-Log ("Feed title   : {0}" -f ($feedTitle -as [string]))
@@ -551,18 +573,9 @@ try {
     Write-Log ("CustomCount  : {0}" -f ($CustomCount -as [string]))
     Write-Log ("Output folder: {0}" -f $OutputPath)
 
-    $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
-    $episodes = @($episodes | Where-Object { $_.Url })
+    Write-Log ("Feed items with valid URLs: {0}" -f $episodeCount)
 
-    Write-Log ("Feed items with valid URLs: {0}" -f $episodes.Count)
-
-    if (-not $episodes -or $episodes.Count -eq 0) {
-        throw "Feed parsed, but no downloadable enclosure URLs were found."
-    }
-
-    $episodes = Select-PodcastEpisode -Episodes $episodes -Mode $Mode -CustomCount $CustomCount
-
-    $total = $episodes.Count
+    $total = $destinationPlan.Count
     Write-Host "[*] Episodes to download: $total"
     Write-Log ("Episodes to download (after mode/filter): {0}" -f $total)
 
@@ -572,11 +585,13 @@ try {
     $maxRetries = 3
 
     $index = 0
-    foreach ($ep in $episodes) {
+    foreach ($planned in $destinationPlan) {
         $index++
+        $ep = $planned.Episode
 
-        $fileName = New-EpisodeFileName -Episode $ep -Index $index
-        $destFile = Join-Path $OutputPath $fileName
+        $fileName = $planned.FileName
+        $relativeDestination = [IO.Path]::Combine($safeFeedTitle, $fileName)
+        $destFile = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
 
         if (Test-Path -LiteralPath $destFile) {
             Write-Progress -Activity "Podcast downloads" -Status "Skipping (exists): $fileName" `
@@ -610,10 +625,12 @@ try {
             Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
 
             try {
-                Invoke-PodcastWebRequest -Uri $ep.Url -OutFile $destFile
+                Invoke-PodcastMediaTransfer -Uri $ep.Url -Root $baseOutputPath -RelativePath $relativeDestination
                 $success = $true
             } catch {
                 $lastError = $_
+                # A path that became unsafe is fatal, not a retryable network error.
+                $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
                 $msg = $lastError.Exception.Message
                 Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $msg)
                 Write-Log ("Attempt failed: {0}" -f $msg) 'WARN'

@@ -1,12 +1,29 @@
 BeforeAll {
     $repositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
     . (Join-Path $repositoryRoot 'tests/support/IntegrationHarness.ps1')
+    . (Join-Path $repositoryRoot 'UniversalPodcastDownloader.ps1')
     $python = Get-Command python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $python) { throw 'Python 3.9+ is required for loopback integration tests. It is a development dependency only.' }
     $script:pythonPath = $python.Source
     $expectedMedia = Join-Path $repositoryRoot 'tools/codex-handoff/fixtures/silence.mp3'
     $script:expectedHash = (Get-FileHash -LiteralPath $expectedMedia -Algorithm SHA256).Hash
     $script:expectedLength = (Get-Item -LiteralPath $expectedMedia).Length
+
+    function Get-UpdSyntheticDestination {
+        param($Context)
+        $output = Join-Path $Context.Root 'output'
+        $folderBudget = [Math]::Min(100, 259 - $output.TrimEnd('\').Length - 2 - 84)
+        $folderName = New-PodcastFolderName -FeedTitle 'Fixture Podcast' -FeedUrl ($Context.BaseUrl + '/feeds/single.xml') -MaxLength $folderBudget
+        $folder = Join-Path $output $folderName
+        $episode = [pscustomobject]@{
+            Title = 'One synthetic episode'
+            Guid = 'fixture-001'
+            Url = $Context.BaseUrl + '/media/ok.mp3'
+            PubDate = [datetime]'2026-09-01T12:00:00'
+        }
+        $fileName = New-EpisodeFileName -Episode $episode -MaxLength ([Math]::Min(180, 259 - $folder.Length - 1))
+        [pscustomobject]@{ Output = $output; Folder = $folder; File = Join-Path $folder $fileName }
+    }
 }
 
 Describe 'Real downloader against synthetic loopback fixtures' {
@@ -66,7 +83,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $first.Stdout | Should -Not -Match 'Security Warning|Script Execution Risk|UseBasicParsing|divide by zero'
         $files = @(Get-ChildItem -LiteralPath $first.OutputPath -Recurse -Filter '*.mp3')
         $files.Count | Should -Be 1
-        $files[0].Name | Should -Be '2026-09-01 - One synthetic episode.mp3'
+        $files[0].FullName | Should -Be (Get-UpdSyntheticDestination -Context $context).File
         $files[0].Length | Should -Be $script:expectedLength
         (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash | Should -Be $script:expectedHash
         $stamp = $files[0].LastWriteTimeUtc
@@ -149,5 +166,140 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $stats = Get-UpdFixtureState -Context $context
         $stats.'/feeds/atom.xml' | Should -Be 2
         $stats.'/media/ok.mp3' | Should -Be 2
+    }
+
+    It 'A009 rejects hostile feed title <FeedPath> before log or media writes' -TestCases @(
+        @{ FeedPath = '/feeds/hostile-dot.xml' }
+        @{ FeedPath = '/feeds/hostile-dotdot.xml' }
+        @{ FeedPath = '/feeds/hostile-drive.xml' }
+        @{ FeedPath = '/feeds/hostile-unc.xml' }
+    ) {
+        param($FeedPath)
+        $sentinel = Join-Path $context.Root 'original.mp3'
+        [IO.File]::WriteAllText($sentinel, 'Synthetic original outside the selected output root.')
+        $originalHash = (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash
+        $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath $FeedPath
+        $run.Result.Succeeded | Should -BeFalse
+        $run.ExitCode | Should -Be 1
+        $run.Result.ErrorMessage | Should -Match 'path|component|dot|absolute|root'
+        @(Get-ChildItem -LiteralPath $context.Root -Recurse -Filter '*.log').Count | Should -Be 0
+        @(Get-ChildItem -LiteralPath $context.Root -Recurse -Filter '*.mp3').Count | Should -Be 1
+        (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
+        (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -BeNullOrEmpty
+    }
+
+    It 'A009 refuses an existing junction at <Location> and preserves the synthetic target' -TestCases @(
+        @{ Location = 'output-root' }
+        @{ Location = 'output-ancestor' }
+        @{ Location = 'podcast-folder' }
+        @{ Location = 'media-destination' }
+    ) {
+        param($Location)
+        $archive = Join-Path $context.Root 'synthetic-originals'
+        $null = New-Item -ItemType Directory -Path $archive
+        $sentinel = Join-Path $archive 'original.mp3'
+        [IO.File]::WriteAllText($sentinel, 'Synthetic archive bytes must survive a rejected junction.')
+        $originalHash = (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash
+        $originalStamp = (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc
+        $paths = Get-UpdSyntheticDestination -Context $context
+        $outputName = 'output'
+        switch ($Location) {
+            'output-root' { $junction = $paths.Output }
+            'output-ancestor' {
+                $junction = Join-Path $context.Root 'ancestor'
+                $outputName = 'ancestor/output'
+            }
+            'podcast-folder' {
+                $null = New-Item -ItemType Directory -Path $paths.Output
+                $junction = $paths.Folder
+            }
+            'media-destination' {
+                $null = New-Item -ItemType Directory -Path $paths.Folder -Force
+                $junction = $paths.File
+            }
+        }
+        New-UpdOwnedJunction -Context $context -Path $junction -Target $archive
+        $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/single.xml' -OutputName $outputName
+        $run.Result.Succeeded | Should -BeFalse
+        $run.ExitCode | Should -Be 1
+        $run.Result.ErrorMessage | Should -Match 'reparse|junction'
+        @(Get-ChildItem -LiteralPath $archive -Force).Count | Should -Be 1
+        (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
+        (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc | Should -Be $originalStamp
+        (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -BeNullOrEmpty
+    }
+
+    It 'A009 rechecks a destination junction inserted at <Stage>' -TestCases @(
+        @{ Stage = 'Preparing'; ExpectedRequests = 0 }
+        @{ Stage = 'AfterTransfer'; ExpectedRequests = 1 }
+    ) {
+        param($Stage, $ExpectedRequests)
+        $archive = Join-Path $context.Root 'synthetic-originals'
+        $null = New-Item -ItemType Directory -Path $archive
+        $sentinel = Join-Path $archive 'original.mp3'
+        [IO.File]::WriteAllText($sentinel, 'Synthetic archive preserved at the later write boundary.')
+        $originalHash = (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash
+        $paths = Get-UpdSyntheticDestination -Context $context
+        $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/single.xml' `
+            -BoundaryJunctionPath $paths.File -BoundaryJunctionTarget $archive -BoundaryStage $Stage
+        $run.Result.Succeeded | Should -BeFalse
+        $run.ExitCode | Should -Be 1
+        $run.Result.BoundaryInjectionCount | Should -Be 1
+        $run.Result.ErrorMessage | Should -Match 'reparse|junction'
+        @(Get-ChildItem -LiteralPath $archive -Force).Count | Should -Be 1
+        (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
+        @(Get-ChildItem -LiteralPath $paths.Folder -Filter '*.tmp' -Force).Count | Should -Be 0
+        [int](Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -Be $ExpectedRequests
+    }
+
+    It 'A009 downloads and preserves <Count> distinct files from <FeedPath>' -TestCases @(
+        @{ FeedPath = '/feeds/collisions.xml'; Count = 6 }
+        @{ FeedPath = '/feeds/long-names.xml'; Count = 2 }
+    ) {
+        param($FeedPath, $Count)
+        $first = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath $FeedPath
+        $first.Result.Succeeded | Should -BeTrue -Because ($first.Stdout + $first.Stderr + $first.Result.ErrorMessage)
+        $first.ExitCode | Should -Be 0
+        $first.Stdout | Should -Match ('Downloaded\s+: ' + $Count)
+        $files = @(Get-ChildItem -LiteralPath $first.OutputPath -Recurse -File -Filter '*.mp3')
+        $files.Count | Should -Be $Count
+        @($files.Name | Select-Object -Unique).Count | Should -Be $Count
+        $stamps = @{}
+        foreach ($file in $files) {
+            $file.Name | Should -Match '-[a-f0-9]{64}\.mp3$'
+            $file.FullName.Length | Should -BeLessOrEqual 259
+            (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash | Should -Be $script:expectedHash
+            $stamps[$file.FullName] = $file.LastWriteTimeUtc
+        }
+        $second = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath $FeedPath
+        $second.Result.Succeeded | Should -BeTrue -Because ($second.Stdout + $second.Stderr + $second.Result.ErrorMessage)
+        $second.ExitCode | Should -Be 0
+        $second.Stdout | Should -Match ('Skipped\s+: ' + $Count)
+        foreach ($file in $files) {
+            (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash | Should -Be $script:expectedHash
+            (Get-Item -LiteralPath $file.FullName).LastWriteTimeUtc | Should -Be $stamps[$file.FullName]
+        }
+        (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -Be $Count
+    }
+
+    It 'A009 keeps feeds with the same title in distinct podcast folders without changing a legacy folder' {
+        $legacy = Join-Path (Join-Path $context.Root 'output') 'Fixture Podcast'
+        $null = New-Item -ItemType Directory -Path $legacy -Force
+        $sentinel = Join-Path $legacy '2026-09-01 - One synthetic episode.mp3'
+        [IO.File]::WriteAllText($sentinel, 'Synthetic legacy media remains untouched.')
+        $originalHash = (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash
+        $stamp = (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc
+        foreach ($feed in '/feeds/single.xml', '/feeds/single-alias.xml') {
+            $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath $feed
+            $run.Result.Succeeded | Should -BeTrue -Because ($run.Stdout + $run.Stderr + $run.Result.ErrorMessage)
+            $run.ExitCode | Should -Be 0
+            $run.Stdout | Should -Match 'Downloaded\s+: 1'
+        }
+        $folders = @(Get-ChildItem -LiteralPath (Join-Path $context.Root 'output') -Directory)
+        $folders.Count | Should -Be 3
+        @($folders | Where-Object { $_.Name -match '-[a-f0-9]{64}$' }).Count | Should -Be 2
+        (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
+        (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc | Should -Be $stamp
+        (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -Be 2
     }
 }

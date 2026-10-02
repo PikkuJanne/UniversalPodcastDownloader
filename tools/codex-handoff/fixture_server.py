@@ -8,6 +8,7 @@ import re
 import socket
 import threading
 import time
+from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -20,6 +21,7 @@ FEEDS = {
     '/feeds/dates.xml': 'rss-date-cases.xml', '/feeds/media.xml': 'rss-media.xml',
     '/feeds/page-1.xml': 'rss-page-1.xml', '/feeds/page-2.xml': 'rss-page-2.xml',
     '/feeds/dtd.xml': 'xml-with-dtd.xml', '/feeds/malformed.xml': 'xml-malformed.xml',
+    '/feeds/single-alias.xml': 'rss-single.xml',
     '/show': 'show-multiple.html', '/show/not-feed': 'show-not-feed.html',
 }
 
@@ -102,6 +104,25 @@ class FixtureHandler(BaseHTTPRequestHandler):
         number = self.server.count(path)
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')
+            return
+        hostile_titles = {
+            '/feeds/hostile-dot.xml': '.',
+            '/feeds/hostile-dotdot.xml': '..',
+            '/feeds/hostile-drive.xml': r'C:\UPD-Synthetic-DoNotCreate',
+            '/feeds/hostile-unc.xml': r'\\127.0.0.1\upd-fixture-do-not-create',
+        }
+        if path in hostile_titles or path == '/feeds/long-names.xml':
+            title = hostile_titles.get(path, 'Long podcast title ' * 25)
+            episode_title = 'Long episode title ' * 30 if path == '/feeds/long-names.xml' else 'Synthetic episode'
+            identifiers = ('long-one', 'long-two') if path == '/feeds/long-names.xml' else ('hostile',)
+            items = ''.join(
+                '<item><title>{}</title><guid isPermaLink="false">{}</guid>'
+                '<pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate>'
+                '<enclosure url="{}/media/ok.mp3?id={}" type="audio/mpeg"/></item>'.format(
+                    escape(episode_title), identifier, self.server.base_url, identifier)
+                for identifier in identifiers)
+            body = '<rss version="2.0"><channel><title>{}</title>{}</channel></rss>'.format(escape(title), items)
+            self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
             return
         if path in FEEDS:
             name = FEEDS[path]

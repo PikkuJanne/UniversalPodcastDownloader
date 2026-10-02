@@ -109,7 +109,7 @@
       "id": "UPD-0102",
       "milestone": "M1",
       "title": "Enforce safe deterministic Windows destinations",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0101"
       ],
@@ -132,9 +132,11 @@
         "A009",
         "A010"
       ],
-      "evidence": [],
+      "evidence": [
+        "docs/codex/evidence/UPD-0102.md"
+      ],
       "implementation_commit": null,
-      "pr": null
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0103",

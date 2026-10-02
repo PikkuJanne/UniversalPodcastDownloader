@@ -10,9 +10,9 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
   - Custom (N newest episodes)
   - All (everything in the feed)
 - Creates per-podcast subfolders based on feed title:
-  - <OutputPath>\<FeedTitle>\YYYY-MM-DD - Episode title.mp3
+  - `<OutputPath>\<SafeFeedTitle>-<feed hash>\YYYY-MM-DD - Episode title-<episode hash>.mp3`
 - Writes a per-run log file in the podcast folder:
-  - YYYYMMDD_HHmmss_<FeedTitle>.log with detailed attempt-by-attempt info.
+  - `YYYYMMDD_HHmmss_<unique run ID>.log` with detailed attempt-by-attempt info.
 
 **Requirements**  
 - Windows 11  
@@ -24,6 +24,7 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Place these files together:
   - UniversalPodcastDownloader.ps1
   - UniversalPodcastDownloader.bat (wrapper for double-click)
+  - src/ (included Naming.ps1 and PathSafety.ps1 helpers)
 - Default output root is:
   - %USERPROFILE%\Downloads\Podcasts
 - No external binaries are required; the script uses Invoke-WebRequest and PowerShell’s XML parsing.
@@ -40,7 +41,7 @@ Usage
        - Number = N newest
        - all = entire feed
    - The episodes are saved under:
-     - %USERPROFILE%\Downloads\Podcasts\<FeedTitle>\
+     - `%USERPROFILE%\Downloads\Podcasts\<SafeFeedTitle>-<feed hash>\`
    - A log file for the run is written next to the audio files.
 
 2. TUI via direct PowerShell
@@ -68,17 +69,20 @@ Usage
 - Default root:
   - %USERPROFILE%\Downloads\Podcasts
 - For each feed:
-  - A subfolder named after the feed title, sanitized for Windows:
-    - %USERPROFILE%\Downloads\Podcasts\<FeedTitle>\
+  - A safe title followed by a full SHA-256 suffix derived from the resolved feed URL.
 - Episodes:
-  - YYYY-MM-DD - Episode title.mp3 when a publication date is known  
-  - Episode title.mp3 if no date is available  
+  - `YYYY-MM-DD - Episode title-<episode hash>.mp3` when a date is known.
+  - `Episode title-<episode hash>.mp3` otherwise. The suffix uses the RSS GUID, then the media URL as fallback.
+  - Names are shortened to fit Windows path limits; the full identifier and extension remain. A tight budget can omit the date. A root with insufficient room fails with a request for a shorter path.
+  - Reserved device names, control characters and trailing dots/spaces are handled safely. Dot/dot-dot and rooted metadata paths are rejected. Junctions and symbolic links in destination paths are refused.
 - Existing files are never overwritten:
-  - Already present files are skipped and noted in the log.
+  - Already present generated destinations are skipped; their contents are not yet verified against durable history.
+  - A file appearing during transfer is preserved. An owned temporary sibling is moved into place only when the final name is available.
+  - Older title-only archives remain untouched. They are not automatically adopted or renamed; a new download uses the new names. Feed URL/title changes can also produce a new folder until explicit history/migration support is added.
 
 **Logging**  
 - Each run produces one log file in the podcast’s folder:  
-  - YYYYMMDD_HHmmss_<FeedTitle>.log
+  - `YYYYMMDD_HHmmss_<unique run ID>.log`
 - Logged details include:
   - Feed URL and resolved RSS URL
   - Feed title, mode, and output folder

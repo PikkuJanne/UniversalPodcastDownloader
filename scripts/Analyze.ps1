@@ -11,7 +11,7 @@ try {
     if (-not $ToolsPath) { $ToolsPath = Join-Path $repo '.dev-tools/Modules' }
     . (Join-Path $PSScriptRoot 'DevTools.ps1')
     Import-UpdDevModule -Name PSScriptAnalyzer -ToolsPath $ToolsPath
-    if (-not $Path) { $Path = @((Join-Path $repo 'UniversalPodcastDownloader.ps1'), $PSScriptRoot, (Join-Path $repo 'tests')) }
+    if (-not $Path) { $Path = @((Join-Path $repo 'UniversalPodcastDownloader.ps1'), (Join-Path $repo 'src'), $PSScriptRoot, (Join-Path $repo 'tests')) }
     $files = @($Path | ForEach-Object {
         $item = Get-Item -LiteralPath $_ -ErrorAction Stop
         if ($item.PSIsContainer) { Get-ChildItem -LiteralPath $item.FullName -Recurse -File -Filter '*.ps1' }

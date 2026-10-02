@@ -61,19 +61,19 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## What the current suite covers
 
-After UPD-0101, the full suite contains **82 checks per engine**:
+After UPD-0102, the full suite contains **196 checks per engine**:
 
 | Group | Count | Scope |
 | --- | ---: | --- |
-| Product unit checks | 58 | Import safety, mocked feed parsing/names, array selection, counts/progress and safe web requests; includes six known-defect characterizations |
+| Product unit checks | 159 | Import safety, parsing, selection/web regressions, safe naming/containment and no-overwrite boundaries; includes three remaining parser characterizations |
 | Runner guards | 10 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
-| Product integration checks | 14 | HTML discovery, RSS/Atom parsing, singleton/multiple transfers across modes, repeat preservation and empty-feed errors against loopback fixtures |
+| Product integration checks | 27 | HTML/RSS/Atom, mode/count/repeat behavior, hostile metadata, long/colliding names, preserved legacy copies and junctions at initial and later write boundaries |
 
 Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper functions and returns before startup preferences, logging, prompts and downloads. It is the import seam; no separate runtime module or package is required. A004 tests this against the actual script. Normal invocation with `&` retains the entry-point behavior.
 
 Unit network access is mocked; synthetic external URLs use `.invalid`. Integration tests start an owned Python process bound to `127.0.0.1` on an ephemeral port, use marked temporary output directories and stop only their tracked child processes. They check media lengths/hashes, request counts and preservation on repeat runs. They never select the real archive or a private feed.
 
-The six unit characterizations assert existing filename collisions, unsafe reserved/dot names, Atom updated-before-published behavior, a missing Atom ID and first-enclosure selection even when it is video. Passing those assertions means the defect was reproduced. Their later acceptance cases remain pending until the relevant implementation task fixes and retests them.
+The three remaining unit characterizations assert Atom updated-before-published behavior, a missing Atom ID and first-enclosure selection even when it is video. Passing those assertions means the defect was reproduced. UPD-0102 converted the three naming defect characterizations into desired-behavior regressions; the parser acceptance cases remain pending.
 
 UPD-0101 replaces both PS5.1 failure characterizations with desired-behavior regressions. Production requests now use `Invoke-PodcastWebRequest`, which always passes `-UseBasicParsing` to the existing network cmdlet. The worker no longer supplies a parsing default. Its HTML discovery check supplies only two exact application UI responses; the hidden child remains `-NonInteractive`, so the web cmdlet's legacy confirmation would fail. Harness control traffic to `/__stats` retains its own safe parsing switch.
 
@@ -86,13 +86,15 @@ pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Unit -Filter '*A
 pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Integration
 ```
 
-These checks do not validate the whole application, launcher UX, cancellation, private feeds, recovery or future acceptance cases. Helper-server self-tests are a separate layer. See [UPD-0002 evidence](evidence/UPD-0002.md) for the historical baseline and [UPD-0101 evidence](evidence/UPD-0101.md) for current commands and outcomes.
+Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008, A009 and A010); use `-Suite Integration` for the real loopback path checks. The worker's two late-boundary hooks insert only tracked test junctions, at Preparing or after a real media response. These are adversarial filesystem fixtures, not alternate product behavior or network mocks.
+
+These checks do not validate the whole application, launcher UX, cancellation, private feeds, recovery or future acceptance cases. Helper-server self-tests are a separate layer. See [UPD-0002 evidence](evidence/UPD-0002.md) for the historical baseline and [UPD-0101 evidence](evidence/UPD-0101.md) for historical commands and outcomes. Current task evidence is [UPD-0102](evidence/UPD-0102.md).
 
 ## Static analysis policy
 
 `Analyze.ps1` parses the runtime, runner and test PowerShell files in the selected engine, then runs PSScriptAnalyzer's warning/error rules. [tools/PSScriptAnalyzerSettings.psd1](../../tools/PSScriptAnalyzerSettings.psd1) excludes `PSAvoidUsingWriteHost` intentionally because the existing TUI and developer summaries use host output. Other default rules remain enabled.
 
-[tools/lint-baseline.json](../../tools/lint-baseline.json) records **10 existing warning findings** from source commit `2ac82614493be7196c9ebee116f23fec07368b50`. Each allowance matches the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count. The runner permits no new finding or parse error; moving a warning into unrelated source or increasing its count fails. Reduce/remove entries as later tasks fix their causes.
+[tools/lint-baseline.json](../../tools/lint-baseline.json) retains **8 existing warning allowances** from source commit `2ac82614493be7196c9ebee116f23fec07368b50`. Each allowance matches the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count. The runner permits no new finding or parse error; moving a warning into unrelated source or increasing its count fails. Reduce/remove entries as later tasks fix their causes.
 
 | Rule | Baseline count | Source context |
 | --- | ---: | --- |
@@ -100,12 +102,10 @@ These checks do not validate the whole application, launcher UX, cancellation, p
 | `PSAvoidOverwritingBuiltInCmdlets` | 1 | Existing `Write-Log` function |
 | `PSAvoidUsingEmptyCatchBlock` | 3 | Feed-title extraction, date parsing and downloaded-file size lookup |
 | `PSPossibleIncorrectComparisonWithNull` | 1 | `$size -ne $null` |
-| `PSUseApprovedVerbs` | 1 | `Sanitize-ForWindowsName` |
 | `PSUseBOMForUnicodeEncodedFile` | 1 | Existing runtime file encoding |
-| `PSUseShouldProcessForStateChangingFunctions` | 1 | `New-EpisodeFileName` |
 | `PSUseSingularNouns` | 1 | `Resolve-PodcastItems` |
 
-The local PS7 analysis reports 10 known warnings; PS5.1 reports 9 because its analyzer built-in command profile does not emit the `Write-Log` override warning. Both observations have zero new findings and zero parse errors. These are acknowledged legacy warnings, not ten resolved defects.
+The local PS7 analysis reports 8 known warnings; PS5.1 reports 7 because its analyzer built-in command profile does not emit the `Write-Log` override warning. Both observations have zero new findings and zero parse errors. These remain acknowledged legacy warnings. Two old naming allowances were removed; the pure naming helpers use narrow, documented suppressions for their retained names. Analysis includes all bundled `src/` helpers.
 
 ## CI and verified sources
 
