@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A036 passed; A037-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0205 evidence](evidence/UPD-0205.md).
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A038 passed; A039-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0206 evidence](evidence/UPD-0206.md).
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -40,8 +40,8 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A036 passed; A037-A060 rem
 | A034 | UPD-0204 | unit | passed | Use published when available; updated only a fallback; Atom ID collected. |
 | A035 | UPD-0205 | unit | passed | Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained. |
 | A036 | UPD-0205 | integration | passed | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
-| A037 | UPD-0206 | integration | not_run | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |
-| A038 | UPD-0206 | integration | not_run | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
+| A037 | UPD-0206 | integration | passed | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |
+| A038 | UPD-0206 | integration | passed | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
 | A039 | UPD-0301 | integration | not_run | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
 | A040 | UPD-0301 | integration | not_run | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
 | A041 | UPD-0301 | manual | not_run | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |

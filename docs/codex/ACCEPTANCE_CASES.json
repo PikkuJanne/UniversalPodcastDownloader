@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A036 passed through UPD-0205; A037-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A038 passed through UPD-0206; A039-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -410,8 +410,8 @@
       "when": "Run All.",
       "expected": "Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue.",
       "fixture": "rss-page-1.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0206.md"
     },
     {
       "id": "A038",
@@ -421,8 +421,8 @@
       "when": "Select episodes.",
       "expected": "Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0206.md"
     },
     {
       "id": "A039",

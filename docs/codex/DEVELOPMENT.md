@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## Historical suite coverage and current checks
 
-The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0205 inventory is **1,184 checks per engine**, detailed below; adding a test does not make an earlier run cover it.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0206 inventory is **1,272 checks per engine**, detailed below; adding a test does not make an earlier run cover it.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -90,7 +90,7 @@ Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008,
 
 Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 169 not_run. Run `-Suite Integration` for all 40 loopback cases. Transaction tests kill only their owned worker process after an actual stream write or immediately before/after File.Move. Process-local debugger breakpoints also insert a competing final file and verify the temporary stream has closed; product code has no test hook. Reruns preserve abandoned partials and begin a fresh request. Signature validation is bounded and is not full decoding.
 
-UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0205 section; historical counts belong to their recorded task snapshots.
+UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0206 section; historical counts belong to their recorded task snapshots.
 
 UPD-0105 legacy units use `-Suite Unit -Filter '*A01[78]*'` (71 checks); focused integration uses `-Suite Integration -Filter '*A01[78]*'` (25 checks, including the updated A009/A017 historical-folder guard and A016/A017 unknown-destination guard). CLI tests hash every copied original before/after operations, assert unchanged preview trees, require exact reviewed adoption digests, distinguish adoption from observed transfers, preserve remote-changed originals, choose one redownload from a multi-episode feed, and restore only metadata from explicit checkpoints. Ordinary WhatIf now performs no filesystem writes; early invalid feeds/identities leave the output root absent. Schema-1 behavior stays supported alongside explicit schema-2 migration.
 
@@ -123,7 +123,7 @@ The new cases check both initial and redirected request targets, disabled reques
 
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These earlier checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0205](evidence/UPD-0205.md), with 1,184 checks (940 units and 244 integrations), audio selection/extension preservation, intermediate failures, exact commands and results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
+These earlier checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0206](evidence/UPD-0206.md), with 1,272 checks (1,012 units and 260 integrations), bounded pagination/partial-catalogue results, intermediate failures, exact commands and results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
 
 ## Static analysis policy
 
@@ -197,7 +197,7 @@ Settled inventory: 1,093 checks, comprising 870 units (860 product units, includ
 
 The new 150 units and seven loopback cases cover invariant parsing across en-US/de-DE/fi-FI, UTC offsets/precision/ranges, published-first Atom selection, date namespaces with compatible IDs, explicit tied/missing order, UTC midnight filename dates, empty/old-priority legacy hints, no-write preview and recorded archive preservation. Prior probes failed as intended before implementation. See [date policy](PUBLICATION_DATES.md) and [UPD-0204 evidence](evidence/UPD-0204.md) for commands, versions, snapshots and limitations.
 
-## UPD-0205 focused checks
+## UPD-0205 focused checks (historical snapshot)
 
 Use fresh processes and the native/Python wrappers above:
 
@@ -212,6 +212,14 @@ pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
 python -B -m unittest discover -s tools/codex-handoff/selftests -v
 ```
 
-Settled inventory is 1,184 checks: 940 units (930 product units, ten runner guards) and 244 integrations, with no remaining media-selection characterization. Final local Unit passed 940/0/0/0 each; A035 units 71/0/0/869 each; existing A012 39/0/0/901 each; format integrations 21/0/0/223 each. Affected archive/body/history/legacy selected 54 at the preceding 243-integration snapshot, passing 54/0/0/189 each. Resume selected 34 at 244 integrations; its results are in the task evidence. Final analyzers: 69 files, parse/new findings zero, baseline 2 PS7/1 native; helper selftests 51/0 separate from acceptance. No local full All run was performed; final exact-head full CI is recorded separately in the PR/final handoff.
+The UPD-0205 snapshot inventory was 1,184 checks: 940 units (930 product units, ten runner guards) and 244 integrations, with no remaining media-selection characterization. Final local Unit passed 940/0/0/0 each; A035 units 71/0/0/869 each; existing A012 39/0/0/901 each; format integrations 21/0/0/223 each. Affected archive/body/history/legacy selected 54 at the preceding 243-integration snapshot, passing 54/0/0/189 each. Resume selected 34 at 244 integrations; its results are in the task evidence. Final analyzers: 69 files, parse/new findings zero, baseline 2 PS7/1 native; helper selftests 51/0 separate from acceptance. No local full All run was performed; final exact-head full CI is recorded separately in the PR/final handoff.
 
 Audio probes exercise bounded MP3/M4A/Ogg/WAVE/FLAC recognition and exact byte hashes, header/URL conflicts, text/video/ambiguity rejection, original identity/budgets, established path authority, unfinished-allocation correction, separate legacy allocation, no-write preview and prepared/checkpoint/no-overwrite boundaries. M4A/Ogg probes establish structural indications rather than full decoding or integrity. See [audio policy](AUDIO_FORMATS.md) and [UPD-0205 evidence](evidence/UPD-0205.md) for exact commands, intermediate failures, snapshots and remaining limits.
+
+## UPD-0206 pagination checks (2026-10-02)
+
+`src/FeedPagination.ps1` traverses one advertised next/prev-archive chain before mode selection, with 20 pages by default (configurable 1-100), 10,000 raw-entry and 32 MiB accepted-character bounds. Feed-level namespace/rel/type/base validation, cycles, duplicates, contradiction guards, later failures and no-write preview are documented in [FEED_PAGINATION.md](FEED_PAGINATION.md). No runtime package is added; current incomplete errors remain nonzero pending UPD-0301's result/launcher contract.
+
+Settled inventory: **1,272 checks** = **1,012 units** (1,002 product units plus ten runner guards) + **260 integrations**. Full local Unit passed 1,012/0/0/0 each, PS7 231.20 s/native 173.05 s. Pagination units passed 72/0/0/940 each; pagination loopback passed 16/0/0/244 each, PS7 146.11 s/native 105.23 s. Existing A030 discovery passed 29/0/0/231 each, PS7 167.83 s/native 94.01 s. Existing A015/A016 history passed 18/0/0/242 each; durations are in task evidence. A031-A036 date/audio checks passed 28/0/0/218 each at the earlier 246-integration snapshot. Counts are passed/failed/skipped/not_run. Final analyzers: 72 files, parse/new findings zero, baseline 2 PS7/1 native. Fixture helper selftests 57/0 are separate from product acceptance. No local full All was performed; final exact-head full CI is recorded in the PR/final handoff.
+
+Fresh-process focus commands use `-Suite Unit -Filter '*A037/A038*'` and `-Suite Integration -Filter '*A037/A038*'`. Affected filters are `-Suite Integration -Filter '*A030*'`, `'*A01[56]*'` and `'*A03[1-6]*'`. Use the native wrapper/process-only Python PATH above; do not run helpers against real archives. Local Windows 10.0.26300.0, PowerShell 7.6.5/native 5.1.26100.9444, Pester 5.7.1/PSScriptAnalyzer 1.24.0 and bundled Python 3.12.14. [UPD-0206 evidence](evidence/UPD-0206.md) records baseline defects, snapshot changes, exact commands, outcomes and limitations. A001-A038 passed; A039-A060 remain not_run. Stop after UPD-0206; UPD-0301 is next.

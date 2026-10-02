@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0206",
+  "current_task": "UPD-0301",
   "status_values": [
     "todo",
     "ready",
@@ -457,7 +457,7 @@
       "id": "UPD-0206",
       "milestone": "M2",
       "title": "Follow explicit feed pagination safely",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0205"
       ],
@@ -479,15 +479,15 @@
         "A037",
         "A038"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": ["docs/codex/evidence/UPD-0206.md"],
+      "implementation_commit": "5d1bd9fdaabe4d1de0a46e151656d09a6450703c",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3"
     },
     {
       "id": "UPD-0301",
       "milestone": "M3",
       "title": "Finalize CLI, results and launcher semantics",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0206"
       ],
