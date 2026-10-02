@@ -1,0 +1,30 @@
+HELPER-ONLY SELF-TEST EVIDENCE
+Environment: Linux, Python 3.13.5
+Command: python -B -m unittest discover -s tools/codex-handoff/selftests -v
+No downloader or PowerShell execution.
+
+test_cli_readiness_and_no_overwrite (test_fixture_server.HelperTests.test_cli_readiness_and_no_overwrite) ... ok
+test_dtd_fixture_is_present_without_resolving_it (test_fixture_server.HelperTests.test_dtd_fixture_is_present_without_resolving_it) ... ok
+test_forced_416 (test_fixture_server.HelperTests.test_forced_416) ... ok
+test_ignored_range_and_changed_entity (test_fixture_server.HelperTests.test_ignored_range_and_changed_entity) ... ok
+test_intentionally_bad_range (test_fixture_server.HelperTests.test_intentionally_bad_range) ... ok
+test_loopback_only (test_fixture_server.HelperTests.test_loopback_only) ... ok
+test_malformed_fixture_really_is_malformed (test_fixture_server.HelperTests.test_malformed_fixture_really_is_malformed) ... ok
+test_normal_media_and_head (test_fixture_server.HelperTests.test_normal_media_and_head) ... ok
+test_range_can_reassemble_exact_original (test_fixture_server.HelperTests.test_range_can_reassemble_exact_original) ... ok
+test_ready_file_never_overwrites (test_fixture_server.HelperTests.test_ready_file_never_overwrites) ... ok
+test_redirect_and_query_redacted_stats (test_fixture_server.HelperTests.test_redirect_and_query_redacted_stats) ... ok
+test_retry_once_and_statuses (test_fixture_server.HelperTests.test_retry_once_and_statuses) ... ok
+test_safe_xml_fixture_shapes (test_fixture_server.HelperTests.test_safe_xml_fixture_shapes) ... ok
+test_single_feed_is_substituted_and_valid (test_fixture_server.HelperTests.test_single_feed_is_substituted_and_valid) ... ok
+test_stall_routes_finish (test_fixture_server.HelperTests.test_stall_routes_finish) ... ok
+test_suffix_and_invalid_range (test_fixture_server.HelperTests.test_suffix_and_invalid_range) ... ok
+test_truncation_is_detectable (test_fixture_server.HelperTests.test_truncation_is_detectable) ... ok
+test_unknown_route_is_not_filesystem_access (test_fixture_server.HelperTests.test_unknown_route_is_not_filesystem_access) ... ok
+test_weak_and_absent_validator (test_fixture_server.HelperTests.test_weak_and_absent_validator) ... ok
+test_wrong_or_missing_content_metadata (test_fixture_server.HelperTests.test_wrong_or_missing_content_metadata) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 2.487s
+
+OK

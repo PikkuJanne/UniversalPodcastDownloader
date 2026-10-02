@@ -1,0 +1,3 @@
+<?xml version="1.0"?>
+<!DOCTYPE rss [<!ENTITY external SYSTEM "http://entity-must-never-be-fetched.invalid/sentinel">]>
+<rss version="2.0"><channel><title>&external;</title><description>Reject this DTD before resolving entities.</description></channel></rss>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Paged fixture</title><link>https://podcast.example.invalid/</link><description>Page two cycles back</description><atom:link rel="next" href="{{BASE_URL}}/feeds/page-1.xml"/>
+<item><title>Shared entry</title><guid isPermaLink="false">shared</guid><pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=shared" type="audio/mpeg"/></item>
+<item><title>Older entry</title><guid isPermaLink="false">older</guid><pubDate>Mon, 31 Aug 2026 12:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=older" type="audio/mpeg"/></item>
+</channel></rss>

@@ -1,0 +1,14 @@
+{
+  "all_values_are_fake": true,
+  "urls": [
+    "https://fake-user:FAKE_PASSWORD@private.example.invalid/feed",
+    "https://private.example.invalid/feed?token=FAKE_TOKEN&signature=FAKE_SIGNATURE",
+    "https://private.example.invalid/FAKE_PATH_TOKEN/rss",
+    "https://cdn.example.invalid/media?Policy=FAKE_POLICY&Key-Pair-Id=FAKE_KEY"
+  ],
+  "headers": {
+    "Authorization": "Bearer FAKE_BEARER",
+    "Cookie": "session=FAKE_COOKIE"
+  },
+  "expected_default": "Only hostname and an opaque request ID in logs/verbose/export; no full URL values."
+}

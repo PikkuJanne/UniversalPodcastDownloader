@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Päivä — Datum</title><link>https://podcast.example.invalid/</link><description>Missing and mixed dates</description>
+<item><title>Earlier UTC</title><guid isPermaLink="false">date-a</guid><pubDate>Tue, 01 Sep 2026 12:00:00 +0200</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=a" type="audio/mpeg"/></item>
+<item><title>Later UTC</title><guid isPermaLink="false">date-b</guid><pubDate>Tue, 01 Sep 2026 11:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=b" type="audio/mpeg"/></item>
+<item><title>Bad date</title><guid isPermaLink="false">date-c</guid><pubDate>not-a-date</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=c" type="audio/mpeg"/></item>
+<item><title>Missing date</title><guid isPermaLink="false">date-d</guid><enclosure url="{{BASE_URL}}/media/ok.mp3?id=d" type="audio/mpeg"/></item>
+</channel></rss>
