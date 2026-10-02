@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0203",
+  "current_task": "UPD-0204",
   "status_values": [
     "todo",
     "ready",
@@ -368,7 +368,7 @@
       "id": "UPD-0203",
       "milestone": "M2",
       "title": "Unify feed discovery and resolution",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0202"
       ],
@@ -390,15 +390,15 @@
         "A031",
         "A032"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": ["docs/codex/evidence/UPD-0203.md"],
+      "implementation_commit": "cddb61d8aba35061996c6e3e068775a0968ec4c7",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3"
     },
     {
       "id": "UPD-0204",
       "milestone": "M2",
       "title": "Normalize publication dates and stable ordering",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0203"
       ],

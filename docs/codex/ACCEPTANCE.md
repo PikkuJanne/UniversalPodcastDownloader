@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A029 passed; A030-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0202.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A032 passed; A033-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0203.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -33,9 +33,9 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A029 passed; A030-A060 rem
 | A027 | UPD-0202 | integration | passed | Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer. |
 | A028 | UPD-0202 | integration | passed | Never blindly append; safely restart with explicit logging or leave partial for review. |
 | A029 | UPD-0202 | integration | passed | No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only. |
-| A030 | UPD-0203 | integration | not_run | Shared resolution rules produce same candidates; already fetched feed response reused. |
-| A031 | UPD-0203 | unit | not_run | Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy. |
-| A032 | UPD-0203 | unit | not_run | Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed. |
+| A030 | UPD-0203 | integration | passed | Shared resolution rules produce same candidates; already fetched feed response reused. |
+| A031 | UPD-0203 | unit | passed | Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy. |
+| A032 | UPD-0203 | unit | passed | Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed. |
 | A033 | UPD-0204 | unit | not_run | Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention. |
 | A034 | UPD-0204 | unit | not_run | Use published when available; updated only a fallback; Atom ID collected. |
 | A035 | UPD-0205 | unit | not_run | Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained. |

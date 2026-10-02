@@ -123,7 +123,7 @@ The new cases check both initial and redirected request targets, disabled reques
 
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0202](evidence/UPD-0202.md), with the settled 829-check inventory (642 units and 187 integrations), resume recovery/ownership cases, exact commands and local/CI results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
+These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0203](evidence/UPD-0203.md), with the settled 936-check inventory (720 units and 216 integrations), shared discovery/selection/reuse cases, intermediate failures, exact commands and local/CI results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
 
 ## Static analysis policy
 
@@ -163,3 +163,21 @@ pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Fil
 ```
 
 The settled selections contain 51 units and 42 integrations. Units inject clock/delay and simulate token-ignoring streams; integrations use real loopback request counts/timestamps, exact media hashes and failed/completed history evidence. Fixture selftests remain separate helper checks. The final Framework regression permits bare IOException retries only while reading the HTTP response source, leaving local destination/history errors permanent. Retry settings and elapsed-window semantics are in [TRANSPORT_POLICY.md](TRANSPORT_POLICY.md).
+
+## UPD-0203 focused checks
+
+Use fresh processes and the native/Python wrappers above:
+
+```powershell
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit -Filter '*A03[12]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A0[03][067]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A019/A021*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit -Filter '*A01[01]:*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite All
+pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
+```
+
+Settled inventory is 936: 720 units (710 product units including two parser characterizations plus ten runner guards) and 216 integrations. Final settled Unit passed 720/0/0/0 per engine. A006/A007/A030 focus passed 43/0/0/173 each; repaired diagnostics 10/0/0/206 each; affected archive/transaction units 12/0/0/708 each. Final analyzers passed 63 files with no parse errors/new findings and reduced 3/2 baseline warnings; fixture helpers: 44 passed separately. The 935-case broad local snapshots exposed four stale mock fixtures and three stale diagnostic expectations; evidence records those failures and their corrected reruns separately from full exact-source CI.
+
+The new 78 units and 29 loopback cases cover root classification, empty/malformed/unsupported diagnostics, redirects/base/entities, attribute variants, deduplication, ambiguity and numbered choices, retained response reuse, original identity, static scanner safety and preview media/archive boundaries. Startup sink/export boundaries also retain the broader diagnostics regressions. See [shared discovery policy](FEED_DISCOVERY.md) and [task evidence](evidence/UPD-0203.md) for the explicit scanner subset and exact source/engine results.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A029 passed through UPD-0202; A030-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A032 passed through UPD-0203; A033-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -333,8 +333,8 @@
       "when": "Use TUI and command-line inputs.",
       "expected": "Shared resolution rules produce same candidates; already fetched feed response reused.",
       "fixture": "show-multiple.html",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A031",
@@ -344,8 +344,8 @@
       "when": "Discover and resolve candidates.",
       "expected": "Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy.",
       "fixture": "show-multiple.html",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A032",
@@ -355,8 +355,8 @@
       "when": "Resolve.",
       "expected": "Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed.",
       "fixture": "rss-empty.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A033",
