@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A034 passed; A035-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0204.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A036 passed; A037-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0205 evidence](evidence/UPD-0205.md).
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -38,8 +38,8 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A034 passed; A035-A060 rem
 | A032 | UPD-0203 | unit | passed | Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed. |
 | A033 | UPD-0204 | unit | passed | Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention. |
 | A034 | UPD-0204 | unit | passed | Use published when available; updated only a fallback; Atom ID collected. |
-| A035 | UPD-0205 | unit | not_run | Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained. |
-| A036 | UPD-0205 | integration | not_run | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
+| A035 | UPD-0205 | unit | passed | Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained. |
+| A036 | UPD-0205 | integration | passed | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
 | A037 | UPD-0206 | integration | not_run | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |
 | A038 | UPD-0206 | integration | not_run | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
 | A039 | UPD-0301 | integration | not_run | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |

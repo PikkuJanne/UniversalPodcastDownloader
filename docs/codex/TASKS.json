@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0205",
+  "current_task": "UPD-0206",
   "status_values": [
     "todo",
     "ready",
@@ -428,7 +428,7 @@
       "id": "UPD-0205",
       "milestone": "M2",
       "title": "Select and preserve supported audio formats",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0204"
       ],
@@ -449,15 +449,15 @@
         "A035",
         "A036"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": ["docs/codex/evidence/UPD-0205.md"],
+      "implementation_commit": "e8b7e5d8562ed12d85e0413bea400f727aaff788",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3"
     },
     {
       "id": "UPD-0206",
       "milestone": "M2",
       "title": "Follow explicit feed pagination safely",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0205"
       ],

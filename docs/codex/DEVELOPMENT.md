@@ -59,9 +59,9 @@ finally {
 
 Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a focused run. Do not change machine-wide execution policy or install modules globally to make these checks run.
 
-## What the current suite covers
+## Historical suite coverage and current checks
 
-The UPD-0201 suite contains **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for the completed runs and exact snapshot counts; adding a test does not make an earlier run cover it.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0205 inventory is **1,184 checks per engine**, detailed below; adding a test does not make an earlier run cover it.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -73,7 +73,7 @@ Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper fu
 
 Unit network access is mocked; synthetic external URLs use `.invalid`. Integration tests start an owned Python process bound to `127.0.0.1` on an ephemeral port, use marked temporary output directories and stop only their tracked child processes. They check media lengths/hashes, request counts and preservation on repeat runs. They never select the real archive or a private feed.
 
-The UPD-0201 snapshot retained two unit characterizations: Atom updated-before-published behavior and first-enclosure selection even when it is video. UPD-0204 replaced the date characterization with desired-behavior A034 regressions; only media selection remains a characterization. Passing the remaining characterization means the media defect was reproduced. UPD-0104 replaced the missing Atom ID characterization with desired-behavior identity regressions; media parsing acceptance remains pending.
+The UPD-0201 snapshot retained two unit characterizations: Atom updated-before-published behavior and first-enclosure selection even when it is video. UPD-0204 replaced the date characterization with desired-behavior A034 regressions; UPD-0205 replaces the media characterization with desired A035 regressions. UPD-0104 replaced the missing Atom ID characterization with desired-behavior identity regressions. Historical passing characterizations reproduced defects and did not satisfy future acceptance.
 
 UPD-0101 replaced both PS5.1 failure characterizations with desired-behavior regressions by routing page/feed requests through `Invoke-PodcastWebRequest`, which supplied `-UseBasicParsing` to `Invoke-WebRequest`; that implementation remains recorded in its historical evidence. UPD-0107 retains the helper name but delegates metadata to the built-in .NET HttpClient with explicit HTTP(S), redirect and body limits. Media uses the same request policy and keeps its streamed completion checks from UPD-0103. Product requests no longer use the legacy web DOM parser. Feed XML uses bounded XmlReader settings with DTD prohibited and external resolution disabled. The HTML discovery worker supplies only the exact application UI responses; its hidden child remains `-NonInteractive`. Harness control traffic retains its own safe parsing switch.
 
@@ -90,7 +90,7 @@ Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008,
 
 Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 169 not_run. Run `-Suite Integration` for all 40 loopback cases. Transaction tests kill only their owned worker process after an actual stream write or immediately before/after File.Move. Process-local debugger breakpoints also insert a competing final file and verify the temporary stream has closed; product code has no test hook. Reruns preserve abandoned partials and begin a fresh request. Signature validation is bounded and is not full decoding.
 
-UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current suite inventory above; historical counts belong to their recorded task snapshots.
+UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0205 section; historical counts belong to their recorded task snapshots.
 
 UPD-0105 legacy units use `-Suite Unit -Filter '*A01[78]*'` (71 checks); focused integration uses `-Suite Integration -Filter '*A01[78]*'` (25 checks, including the updated A009/A017 historical-folder guard and A016/A017 unknown-destination guard). CLI tests hash every copied original before/after operations, assert unchanged preview trees, require exact reviewed adoption digests, distinguish adoption from observed transfers, preserve remote-changed originals, choose one redownload from a multi-episode feed, and restore only metadata from explicit checkpoints. Ordinary WhatIf now performs no filesystem writes; early invalid feeds/identities leave the output root absent. Schema-1 behavior stays supported alongside explicit schema-2 migration.
 
@@ -123,22 +123,20 @@ The new cases check both initial and redirected request targets, disabled reques
 
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0203](evidence/UPD-0203.md), with the settled 936-check inventory (720 units and 216 integrations), shared discovery/selection/reuse cases, intermediate failures, exact commands and local/CI results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
+These earlier checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0205](evidence/UPD-0205.md), with 1,184 checks (940 units and 244 integrations), audio selection/extension preservation, intermediate failures, exact commands and results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
 
 ## Static analysis policy
 
 `Analyze.ps1` parses the runtime, runner and test PowerShell files in the selected engine, then runs PSScriptAnalyzer's warning/error rules. [tools/PSScriptAnalyzerSettings.psd1](../../tools/PSScriptAnalyzerSettings.psd1) excludes `PSAvoidUsingWriteHost` intentionally because the existing TUI and developer summaries use host output. Other default rules remain enabled.
 
-[tools/lint-baseline.json](../../tools/lint-baseline.json) retains **5 existing warning allowances** from source commit `2ac82614493be7196c9ebee116f23fec07368b50`. Each allowance matches the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count. The runner permits no new finding or parse error; moving a warning into unrelated source or increasing its count fails. Reduce/remove entries as later tasks fix their causes.
+[tools/lint-baseline.json](../../tools/lint-baseline.json) retains **2 surviving warning allowances** from the reviewed baseline source `2ac82614493be7196c9ebee116f23fec07368b50`. Each allowance matches the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count. The runner permits no new finding or parse error; moving a warning into unrelated source or increasing its count fails. Reduce/remove entries as later tasks fix their causes.
 
 | Rule | Baseline count | Source context |
 | --- | ---: | --- |
-| `PSAvoidAssignmentToAutomaticVariable` | 1 | Regex result assigned to `$matches` |
 | `PSAvoidOverwritingBuiltInCmdlets` | 1 | Existing `Write-Log` function |
-| `PSAvoidUsingEmptyCatchBlock` | 2 | Feed-title extraction and date parsing |
-| `PSUseSingularNouns` | 1 | `Resolve-PodcastItems` |
+| `PSAvoidUsingEmptyCatchBlock` | 1 | Feed-title extraction |
 
-The known baseline is 5 warnings on PS7 and 4 on PS5.1, whose analyzer built-in command profile does not emit the `Write-Log` override warning. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances; UPD-0104 added the main script's UTF-8 BOM and removed that allowance. Pure helpers use narrow, documented suppressions for their retained names. The UPD-0107 analysis covers 50 PowerShell files. Full analysis has zero parse errors and zero new findings on both engines, with 5 baseline warnings on PS7 and 4 on native PS5.1.
+The current baseline emits 2 warnings on PS7 and 1 on native PS5.1, whose analyzer built-in command profile does not emit the `Write-Log` override warning. These remain acknowledged legacy warnings. Earlier tasks removed obsolete naming/size/BOM allowances; UPD-0203 reduced the baseline to 3/2 and UPD-0204 to 2/1. Pure helpers use narrow, documented suppressions for retained names. Final UPD-0205 analysis covers 69 PowerShell files with zero parse errors and zero new findings on both engines.
 
 ## CI and verified sources
 
@@ -198,3 +196,22 @@ python -B -m unittest discover -s tools/codex-handoff/selftests -v
 Settled inventory: 1,093 checks, comprising 870 units (860 product units, including one media-selection characterization, plus ten runner guards) and 223 integrations. Final local Unit passed 870/0/0/0 each. A033/A034 units passed 151/0/0/719 each; date integrations 7/0/0/216 each; affected history/legacy integrations 42/0/0/181 each. Final analyzers: 66 files, no parse errors/new findings, reduced 2/1 baseline warnings. Helper selftests: 46/0, separate from acceptance. No local full All run was performed; exact-head CI is recorded separately in the PR/final handoff.
 
 The new 150 units and seven loopback cases cover invariant parsing across en-US/de-DE/fi-FI, UTC offsets/precision/ranges, published-first Atom selection, date namespaces with compatible IDs, explicit tied/missing order, UTC midnight filename dates, empty/old-priority legacy hints, no-write preview and recorded archive preservation. Prior probes failed as intended before implementation. See [date policy](PUBLICATION_DATES.md) and [UPD-0204 evidence](evidence/UPD-0204.md) for commands, versions, snapshots and limitations.
+
+## UPD-0205 focused checks
+
+Use fresh processes and the native/Python wrappers above:
+
+```powershell
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit -Filter '*A035*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit -Filter '*A012 bounded conservative*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Unit
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A035/A036*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A01[125678]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A02[78]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
+python -B -m unittest discover -s tools/codex-handoff/selftests -v
+```
+
+Settled inventory is 1,184 checks: 940 units (930 product units, ten runner guards) and 244 integrations, with no remaining media-selection characterization. Final local Unit passed 940/0/0/0 each; A035 units 71/0/0/869 each; existing A012 39/0/0/901 each; format integrations 21/0/0/223 each. Affected archive/body/history/legacy selected 54 at the preceding 243-integration snapshot, passing 54/0/0/189 each. Resume selected 34 at 244 integrations; its results are in the task evidence. Final analyzers: 69 files, parse/new findings zero, baseline 2 PS7/1 native; helper selftests 51/0 separate from acceptance. No local full All run was performed; final exact-head full CI is recorded separately in the PR/final handoff.
+
+Audio probes exercise bounded MP3/M4A/Ogg/WAVE/FLAC recognition and exact byte hashes, header/URL conflicts, text/video/ambiguity rejection, original identity/budgets, established path authority, unfinished-allocation correction, separate legacy allocation, no-write preview and prepared/checkpoint/no-overwrite boundaries. M4A/Ogg probes establish structural indications rather than full decoding or integrity. See [audio policy](AUDIO_FORMATS.md) and [UPD-0205 evidence](evidence/UPD-0205.md) for exact commands, intermediate failures, snapshots and remaining limits.
