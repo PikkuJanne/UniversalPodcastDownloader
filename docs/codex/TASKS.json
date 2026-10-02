@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0104",
+  "current_task": "UPD-0105",
   "status_values": [
     "todo",
     "ready",
@@ -175,7 +175,7 @@
       "id": "UPD-0104",
       "milestone": "M1",
       "title": "Add stable identities and durable local history",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0103"
       ],
@@ -200,14 +200,14 @@
       "evidence": [
         "docs/codex/evidence/UPD-0104.md"
       ],
-      "implementation_commit": null,
+      "implementation_commit": "086aa2316f9d5cb01c6ec10a8bdf5a3d84b26da2",
       "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0105",
       "milestone": "M1",
       "title": "Protect and migrate legacy archives",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0104"
       ],

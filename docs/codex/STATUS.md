@@ -3,8 +3,8 @@
 Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0104 only**.
 
 - UPD-0001, UPD-0002 and UPD-0101 through UPD-0103: done; historical evidence preserved.
-- UPD-0104: **in_progress**; implementation and all local checks complete; GitHub checkpoint pending.
-- Next: **UPD-0105 — protect and migrate legacy archives**; unstarted.
+- UPD-0104: **done**; implementation pushed/verified, all local checks and both GitHub jobs passed.
+- Next, ready: **UPD-0105 — protect and migrate legacy archives**; unstarted.
 - Branch/upstream: `codex/upd-m1-safety` / `origin/codex/upd-m1-safety`.
 - M1 [draft PR #2](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2) remains stacked on `codex/upd-m0-foundation`; M0 draft PR #1 remains unmerged.
 - [Commands](DEVELOPMENT.md), [UPD-0104 evidence](evidence/UPD-0104.md), [schema and recovery](STATE_AND_MIGRATION.md), [decisions](DECISIONS.md).
@@ -31,4 +31,4 @@ Windows 10.0.26300.0; Python 3.14.7; Git 2.56.0.windows.1; gh 2.97.0; Pester 5.7
 
 ## GitHub checkpoint
 
-Implementation and final documentation checkpoints will be verified after local checks. Stop after UPD-0104; the next task is UPD-0105.
+Implementation head `086aa2316f9d5cb01c6ec10a8bdf5a3d84b26da2` equals the independently verified remote branch. [CI 37000740167](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37000740167) passed both Windows Server 2022 jobs at that exact SHA: 379/0/0/0 each, 32 analyzed files, zero parse errors/new findings, 5/4 baseline warnings. CI engines: PowerShell 7.6.6 and Windows PowerShell 5.1.20348.5622. The final documentation-only checkpoint and its CI are verified separately in draft PR #2/final handoff, since this file cannot embed its own SHA. Stop after UPD-0104; the exact UPD-0105 continuation is in NEXT_THREAD_PROMPT.md.
