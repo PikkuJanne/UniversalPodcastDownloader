@@ -198,6 +198,7 @@ param(
 . (Join-Path $PSScriptRoot 'src/FeedXml.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
+. (Join-Path $PSScriptRoot 'src/ResumeStore.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaTransfer.ps1')
 . (Join-Path $PSScriptRoot 'src/LegacyInventory.ps1')
 . (Join-Path $PSScriptRoot 'src/LegacyMigration.ps1')

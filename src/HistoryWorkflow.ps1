@@ -114,7 +114,7 @@ function Invoke-PodcastRecordedTransfer {
     $transferPlan = $Planned
     Invoke-PodcastTransportOperation -Policy $Policy -Operation {
         param($Attempt, $AttemptPolicy)
-        # Each retry repeats the transaction with a fresh owned temporary file.
+        # Each retry verifies an owned checkpoint or reserves a fresh temporary file.
         # Untyped filesystem, validation and history errors are never retried.
         $result = Invoke-PodcastRecordedTransferAttempt -Context $transferContext -Planned $transferPlan -Policy $AttemptPolicy
         $result | Add-Member NoteProperty Attempts $Attempt -Force
@@ -141,7 +141,8 @@ function Invoke-PodcastRecordedTransferAttempt {
         Save-PodcastEpisodeRecord -Context $Context -Record $prepared
     }
     $result = Invoke-PodcastMediaTransfer -Uri $Planned.Episode.Url -Root $Context.Lock.Root `
-        -RelativePath $Planned.FileName -EnclosureLength $Planned.Episode.EnclosureLength -BeforeFinalize $beforeFinalize -Policy $Policy
+        -RelativePath $Planned.FileName -EnclosureLength $Planned.Episode.EnclosureLength -BeforeFinalize $beforeFinalize -Policy $Policy `
+        -ResumeContext ([pscustomobject]@{ Lock = $Context.Lock; FeedId = $Context.State.feed_id; EpisodeId = $Planned.EpisodeId })
     $completed = @($Context.State.episodes | Where-Object { $_.episode_id -ceq $Planned.EpisodeId })[0].PSObject.Copy()
     $completed.status = 'transfer_verified'
     Save-PodcastEpisodeRecord -Context $Context -Record $completed

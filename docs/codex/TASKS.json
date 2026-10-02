@@ -337,7 +337,7 @@
       "id": "UPD-0202",
       "milestone": "M2",
       "title": "Add validator-aware safe resume",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0201"
       ],
@@ -360,7 +360,7 @@
         "A028",
         "A029"
       ],
-      "evidence": [],
+      "evidence": ["docs/codex/evidence/UPD-0202.md"],
       "implementation_commit": null,
       "pr": null
     },

@@ -207,6 +207,9 @@ class HelperTests(unittest.TestCase):
         self.assertTrue(hdr['ETag'].startswith('W/'))
         _, hdr, _ = self.request('/media/no-validator.mp3')
         self.assertNotIn('ETag', hdr)
+        for path in ('/media/truncated.mp3', '/media/recover.mp3', '/media/interrupt.mp3'):
+            _, headers, _ = self.request(path, method='HEAD')
+            self.assertNotIn('ETag', headers)
 
     def test_intentionally_bad_range(self):
         status, hdr, data = self.request('/media/bad-range.mp3', {'Range': 'bytes=100-'})
@@ -350,6 +353,133 @@ class HelperTests(unittest.TestCase):
         started = time.monotonic()
         self.assertEqual(self.request('/transport/media/progress')[2], self.audio)
         self.assertGreater(time.monotonic() - started, 1.0)
+
+    def test_resume_feed_has_stable_identity_and_rotates_only_synthetic_signature(self):
+        self.server.recovered.clear()
+        try:
+            before = ET.fromstring(self.request('/resume/feed/signed')[2])
+            self.server.recovered.set()
+            after = ET.fromstring(self.request('/resume/feed/signed')[2])
+            self.assertEqual(before.find('./channel/item/guid').text, after.find('./channel/item/guid').text)
+            self.assertIn('signature=original', before.find('./channel/item/enclosure').attrib['url'])
+            self.assertIn('signature=renewed', after.find('./channel/item/enclosure').attrib['url'])
+            self.assertEqual(self.request('/resume/media/signed?signature=original')[0], 403)
+            self.assertEqual(self.request('/resume/media/signed?signature=renewed')[2], self.audio * 64)
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_partial_gate_and_matching_range_reconstruct_original_bytes(self):
+        self.server.recovered.clear()
+        conn = http.client.HTTPConnection('127.0.0.1', self.port, timeout=3)
+        try:
+            conn.request('GET', '/resume/media/valid')
+            response = conn.getresponse()
+            self.assertEqual(response.getheader('ETag'), '"resume-v1"')
+            prefix = response.read(1024)
+            self.assertEqual(prefix, (self.audio * 64)[:1024])
+        finally:
+            conn.close()
+            self.server.recovered.set()
+        try:
+            status, headers, suffix = self.request('/resume/media/valid', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            self.assertEqual(status, 206)
+            self.assertEqual(headers['Content-Range'], 'bytes 1024-{}/{}'.format(len(self.audio) * 64 - 1, len(self.audio) * 64))
+            self.assertEqual(prefix + suffix, self.audio * 64)
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_unknown_or_weak_representation_never_claims_a_strong_validator(self):
+        for scenario in ('weak', 'absent', 'last-modified', 'no-length'):
+            status, headers, _ = self.request('/resume/media/' + scenario, method='HEAD')
+            self.assertEqual(status, 200)
+            if scenario == 'weak':
+                self.assertEqual(headers['ETag'], 'W/"resume-v1"')
+            if scenario in ('absent', 'last-modified'):
+                self.assertNotIn('ETag', headers)
+            if scenario == 'last-modified':
+                self.assertIn('Last-Modified', headers)
+            if scenario == 'no-length':
+                self.assertNotIn('Content-Length', headers)
+
+    def test_resume_adversarial_range_headers_and_fresh_responses_are_distinct(self):
+        self.server.recovered.set()
+        try:
+            cases = {
+                'bad-start': ('Content-Range', 'bytes 1025-'),
+                'bad-end': ('Content-Range', 'bytes 1024-{}'.format(len(self.audio) * 64 - 2)),
+                'bad-total': ('Content-Range', 'bytes 1024-{}/{}'.format(len(self.audio) * 64 - 1, len(self.audio) * 64 + 1)),
+                'bad-validator': ('ETag', '"resume-v2"'),
+                'weak-validator': ('ETag', 'W/"resume-v1"'),
+                'bad-type': ('Content-Type', 'audio/ogg'),
+                'bad-encoding': ('Content-Encoding', 'gzip'),
+                'multipart': ('Content-Type', 'multipart/byteranges'),
+            }
+            for scenario, (header, prefix) in cases.items():
+                status, headers, _ = self.request('/resume/media/' + scenario, {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+                self.assertEqual(status, 206)
+                self.assertTrue(headers[header].startswith(prefix), scenario)
+                self.assertEqual(self.request('/resume/media/' + scenario)[2], self.audio * 64)
+            with self.assertRaises(http.client.IncompleteRead):
+                self.request('/resume/media/bad-length', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            status, headers, _ = self.request('/resume/media/missing-validator', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            self.assertEqual(status, 206)
+            self.assertNotIn('ETag', headers)
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_416_and_ignored_or_changed_ranges_are_explicit(self):
+        self.server.recovered.set()
+        try:
+            request_headers = {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'}
+            self.assertEqual(self.request('/resume/media/range-416', request_headers)[0], 416)
+            self.assertEqual(self.request('/resume/media/range-416')[2], self.audio * 64)
+            status, headers, _ = self.request('/resume/media/range-416-local', request_headers)
+            self.assertEqual((status, headers['Content-Range']), (416, 'bytes */1024'))
+            self.assertEqual(self.request('/resume/media/always-416')[0], 416)
+            self.assertEqual(self.request('/resume/media/ignore-range', request_headers)[0], 200)
+            status, headers, body = self.request('/resume/media/changed', request_headers)
+            self.assertEqual((status, headers['ETag'], body), (200, '"resume-v2"', self.audio * 64 + b'\0' * 32))
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_events_record_only_bounded_synthetic_range_values(self):
+        self.request('/__reset', method='POST')
+        self.server.recovered.set()
+        try:
+            self.request('/resume/media/valid?secret=DO_NOT_RECORD', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            self.request('/resume/media/valid?secret=DO_NOT_RECORD', {'If-Range': 'UNTRUSTED_DO_NOT_RECORD'})
+            raw = self.request('/__resume')[2]
+            self.assertNotIn(b'DO_NOT_RECORD', raw)
+            events = json.loads(raw)
+            self.assertEqual(events[0]['range'], 'bytes=1024-')
+            self.assertEqual(events[0]['if_range'], '"resume-v1"')
+            self.assertTrue(events[1]['has_if_range'])
+            self.assertIsNone(events[1]['if_range'])
+        finally:
+            self.server.recovered.clear()
+
+    def test_resume_caught_failure_fixtures_advance_from_the_observed_bytes(self):
+        self.request('/__reset', method='POST')
+        self.server.recovered.set()
+        try:
+            original = self.audio * 64
+            with self.assertRaises(http.client.IncompleteRead) as fresh:
+                self.request('/resume/media/fresh-truncated-once')
+            prefix = fresh.exception.partial
+            self.assertEqual(prefix, original[:len(original) // 3])
+            status, _, tail = self.request('/resume/media/fresh-truncated-once', {
+                'Range': 'bytes={}-'.format(len(prefix)), 'If-Range': '"resume-v1"'})
+            self.assertEqual((status, prefix + tail), (206, original))
+            self.request('/resume/media/range-truncated-once', method='HEAD')
+            with self.assertRaises(http.client.IncompleteRead) as resumed:
+                self.request('/resume/media/range-truncated-once', {'Range': 'bytes=1024-', 'If-Range': '"resume-v1"'})
+            middle = resumed.exception.partial
+            self.assertEqual(middle, original[1024:1024 + len(middle)])
+            status, _, tail = self.request('/resume/media/range-truncated-once', {
+                'Range': 'bytes={}-'.format(1024 + len(middle)), 'If-Range': '"resume-v1"'})
+            self.assertEqual((status, original[:1024] + middle + tail), (206, original))
+        finally:
+            self.server.recovered.clear()
 
 
 if __name__ == '__main__':

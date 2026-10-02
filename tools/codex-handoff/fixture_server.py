@@ -36,6 +36,7 @@ class FixtureServer(ThreadingHTTPServer):
     def __init__(self, port: int = 0):
         self.counts: Dict[str, int] = {}
         self.transport_events = []
+        self.resume_events = []
         self.count_lock = threading.Lock()
         self.recovered = threading.Event()
         self.audio = (FIXTURES / 'silence.mp3').read_bytes()
@@ -80,6 +81,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
         with self.server.count_lock:
             self.server.counts.clear()
             self.server.transport_events.clear()
+            self.server.resume_events.clear()
         self._send(200, b'{"reset":true}', False, 'application/json')
 
     def _safe_dispatch(self, head: bool) -> None:
@@ -189,6 +191,116 @@ class FixtureHandler(BaseHTTPRequestHandler):
             return
         self._send(200, body, head, content_type)
 
+    def _resume(self, path: str, number: int, head: bool) -> None:
+        match = re.fullmatch(r'/resume/(feed|media)/([a-z0-9-]+)', path)
+        scenarios = {'valid', 'ignore-range', 'changed', 'weak', 'absent',
+                     'last-modified', 'no-length', 'bad-start', 'bad-end',
+                     'bad-total', 'bad-length', 'bad-validator', 'missing-validator',
+                     'weak-validator', 'bad-type', 'bad-encoding', 'multipart',
+                     'range-416', 'range-416-local', 'always-416', 'signed',
+                     'range-truncated-once', 'fresh-truncated-once'}
+        if not match or match.group(2) not in scenarios:
+            self._send(404, b'Unknown resume fixture', head, 'text/plain')
+            return
+        kind, scenario = match.groups()
+        recovered = self.server.recovered.is_set()
+        data = self.server.audio * 64
+        etag = '"resume-v1"'
+        if scenario == 'changed' and recovered:
+            data += b'\0' * 32
+            etag = '"resume-v2"'
+        if kind == 'feed':
+            suffix = '?signature={}'.format('renewed' if recovered else 'original') if scenario == 'signed' else ''
+            body = ('<rss version="2.0"><channel><title>Resume fixture</title>'
+                    '<item><title>Original resume audio</title><guid>resume-001</guid>'
+                    '<enclosure url="{}/resume/media/{}{}" type="audio/mpeg" '
+                    'length="{}"/></item></channel></rss>').format(
+                        self.server.base_url, scenario, suffix, len(data)).encode('utf-8')
+            self._send(200, body, head, 'application/xml; charset=utf-8')
+            return
+        query_variant = None
+        if scenario == 'signed':
+            expected = 'signature={}'.format('renewed' if recovered else 'original')
+            query_variant = 'renewed' if recovered else 'original'
+            if urlsplit(self.path).query != expected:
+                self._send(403, b'Synthetic signature mismatch', head, 'text/plain')
+                return
+        range_header = self.headers.get('Range')
+        if_range = self.headers.get('If-Range')
+        # Record only bounded, syntactically safe synthetic range evidence.
+        event = {'path': path, 'number': number, 'query_variant': query_variant,
+                 'range': range_header if range_header and re.fullmatch(r'bytes=[0-9]+-', range_header) else None,
+                 'if_range': if_range if if_range in ('"resume-v1"', '"resume-v2"') else None,
+                 'has_range': range_header is not None, 'has_if_range': if_range is not None}
+        with self.server.count_lock:
+            self.server.resume_events.append(event)
+        headers = {'Accept-Ranges': 'bytes', 'ETag': etag}
+        if scenario == 'weak':
+            headers['ETag'] = 'W/"resume-v1"'
+        if scenario in ('absent', 'last-modified'):
+            headers.pop('ETag')
+        if scenario == 'last-modified':
+            headers['Last-Modified'] = 'Tue, 01 Sep 2026 12:00:00 GMT'
+        if scenario == 'fresh-truncated-once' and number == 1:
+            self._headers(200, len(data), 'audio/mpeg', headers)
+            if not head:
+                self.wfile.write(data[:len(data) // 3])
+                self.wfile.flush()
+                self.connection.shutdown(socket.SHUT_WR)
+            return
+        if recovered and scenario == 'always-416':
+            self._send(416, b'', head, extra={'Content-Range': 'bytes */{}'.format(len(data))})
+            return
+        if range_header and recovered:
+            if scenario in ('range-416', 'range-416-local'):
+                total = int(range_header[6:-1]) if scenario == 'range-416-local' and re.fullmatch(r'bytes=[0-9]+-', range_header) else len(data)
+                self._send(416, b'', head, extra={'Content-Range': 'bytes */{}'.format(total)})
+                return
+            span = parse_single_range(range_header, len(data))
+            if span is None:
+                self._send(416, b'', head, extra={'Content-Range': 'bytes */{}'.format(len(data))})
+                return
+            if scenario != 'ignore-range' and if_range == etag:
+                start, end = span
+                range_start = start + 1 if scenario == 'bad-start' else start
+                range_end = end - 1 if scenario == 'bad-end' else end
+                total = len(data) + 1 if scenario == 'bad-total' else len(data)
+                headers['Content-Range'] = 'bytes {}-{}/{}'.format(range_start, range_end, total)
+                if scenario == 'bad-validator':
+                    headers['ETag'] = '"resume-v2"'
+                elif scenario == 'missing-validator':
+                    headers.pop('ETag')
+                elif scenario == 'weak-validator':
+                    headers['ETag'] = 'W/"resume-v1"'
+                elif scenario == 'bad-encoding':
+                    headers['Content-Encoding'] = 'gzip'
+                mime = 'audio/ogg' if scenario == 'bad-type' else 'audio/mpeg'
+                if scenario == 'multipart':
+                    mime = 'multipart/byteranges; boundary=synthetic'
+                body = data[start:end + 1]
+                length = len(body) + 1 if scenario == 'bad-length' else len(body)
+                self._headers(206, length, mime, headers)
+                if not head:
+                    if scenario == 'range-truncated-once' and number == 2:
+                        self.wfile.write(body[:len(body) // 2])
+                        self.wfile.flush()
+                        self.connection.shutdown(socket.SHUT_WR)
+                        return
+                    self.wfile.write(body)
+                return
+        self._headers(200, None if scenario == 'no-length' else len(data), 'audio/mpeg', headers)
+        if not head:
+            if not recovered:
+                boundary = 65536
+                self.wfile.write(data[:boundary])
+                self.wfile.flush()
+                # The owned test worker is terminated before the local test
+                # releases this finite gate. Later requests complete normally.
+                self.server.recovered.wait(timeout=15)
+                self.wfile.write(data[boundary:])
+            else:
+                self.wfile.write(data)
+
     def _dispatch(self, head: bool) -> None:
         path = urlsplit(self.path).path
         number = self.server.count(path)
@@ -202,6 +314,14 @@ class FixtureHandler(BaseHTTPRequestHandler):
             return
         if path.startswith('/transport/'):
             self._transport(path, number, head)
+            return
+        if path == '/__resume':
+            with self.server.count_lock:
+                events = list(self.server.resume_events)
+            self._send(200, json.dumps(events).encode(), head, 'application/json')
+            return
+        if path.startswith('/resume/'):
+            self._resume(path, number, head)
             return
         if path == '/entity/never':
             self._send(200, b'ENTITY_MUST_NOT_BE_READ', head, 'text/plain')
@@ -375,7 +495,11 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == '/media/weak.mp3':
             etag = 'W/"fixture-v1"'
         extra = {'Accept-Ranges': 'bytes'}
-        if path != '/media/no-validator.mp3':
+        # Legacy fault cases exercise cleanup/restart without resume evidence.
+        # Validator-bearing crash and recovery cases have explicit /resume routes.
+        no_validator = {'/media/no-validator.mp3', '/media/truncated.mp3',
+                        '/media/recover.mp3', '/media/interrupt.mp3'}
+        if path not in no_validator:
             extra['ETag'] = etag
         if path == '/media/empty.mp3':
             self._send(200, b'', head, extra=extra)

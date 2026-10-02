@@ -25,11 +25,11 @@ The retry window begins before the initial attempt and is shared by retries and 
 
 ## Failure and delay decisions
 
-HTTP 408, 429, 500, 502, 503 and 504 are transient. Supported connection, DNS, socket and premature-end failures, header timeouts, idle timeouts and short framed bodies may retry. Other HTTP statuses, invalid URLs or redirects, certificate/TLS failures, invalid metadata/media, unsupported encoding, destination errors and history/finalization errors stop. Unknown failures are conservative permanent failures.
+HTTP 408, 429, 500, 502, 503 and 504 are transient. Supported connection, DNS, socket and premature-end failures, header timeouts, idle timeouts and short framed bodies may retry. Other HTTP errors stop, except a resumed-media 416 permits one fresh full request under the resume policy. Invalid URLs or redirects, certificate/TLS failures, invalid metadata/media, unsupported encoding on a full response, destination errors and history/finalization errors stop. Unknown failures are conservative permanent failures.
 
 Backoff doubles from the base delay, up to the local maximum. A valid `Retry-After` integer or HTTP date provides an additional minimum wait, including on redirects. The later of local backoff and server time wins. Large numeric server delays are deferred instead of overflowing or falling back to a short wait. Invalid unrecognized values use local backoff. Waits round upward and recheck the clock; a short wakeup cannot cause an early retry. If the required wait exceeds the remaining budget, or the budget expires while waiting, the request fails with a safe deferred category. It does not schedule background work.
 
-Each metadata retry starts a fresh in-memory body. Each episode retry repeats the transaction with a new exclusively owned temporary file. Failed attempts clean only their own partial; unknown partials and final media remain protected. Only a fully received, validated and recorded transfer is complete. Resume and ranges remain UPD-0202.
+Each metadata retry starts a fresh in-memory body. Each episode retry repeats the transaction with a verified owned resume checkpoint or a new exclusively owned temporary file. UPD-0202's [resume policy](RESUME_POLICY.md) validates the complete remaining range before append; rejected ranges permit one fresh GET within the same attempt. It adds no retry loop. Caught transient failures checkpoint eligible written prefixes. Unclaimed partials and final media remain protected. Only a fully received, validated and recorded transfer is complete.
 
 ## Diagnostics and tests
 

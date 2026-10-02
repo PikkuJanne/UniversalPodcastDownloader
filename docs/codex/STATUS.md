@@ -1,33 +1,26 @@
 # Current implementation status
 
-Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0201 only**.
+Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0202 only**.
 
-- UPD-0001, UPD-0002 and UPD-0101 through UPD-0107: done; historical evidence preserved.
-- UPD-0201: **done**; implementation pushed and verified; full local coverage and both GitHub jobs passed.
-- Next, ready: **UPD-0202 — add validator-aware safe resume**; not started.
-- Branch: `codex/upd-m2-network-feeds`, created from verified M1 tip `82f4ca88e3b304e7cb85449758b09f0e9d892ce9`.
-- [M2 draft PR #3](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3) is stacked on `codex/upd-m1-safety`. M1 PR #2 and M0 PR #1 remain open/unmerged.
-- [Commands](DEVELOPMENT.md), [UPD-0201 evidence](evidence/UPD-0201.md), [retry and timeout policy](TRANSPORT_POLICY.md), [input boundaries](INPUT_BOUNDARIES.md), [diagnostics](DIAGNOSTICS.md), [history and migration](STATE_AND_MIGRATION.md).
+- UPD-0001, UPD-0002, UPD-0101 through UPD-0107 and UPD-0201: done; historical evidence preserved.
+- UPD-0202: **in_progress**; implementation and focused checks complete, broad integration and GitHub verification pending.
+- UPD-0203 remains unstarted; continue only after current task verification.
+- Branch: `codex/upd-m2-network-feeds`.
+- [M2 draft PR #3](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/3) remains stacked on `codex/upd-m1-safety`. M1 PR #2 and M0 PR #1 remain open, draft and unmerged.
+- [Commands](DEVELOPMENT.md), [UPD-0202 evidence](evidence/UPD-0202.md), [safe resume](RESUME_POLICY.md), [retry policy](TRANSPORT_POLICY.md), [history](STATE_AND_MIGRATION.md), [diagnostics](DIAGNOSTICS.md).
 
 ## Verified checkout and changes
 
-Actual checkout: `D:\projects\UniversalPodcastDownloader`. Preserved `UniversalPodcastDownloader-main` snapshot untouched. Origin: `git@github.com:PikkuJanne/UniversalPodcastDownloader.git`. Starting local/fetched remote/PR HEAD `82f4ca88e3b304e7cb85449758b09f0e9d892ce9` was clean with 0/0 divergence. [Predecessor CI 37013964074](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37013964074) passed both jobs at that exact SHA. Continue command-scoped authenticated HTTPS and public author identity without persistent settings changes.
+Actual checkout: `D:\projects\UniversalPodcastDownloader`. Preserved `UniversalPodcastDownloader-main` snapshot untouched. Origin: `git@github.com:PikkuJanne/UniversalPodcastDownloader.git`. Starting local/fetched remote/PR HEAD `2092c55a2d3aac61bee4742813a44a2c38e2b815` was clean with 0/0 divergence. [Predecessor CI 37018152755](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37018152755) passed both jobs at that exact SHA. Continue command-scoped authenticated HTTPS and public author identity without persistent settings changes.
 
-One shared transport policy now bounds attempts, connection/header waits, idle body reads and the elapsed retry window. Metadata retries from empty memory; recorded media retries with a fresh owned temporary per attempt. The old fixed episode retry loop is removed. Transient HTTP/network failures may retry with exponential backoff; permanent HTTP, TLS/policy, validation, filesystem and history failures stop. Retry-After dates/seconds on errors and redirects never shorten the server delay; over-budget waits defer.
+Resume now requires strict owned sidecar evidence, matching identities and representation, a strong ETag, known total and exact local prefix size/hash. Only validated complete-tail 206 responses append. Ignored or inconsistent ranges, changed validators/representation and 416 use one fresh GET into a new file and preserve old evidence. Corrupt state or uncheckpointed crash tails stop for review. Caught network failures checkpoint their latest bytes for the existing bounded retry loop.
 
-Defaults are three total attempts, 30-second headers, 30-second idle reads, 120-second retry window, one-second base backoff and 30-second local cap. Script parameters expose all six values. A progressing body can outlast the header timeout and retry window; there is no short total media deadline. Transport failure categories produce fixed private messages. Original audio, history schemas, prepared completion evidence, no-overwrite placement, locks, preview and legacy protections remain. No runtime dependency was added.
+The sidecar is separate from history schemas 1/2. Media and metadata are flushed before atomic checkpoint replacement, under exclusive handles and the archive writer lock. Progress checkpoints are geometrically spaced. Prepared history evidence, no-overwrite final placement, preview, legacy protections, private diagnostics and original audio bytes remain intact. No runtime dependency or option was added.
 
 ## Checks and limits
 
-Settled suite: **705 checks** (542 product units, ten runner guards, 153 integrations), including two remaining parser characterizations. Local All snapshots passed **704/0/0/0 on both engines** (PS7 965.71 seconds; native 574.94 seconds). They discovered the suite before the final Framework unit was added; all integration workers used the corrected runtime. Final Unit then passed **552/0/0/0 per engine**, covering that added case and the settled source. Both CI jobs passed **705/0/0/0** at implementation HEAD. Analysis: **54 files, zero parse errors/new findings**, 5/4 existing warnings. Focused transport integrations passed 42/0/0/111 each; helper tests passed 34/0 separately. Evidence preserves initial fixture failures and the genuine Framework truncated-body correction.
+Final Unit: **641/0/0/0 on each engine**. Focused native resume integrations: **34/0/0/153**. Analyzers: **60 files, zero parse errors/new findings**, unchanged 5/4 baseline warnings. Fixture helper checks: **41 passed / 0 failed**, separate from product acceptance. The settled inventory is 828 (631 product units, ten runner guards, 187 integrations), including two remaining parser characterizations. Full integration checks are still running at this implementation checkpoint.
 
-Local Windows 10.0.26300.0; PowerShell 7.6.5 / 5.1.26100.9444; Pester 5.7.1; PSScriptAnalyzer 1.24.0; bundled Python 3.12.14. CI Python stays pinned to 3.14.7. Use the bundled Python directory via process-only PATH because the ambient alias is unusable. Tests isolate logs and archives in marked owned temporary data.
+Local Windows 10.0.26300.0; PowerShell 7.6.5 / 5.1.26100.9444; Pester 5.7.1; PSScriptAnalyzer 1.24.0; bundled Python 3.12.14. CI Python stays pinned to 3.14.7. Use process-only Python PATH and native module-path handling from DEVELOPMENT.md. Tests isolate logs and archives in marked owned temporary data.
 
-A001-A026 passed; A027-A060 remain not_run. Retry time is an attempt-start budget, not a total transfer deadline or an operating-system cleanup guarantee. Unknown failures stop conservatively. No resume/range append, richer feed parsing, launcher/exit-code redesign, manual launcher verification, real-archive test, merge, history rewrite, persistent setting change, release or publication is claimed.
-
-
-## GitHub checkpoint and continuation
-
-Implementation `22632b891c455f82a9bba9b9a7b8d48f9f3de5c6` is pushed and independently matches the remote. [CI 37016749029](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37016749029) passed both Windows Server 2022 jobs: 705/0/0/0 each, 54 analyzed files, zero parse errors/new findings and 5/4 baseline warnings. CI engines: PowerShell 7.6.6 and Windows PowerShell 5.1.20348.5622. Final checkpoint adds verification records plus a stronger synthetic XML assertion; its SHA and CI are recorded in draft PR #3/final handoff without a self-referential commit loop.
-
-Stop after UPD-0201. NEXT_THREAD_PROMPT.md describes UPD-0202 on the same M2 branch and draft PR; resume is unstarted.
+A001-A026 have predecessor evidence; A027-A029 await final broad/GitHub verification here. A030-A060 remain not_run. Resume deliberately rejects uncertain crash tails and some RFC-permitted response forms. Unknown partials and old sidecar snapshots are retained. No live archive, private feed, power-loss/UNC guarantee, discovery expansion, launcher redesign, merge, history rewrite, persistent settings change, release or publication is claimed.

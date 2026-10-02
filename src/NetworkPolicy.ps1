@@ -1,6 +1,7 @@
 #requires -Version 5.1
 
 . (Join-Path $PSScriptRoot 'TransportPolicy.ps1')
+. (Join-Path $PSScriptRoot 'ResumePolicy.ps1')
 
 function Get-PodcastRequestUri {
     [CmdletBinding()]
@@ -67,9 +68,10 @@ function Get-PodcastHttpClient {
 
 function Invoke-PodcastHttpGet {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Uri, [Parameter(Mandatory)]$Client, $Policy = (New-PodcastTransportPolicy))
+    param([Parameter(Mandatory)][string]$Uri, [Parameter(Mandatory)]$Client, $Policy = (New-PodcastTransportPolicy), $Resume)
 
     $current = Get-PodcastRequestUri -Uri $Uri
+    if ($null -ne $Resume -and -not (Test-PodcastResumeRequest -Resume $Resume)) { throw 'The resume request evidence is invalid.' }
     $request = $null
     $response = $null
     $redirects = 0
@@ -81,6 +83,12 @@ function Invoke-PodcastHttpGet {
             # Authorization, Referer or caller-supplied headers are propagated.
             $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $current)
             $request.Headers.AcceptEncoding.ParseAdd('identity')
+            # Resume validators belong to one exact previously observed target.
+            # Intermediate or changed redirect targets never receive them.
+            if ($null -ne $Resume -and (Get-PodcastResumeUriFingerprint -Uri $current) -ceq $Resume.FinalUriFingerprint) {
+                $request.Headers.Range = [Net.Http.Headers.RangeHeaderValue]::new([long]$Resume.Offset, $null)
+                $request.Headers.IfRange = [Net.Http.Headers.RangeConditionHeaderValue]::new([Net.Http.Headers.EntityTagHeaderValue]::new($Resume.ETag))
+            }
             $cancellation = [Threading.CancellationTokenSource]::new()
             $timedOut = $false
             try {
@@ -101,7 +109,7 @@ function Invoke-PodcastHttpGet {
             }
             finally { $cancellation.Dispose() }
             if (@(301, 302, 303, 307, 308) -notcontains [int]$response.StatusCode) {
-                if ([int]$response.StatusCode -ge 400) {
+                if ([int]$response.StatusCode -ge 400 -and -not ($null -ne $Resume -and [int]$response.StatusCode -eq 416)) {
                     $retryable = @(408, 429, 500, 502, 503, 504) -contains [int]$response.StatusCode
                     throw (New-PodcastTransportException -Kind HttpStatus -Message ('HTTP status {0}; the response must be a complete HTTP 200 body.' -f [int]$response.StatusCode) -Retryable $retryable -StatusCode ([int]$response.StatusCode) -RetryAfterUtc (Get-PodcastRetryAfterUtc -Response $response -Policy $Policy))
                 }

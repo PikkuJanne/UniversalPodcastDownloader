@@ -82,10 +82,10 @@ Usage
   - A legacy folder matching the old title-based name or the proposed archive folder blocks an ordinary new download when unclaimed media needs review. Use the explicit legacy workflow below to inspect and choose one episode at a time. A title match never binds a feed identity automatically.
   - Changed feed URLs require an explicit alias association; titles and redirects do not establish one automatically. Without a publisher identifier, a changed media URL can mean a new episode.
 - Downloads are validated before final placement:
-  - Each attempt writes to a unique `.upd-<GUID>.tmp` in the destination folder. Streams close before validation and final rename.
+  - Fresh transfers reserve a unique `.upd-<GUID>.tmp` in the destination folder; eligible retries verify and reuse their owned checkpoint. Streams close before validation and final rename.
   - Empty bodies, text/error pages, unsupported binary signatures, incomplete HTTP bodies and unsolicited partial responses fail. Valid recognizable audio can succeed without Content-Length. A feed enclosure-length mismatch produces a warning.
   - Checks read at most 64 KiB for recognizable MPEG audio, WAV, FLAC, Ogg or MP4 signatures. They do not decode the whole file or prove publisher authenticity; Ogg/MP4 audio tracks are not verified.
-  - A caught failure cleans only its own temporary file. A killed process may leave a temporary sibling; rerunning starts a fresh download and preserves that old partial. There is no resume or automatic orphan cleanup.
+  - Downloads with a strong ETag, known length and matching durable checkpoint can resume automatically. The downloader verifies the stored identity, local bytes and returned range before appending. Uncertain responses start fresh while preserving the old partial. Corrupt checkpoints or uncheckpointed crash tails stop for review; unknown partials are never reused or cleaned. See [safe resume policy](docs/codex/RESUME_POLICY.md).
 
 **Local history and recovery**
 
