@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0001",
+  "current_task": "UPD-0002",
   "status_values": [
     "todo",
     "ready",
@@ -16,7 +16,7 @@
       "id": "UPD-0001",
       "milestone": "M0",
       "title": "Bootstrap handoff and verify repository",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [],
       "review_items": [],
       "scope": "Inspect actual local root, GitHub origin, branch and working tree. Fetch without resetting. Compare BASELINE.json with current code. Preview the overlay outside the checkout, create a safe feature branch and install only nonconflicting handoff files. Reconcile existing AGENTS/status files rather than overwrite them. Do not fix downloader behavior in this task.",
@@ -37,14 +37,14 @@
       "evidence": [
         "docs/codex/evidence/UPD-0001.md"
       ],
-      "implementation_commit": null,
-      "pr": null
+      "implementation_commit": "3a997c8290f9a6f4c9b159e8d1b082e1cc610f71",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1"
     },
     {
       "id": "UPD-0002",
       "milestone": "M0",
       "title": "Create efficient regression and CI foundations",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0001"
       ],

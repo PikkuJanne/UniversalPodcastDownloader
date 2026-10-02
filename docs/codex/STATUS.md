@@ -2,8 +2,8 @@
 
 Updated 2026-10-02 (Europe/Berlin). This thread completes **UPD-0001 only**.
 
-- Current task: **UPD-0001 — in_progress**; local bootstrap complete, push/draft PR pending.
-- Next task: **UPD-0002 — regression and CI foundations**, not started.
+- Completed task: **UPD-0001 — done**; handoff committed/pushed, remote SHA verified, draft PR created.
+- Current/next task: **UPD-0002 — regression and CI foundations**, ready and not started.
 - Downloader behavior/source: unchanged; no downloader execution or product tests.
 - Handoff v1.0.0: 65 overlay files installed, plus task evidence.
 - Evidence: [UPD-0001](evidence/UPD-0001.md). Historical bundle validation remains unchanged.
@@ -20,7 +20,7 @@ Updated 2026-10-02 (Europe/Berlin). This thread completes **UPD-0001 only**.
 - Baseline drift: **none**. Commit, tree and all seven blobs in BASELINE.json match fetched main. No reset, stash, rebase or merge.
 - Initial clone: no tracked/untracked changes, instruction/status files or unfinished merge. No applicable AGENTS.md at the checkout or inspected parent paths.
 - Initial GitHub state: only `main`; no PRs or foundation branch.
-- Feature branch: `codex/upd-m0-foundation`, created from fetched `origin/main`. Push will establish its own upstream.
+- Feature branch: `codex/upd-m0-foundation`, created from fetched `origin/main`. Upstream is `origin/codex/upd-m0-foundation`.
 - Actual overlay: preview 65 CREATE / 0 UNCHANGED / 0 CONFLICT and no writes; apply created 65 files; repeat apply 0 CREATE / 65 UNCHANGED / 0 CONFLICT and no writes.
 
 ## Environment and constraints
@@ -36,12 +36,17 @@ The actual overlay ran with the inspected helper under PowerShell 7.6.5. Separat
 - Bundle verifier: PASS; 74 files, 26 tasks, 60 cases, 23 review items covered; 0 product tests.
 - Fixture helper: 20 passed, 0 failed, 0 skipped; Python standard library, loopback only.
 - All seven original application files unchanged.
-- Workflow acceptance: A001 and A002 passed; A003 awaits push/PR.
+- Workflow acceptance: **A001-A003 passed**; 3 passed / 0 failed / 0 skipped, 57 future cases not_run. These three workflow checks are not downloader tests.
 - Synthetic helper controls: PowerShell 7: 10 passed / 0 failed / 0 skipped; Windows PowerShell 5.1: 9 passed / 1 failed / 0 skipped. Both engines parse the helper without errors.
 - Product unit/integration/manual checks: NOT RUN; future acceptance remains not_run.
 
 ## Git continuity and owner gates
 
-Tested source: `2ac82614493be7196c9ebee116f23fec07368b50`, with handoff-only additions. No remote feature commit observed yet. A final documentation checkpoint will record the first verified push and draft PR. Final HEAD is reported from Git after that checkpoint; this file cannot contain its own commit hash.
+- Tested original source: `2ac82614493be7196c9ebee116f23fec07368b50`; unchanged in the handoff commit.
+- Handoff implementation commit: `3a997c8290f9a6f4c9b159e8d1b082e1cc610f71`.
+- Last observed feature push: local HEAD = remote HEAD = `3a997c8290f9a6f4c9b159e8d1b082e1cc610f71`, verified 2026-10-02 10:52:28 +02:00.
+- Draft PR: [#1 — UPD-0001: bootstrap handoff and verify repository](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1), OPEN and draft, head `codex/upd-m0-foundation`, base `main`; confirmed 10:53:09 +02:00. No CI checks configured or reported.
+- Working tree was clean after the first push. This documentation checkpoint changes only the six named status/register/evidence/prompt files. Its final HEAD must be checked after push and reported from Git and in the PR; it cannot be embedded in itself.
+- Git author identity was initially absent; command-scoped author settings use the authenticated GitHub account's public name and no-reply address. See evidence for exact arguments.
 
-No approval is needed for the authorized push and draft PR. Merges, rebases, resets, force pushes, existing branch/issue deletion, repository settings, release tags/publication, purchases and website deployment remain outside scope. Stop after UPD-0001.
+No approvals remain for UPD-0001. The feature branch is published and its PR remains draft. Merges, rebases, resets, force pushes, existing branch/issue deletion, repository settings, release tags/publication, purchases and website deployment remain outside scope. Stop after UPD-0001.

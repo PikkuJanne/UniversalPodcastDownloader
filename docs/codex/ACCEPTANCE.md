@@ -1,12 +1,12 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A002 passed; A003 awaits synchronization. A004-A060 remain NOT RUN. Helper results are separate from downloader acceptance; see evidence/UPD-0001.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A003 passed; A004-A060 remain NOT RUN. Helper results are separate from downloader acceptance; see evidence/UPD-0001.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
 | A001 | UPD-0001 | workflow | passed | Correct repository proven; unrelated changes preserved; baseline drift recorded; no automatic reset or stash. |
 | A002 | UPD-0001 | workflow | passed | Only new handoff files copied; unchanged files recognized; conflicting files cause no overwrite; repeat application is idempotent. |
-| A003 | UPD-0001 | workflow | not_run | Remote branch SHA equals local HEAD; draft PR created/reused or an authentication/permission blocker is reported honestly. |
+| A003 | UPD-0001 | workflow | passed | Remote branch SHA equals local HEAD; draft PR created/reused or an authentication/permission blocker is reported honestly. |
 | A004 | UPD-0002 | unit | not_run | No prompts, network calls, directories, downloads or preference mutations occur. |
 | A005 | UPD-0002 | workflow | not_run | Versions and engine are recorded; missing test tools produce a clear failure, not an empty green result; no runtime dependency added. |
 | A006 | UPD-0101 | unit | not_run | Selections are arrays; valid counts and progress; empty input is handled explicitly; no null/divide-by-zero errors on either Windows engine. |
