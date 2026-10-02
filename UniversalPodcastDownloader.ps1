@@ -166,6 +166,9 @@ param(
 
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
 . (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaTransfer.ps1')
 
 function Write-Log {
     param(
@@ -191,41 +194,6 @@ function Invoke-PodcastWebRequest {
 
     # Avoid the legacy DOM parser and its security prompt in Windows PowerShell.
     Invoke-WebRequest @PSBoundParameters -UseBasicParsing
-}
-
-function Invoke-PodcastMediaTransfer {
-    param(
-        [Parameter(Mandatory)][string]$Uri,
-        [Parameter(Mandatory)][string]$Root,
-        [Parameter(Mandatory)][string]$RelativePath
-    )
-
-    $destination = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
-    if (Test-Path -LiteralPath $destination) { throw 'Media destination already exists; preserving it.' }
-    $relativeDirectory = [IO.Path]::GetDirectoryName($RelativePath)
-    $temporaryRelative = [IO.Path]::Combine($relativeDirectory, ('.upd-' + [guid]::NewGuid().ToString('N') + '.tmp'))
-    $temporary = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
-    $owned = $false
-    try {
-        # Reserve a unique sibling. Only this attempt's temporary file may be replaced.
-        $reservation = [IO.File]::Open($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
-        $owned = $true
-        $reservation.Dispose()
-        $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
-        Invoke-PodcastWebRequest -Uri $Uri -OutFile $temporary
-        $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
-        $null = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
-        # The two-argument .NET operation fails if any final file already exists.
-        [IO.File]::Move($temporary, $destination)
-        $owned = $false
-    }
-    finally {
-        if ($owned) {
-            # An unsafe replacement is left untouched for inspection.
-            $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
-            [IO.File]::Delete($temporary)
-        }
-    }
 }
 
 # --- RSS autodetect helpers ---
@@ -381,16 +349,21 @@ function Get-EpisodeData {
     if (-not $guid) { $guid = Get-FirstText $XmlItem.guid }
 
     $url = $null
+    $mediaNode = $null
     $enc = $XmlItem.SelectSingleNode('./*[local-name()="enclosure"][1]')
     if ($enc) {
         $attr = $enc.Attributes["url"]
         if ($attr) { $url = $attr.Value }
         if (-not $url) { $url = $enc.GetAttribute("url") }
+        if ($url) { $mediaNode = $enc }
     }
 
     if (-not $url) {
         $ln = $XmlItem.SelectSingleNode('./*[local-name()="link" and @rel="enclosure"][1]')
-        if ($ln) { $url = $ln.GetAttribute("href") }
+        if ($ln) {
+            $url = $ln.GetAttribute("href")
+            if ($url) { $mediaNode = $ln }
+        }
     }
 
     if (-not $url) {
@@ -406,11 +379,21 @@ function Get-EpisodeData {
         }
     }
 
+    $enclosureLength = $null
+    if ($mediaNode) {
+        $parsedLength = 0L
+        if ([long]::TryParse($mediaNode.GetAttribute('length'), [Globalization.NumberStyles]::None,
+                [Globalization.CultureInfo]::InvariantCulture, [ref]$parsedLength)) {
+            $enclosureLength = $parsedLength
+        }
+    }
+
     [PSCustomObject]@{
         Title   = ($title -as [string])
         PubDate = $pubDate
         Url     = $url
         Guid    = ($guid -as [string])
+        EnclosureLength = $enclosureLength
     }
 }
 
@@ -625,7 +608,8 @@ try {
             Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
 
             try {
-                Invoke-PodcastMediaTransfer -Uri $ep.Url -Root $baseOutputPath -RelativePath $relativeDestination
+                $transferResult = Invoke-PodcastMediaTransfer -Uri $ep.Url -Root $baseOutputPath `
+                    -RelativePath $relativeDestination -EnclosureLength $ep.EnclosureLength
                 $success = $true
             } catch {
                 $lastError = $_
@@ -639,12 +623,14 @@ try {
         }
 
         if ($success) {
-            $size = $null
-            try { $size = (Get-Item -LiteralPath $destFile).Length } catch {}
             Write-Host "    Saved: $fileName"
             $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
             Write-Log ("Download succeeded: {0}" -f $destFile)
-            if ($size -ne $null) { Write-Log ("File size: {0} bytes" -f $size) }
+            Write-Log ("File size: {0} bytes; validation: {1}" -f $transferResult.Bytes, $transferResult.Verification)
+            foreach ($validationWarning in $transferResult.Warnings) {
+                Write-Warning $validationWarning
+                Write-Log $validationWarning 'WARN'
+            }
         } else {
             Write-Warning ("    Giving up after {0} attempts." -f $maxRetries)
             $errMsg = if ($lastError) { $lastError.Exception.Message } else { "Unknown error" }
@@ -672,6 +658,7 @@ try {
             Write-Host (" - {0}  ({1})" -f $f.Title, $f.Error)
             Write-Log ("Failed: {0} ({1})" -f ($f.Title -as [string]), $f.Error) 'ERROR'
         }
+        throw ('Download incomplete: {0} episode(s) failed; no failed transfer was published.' -f $failed.Count)
     }
 
     Write-Log "Run completed." 'INFO'

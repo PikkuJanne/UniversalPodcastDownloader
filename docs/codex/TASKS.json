@@ -142,7 +142,7 @@
       "id": "UPD-0103",
       "milestone": "M1",
       "title": "Make file completion transactional",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0102"
       ],
@@ -165,9 +165,11 @@
         "A012",
         "A013"
       ],
-      "evidence": [],
+      "evidence": [
+        "docs/codex/evidence/UPD-0103.md"
+      ],
       "implementation_commit": null,
-      "pr": null
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0104",

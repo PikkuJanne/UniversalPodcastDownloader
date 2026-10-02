@@ -34,6 +34,7 @@ class FixtureServer(ThreadingHTTPServer):
     def __init__(self, port: int = 0):
         self.counts: Dict[str, int] = {}
         self.count_lock = threading.Lock()
+        self.recovered = threading.Event()
         self.audio = (FIXTURES / 'silence.mp3').read_bytes()
         super().__init__(('127.0.0.1', port), FixtureHandler)
 
@@ -66,6 +67,10 @@ class FixtureHandler(BaseHTTPRequestHandler):
         self._safe_dispatch(True)
 
     def do_POST(self) -> None:
+        if urlsplit(self.path).path == '/__recover':
+            self.server.recovered.set()
+            self._send(200, b'{"recovered":true}', False, 'application/json')
+            return
         if urlsplit(self.path).path != '/__reset':
             self._send(404, b'Unknown fixture route', False, 'text/plain')
             return
@@ -104,6 +109,29 @@ class FixtureHandler(BaseHTTPRequestHandler):
         number = self.server.count(path)
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')
+            return
+        transaction_media = {
+            '/feeds/transaction-empty.xml': ('/media/empty.mp3', len(self.server.audio)),
+            '/feeds/transaction-html.xml': ('/media/html.mp3', len(self.server.audio)),
+            '/feeds/transaction-truncated.xml': ('/media/truncated.mp3', len(self.server.audio)),
+            '/feeds/transaction-no-length.xml': ('/media/no-length.mp3', len(self.server.audio)),
+            '/feeds/transaction-octet.xml': ('/media/octet-stream', len(self.server.audio)),
+            '/feeds/transaction-enclosure-mismatch.xml': ('/media/ok.mp3', len(self.server.audio) + 12345),
+            '/feeds/transaction-crash.xml': ('/media/ok.mp3', len(self.server.audio)),
+            '/feeds/transaction-recover.xml': ('/media/recover.mp3', len(self.server.audio)),
+            '/feeds/transaction-interrupt.xml': ('/media/interrupt.mp3', len(self.server.audio) * 64),
+            '/feeds/transaction-json.xml': ('/media/json.mp3', len(self.server.audio)),
+            '/feeds/transaction-xml.xml': ('/media/xml.mp3', len(self.server.audio)),
+            '/feeds/transaction-partial.xml': ('/media/unsolicited-partial.mp3', len(self.server.audio)),
+        }
+        if path in transaction_media:
+            media_path, estimate = transaction_media[path]
+            body = ('<rss version="2.0"><channel><title>Transactional fixtures</title>'
+                    '<item><title>Transactional episode</title><guid isPermaLink="false">transactional-001</guid>'
+                    '<pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate>'
+                    '<enclosure url="{}{}" type="audio/mpeg" length="{}"/></item></channel></rss>').format(
+                        self.server.base_url, media_path, estimate)
+            self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
             return
         hostile_titles = {
             '/feeds/hostile-dot.xml': '.',
@@ -150,6 +178,8 @@ class FixtureHandler(BaseHTTPRequestHandler):
             '/media/always-416.mp3', '/media/truncated.mp3', '/media/empty.mp3',
             '/media/html.mp3', '/media/octet-stream', '/media/no-length.mp3',
             '/media/stall.mp3', '/media/stall-headers.mp3', '/retry/once.mp3',
+            '/media/recover.mp3', '/media/interrupt.mp3', '/media/json.mp3',
+            '/media/xml.mp3', '/media/unsolicited-partial.mp3',
         }
         if path not in known:
             self._send(404, b'Unknown fixture route', head, 'text/plain')
@@ -171,10 +201,29 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == '/media/html.mp3':
             self._send(200, b'<!doctype html><html><body>Synthetic error</body></html>', head)
             return
+        if path in ('/media/json.mp3', '/media/xml.mp3'):
+            body = b'{"error":"synthetic denial"}' if path.endswith('json.mp3') else b'<?xml version="1.0"?><error>synthetic denial</error>'
+            self._send(200, body, head, 'audio/mpeg')
+            return
+        if path == '/media/unsolicited-partial.mp3':
+            self._send(206, data[:len(data) // 2], head, extra={'Content-Range': 'bytes 0-{}/{}'.format(len(data) // 2 - 1, len(data))})
+            return
+        if path == '/media/interrupt.mp3':
+            data = data * 64
+            self._headers(200, len(data), 'audio/mpeg', extra)
+            if not head:
+                boundary = min(65536, len(data) - 1)
+                self.wfile.write(data[:boundary])
+                self.wfile.flush()
+                # Tests release this loopback-only gate after terminating their
+                # owned downloader child. The bounded wait cannot hang cleanup.
+                self.server.recovered.wait(timeout=15)
+                self.wfile.write(data[boundary:])
+            return
         if path == '/media/always-416.mp3':
             self._send(416, b'', head, extra={'Content-Range': 'bytes */{}'.format(len(data))})
             return
-        if path == '/media/truncated.mp3':
+        if path == '/media/truncated.mp3' or (path == '/media/recover.mp3' and not self.server.recovered.is_set()):
             self._headers(200, len(data), 'audio/mpeg', extra)
             if not head:
                 self.wfile.write(data[:len(data) // 3])

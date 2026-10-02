@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A010 passed through UPD-0102; A011-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A013 passed through UPD-0103; A014-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -124,8 +124,8 @@
       "when": "Download, then rerun.",
       "expected": "Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete.",
       "fixture": "http:/media/truncated.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0103.md"
     },
     {
       "id": "A012",
@@ -135,8 +135,8 @@
       "when": "Download each.",
       "expected": "Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption.",
       "fixture": "http:/media/html.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0103.md"
     },
     {
       "id": "A013",
@@ -146,8 +146,8 @@
       "when": "Finalize a new temporary download.",
       "expected": "No existing file is overwritten; temporary file is on destination volume; all streams close on failure.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0103.md"
     },
     {
       "id": "A014",

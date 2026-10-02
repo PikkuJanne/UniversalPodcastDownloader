@@ -3,21 +3,30 @@ BeforeAll {
     Mock Read-Host { throw 'Unexpected unit prompt.' }
     Mock Invoke-WebRequest { throw 'Unexpected network request.' }
     . $script:DownloaderPath -OutputPath $TestDrive
+    $script:FixtureMedia = [IO.File]::ReadAllBytes((Join-Path (Split-Path $script:DownloaderPath -Parent) 'tools/codex-handoff/fixtures/silence.mp3'))
+    Mock Invoke-PodcastMediaRequest { throw 'Unexpected media request.' }
 }
 
 Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
     BeforeEach {
+        $fixtureMedia = $script:FixtureMedia
+        Mock Start-Sleep {}
         $script:OutputRoot = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $null = [IO.Directory]::CreateDirectory($script:OutputRoot)
         $script:FinalPath = Join-Path $script:OutputRoot 'episode.mp3'
     }
 
     It 'publishes the original bytes through a unique sibling file' {
-        Mock Invoke-WebRequest { [IO.File]::WriteAllBytes($OutFile, [byte[]](1, 2, 3, 255)) }
-        Invoke-PodcastMediaTransfer -Uri 'https://media.example.invalid/episode.mp3' -Root $script:OutputRoot -RelativePath 'episode.mp3'
-        [BitConverter]::ToString([IO.File]::ReadAllBytes($script:FinalPath)) | Should -Be '01-02-03-FF'
+        Mock Invoke-PodcastMediaRequest {
+            $DestinationStream.Write($fixtureMedia, 0, $fixtureMedia.Length)
+            [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }
+        }
+        $result = Invoke-PodcastMediaTransfer -Uri 'https://media.example.invalid/episode.mp3' -Root $script:OutputRoot -RelativePath 'episode.mp3'
+        $result.Outcome | Should -Be 'downloaded'
+        $result.Bytes | Should -Be $script:FixtureMedia.Length
+        [BitConverter]::ToString([IO.File]::ReadAllBytes($script:FinalPath)) | Should -Be ([BitConverter]::ToString($script:FixtureMedia))
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Force).Count | Should -Be 1
-        Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter { $UseBasicParsing -and $OutFile -like '*.tmp' }
+        Should -Invoke Invoke-PodcastMediaRequest -Times 1 -Exactly -ParameterFilter { $DestinationStream.Name -like '*.tmp' }
     }
 
     It 'preserves an unknown existing destination without requesting media' {
@@ -27,13 +36,14 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
             Should -Throw '*already exists*'
         [IO.File]::ReadAllText($script:FinalPath) | Should -Be 'unknown existing bytes'
         (Get-Item -LiteralPath $script:FinalPath).LastWriteTimeUtc | Should -Be $before
-        Should -Invoke Invoke-WebRequest -Times 0 -Exactly
+        Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
     }
 
     It 'preserves a competing file created during the request' {
-        Mock Invoke-WebRequest {
-            [IO.File]::WriteAllText($OutFile, 'downloaded bytes')
+        Mock Invoke-PodcastMediaRequest {
+            $DestinationStream.Write($fixtureMedia, 0, $fixtureMedia.Length)
             [IO.File]::WriteAllText($script:FinalPath, 'competing bytes')
+            [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }
         }
         { Invoke-PodcastMediaTransfer -Uri 'https://media.example.invalid/episode.mp3' -Root $script:OutputRoot -RelativePath 'episode.mp3' } |
             Should -Throw
@@ -44,8 +54,8 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
     It 'cleans only the failed attempt temporary file and keeps unknown partials' {
         $unowned = Join-Path $script:OutputRoot '.upd-unknown.tmp'
         [IO.File]::WriteAllText($unowned, 'unowned bytes')
-        Mock Invoke-WebRequest {
-            [IO.File]::WriteAllText($OutFile, 'partial bytes')
+        Mock Invoke-PodcastMediaRequest {
+            $DestinationStream.Write($fixtureMedia, 0, 100)
             throw 'Synthetic interrupted request.'
         }
         { Invoke-PodcastMediaTransfer -Uri 'https://media.example.invalid/episode.mp3' -Root $script:OutputRoot -RelativePath 'episode.mp3' } |
@@ -59,7 +69,7 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
         { Invoke-PodcastMediaTransfer -Uri 'https://media.example.invalid/episode.mp3' -Root $script:OutputRoot -RelativePath '..\escape.mp3' } |
             Should -Throw
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Force).Count | Should -Be 0
-        Should -Invoke Invoke-WebRequest -Times 0 -Exactly
+        Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
     }
 
     It 'validates <Kind> before creating podcast folders or logs' -ForEach @(
@@ -72,16 +82,17 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
         { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All } |
             Should -Throw
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Force).Count | Should -Be 0
-        Should -Invoke Invoke-WebRequest -Times 0 -Exactly -ParameterFilter { $OutFile }
+        Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
     }
 
     It 'fits both full identifiers under a tight absolute output-root budget' {
         Mock Write-Host {}
         Mock Write-Progress {}
         $response = [pscustomobject]@{ Content = '<rss><channel><title>Show</title><item><title>Episode</title><guid>one</guid><pubDate>2026-09-01</pubDate><enclosure url="https://media.example.invalid/one.mp3" /></item></channel></rss>' }
-        Mock Invoke-WebRequest {
-            if ($OutFile) { [IO.File]::WriteAllText($OutFile, 'synthetic media') }
-            else { $response }
+        Mock Invoke-WebRequest { $response }
+        Mock Invoke-PodcastMediaRequest {
+            $DestinationStream.Write($fixtureMedia, 0, $fixtureMedia.Length)
+            [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }
         }
         $tightRoot = Join-Path $TestDrive ('x' * (120 - $TestDrive.Length - 1))
         & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $tightRoot -Mode All

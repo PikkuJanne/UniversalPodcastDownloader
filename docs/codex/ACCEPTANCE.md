@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A010 passed; A011-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0102.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A013 passed; A014-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0103.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -14,9 +14,9 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A010 passed; A011-A060 rem
 | A008 | UPD-0102 | unit | passed | Valid deterministic components; identifiers retained after shortening; Windows limits handled clearly. |
 | A009 | UPD-0102 | integration | passed | No escape from output root, no metadata-controlled drive/UNC path and no silent traversal through unsafe reparse points. |
 | A010 | UPD-0102 | unit | passed | No accidental skip or overwrite; case-insensitive collisions also handled. |
-| A011 | UPD-0103 | integration | not_run | Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete. |
-| A012 | UPD-0103 | integration | not_run | Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption. |
-| A013 | UPD-0103 | integration | not_run | No existing file is overwritten; temporary file is on destination volume; all streams close on failure. |
+| A011 | UPD-0103 | integration | passed | Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete. |
+| A012 | UPD-0103 | integration | passed | Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption. |
+| A013 | UPD-0103 | integration | passed | No existing file is overwritten; temporary file is on destination volume; all streams close on failure. |
 | A014 | UPD-0104 | unit | not_run | Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title. |
 | A015 | UPD-0104 | integration | not_run | Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset. |
 | A016 | UPD-0104 | integration | not_run | History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted. |

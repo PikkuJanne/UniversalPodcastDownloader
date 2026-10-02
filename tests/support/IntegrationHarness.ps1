@@ -95,7 +95,9 @@ function Invoke-UpdIntegrationWorker {
         [string]$OutputName = 'output',
         [string]$BoundaryJunctionPath,
         [string]$BoundaryJunctionTarget,
-        [ValidateSet('Preparing', 'AfterTransfer')][string]$BoundaryStage = 'Preparing'
+        [ValidateSet('Preparing', 'AfterTransfer')][string]$BoundaryStage = 'Preparing',
+        [ValidateSet('None', 'BeforeFinalizeCrash', 'AfterFinalizeCrash', 'FinalRace')][string]$TransactionHook = 'None',
+        [switch]$InterruptOnPartial
     )
 
     if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -ne '/show') { throw 'Only named local feed or show fixtures are allowed.' }
@@ -111,7 +113,10 @@ function Invoke-UpdIntegrationWorker {
         ResultPath = $resultPath
         Mode = $Mode
         CustomCount = $CustomCount
+        TransactionHook = $TransactionHook
+        HookMarkerPath = Join-Path $Context.Root ($identifier + '-hook.json')
     }
+    if ($InterruptOnPartial) { $config.TransactionHook = 'DuringTransferCrash' }
     if ($BoundaryJunctionPath -or $BoundaryJunctionTarget) {
         $prefix = [IO.Path]::GetFullPath($Context.Root).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
         foreach ($candidate in @($BoundaryJunctionPath, $BoundaryJunctionTarget)) {
@@ -131,22 +136,35 @@ function Invoke-UpdIntegrationWorker {
         '-File', (Join-Path $Context.RepositoryRoot 'tests/support/Invoke-IntegrationWorker.ps1'),
         '-ConfigPath', $configPath
     )
-    if (-not $worker.Process.WaitForExit(30000)) {
+    $interrupted = $false
+    $observedPartial = $null
+    if (-not $worker.Process.HasExited -and -not $worker.Process.WaitForExit(30000)) {
         $worker.Process.Kill()
         $worker.Process.WaitForExit()
         throw 'Downloader integration child timed out after 30 seconds; only this owned child was stopped.'
     }
     $stdout = $worker.Output.Result
     $stderr = $worker.ErrorOutput.Result
-    if (-not (Test-Path -LiteralPath $resultPath)) {
-        throw "Integration child produced no result. Exit=$($worker.Process.ExitCode); stdout=$stdout; stderr=$stderr"
+    $hookMarker = if (Test-Path -LiteralPath $config.HookMarkerPath) { Get-Content -LiteralPath $config.HookMarkerPath -Raw | ConvertFrom-Json } else { $null }
+    if ($InterruptOnPartial -and $hookMarker -and $hookMarker.Hook -eq 'DuringTransferCrash') {
+        $interrupted = $true
+        $observedPartial = Get-Item -LiteralPath $hookMarker.Temporary
     }
+    if (-not (Test-Path -LiteralPath $resultPath)) {
+        if (-not $interrupted -and -not ($TransactionHook -like '*Crash' -and $hookMarker)) {
+            throw "Integration child produced no result. Exit=$($worker.Process.ExitCode); stdout=$stdout; stderr=$stderr"
+        }
+    }
+    $workerResult = if (Test-Path -LiteralPath $resultPath) { Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json } else { $null }
     [pscustomobject]@{
         ExitCode = $worker.Process.ExitCode
-        Result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+        Result = $workerResult
         Stdout = $stdout
         Stderr = $stderr
         OutputPath = $config.OutputPath
+        Interrupted = $interrupted
+        ObservedPartial = $observedPartial
+        HookMarker = $hookMarker
     }
 }
 

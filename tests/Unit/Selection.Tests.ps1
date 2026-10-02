@@ -3,6 +3,7 @@ BeforeAll {
     Mock Read-Host { throw 'Unit tests must not prompt.' }
     Mock Invoke-WebRequest { throw 'Unexpected network request in unit test.' }
     . $script:DownloaderPath -OutputPath $TestDrive
+    $script:FixtureMedia = [IO.File]::ReadAllBytes((Join-Path (Split-Path $script:DownloaderPath -Parent) 'tools/codex-handoff/fixtures/silence.mp3'))
 }
 
 Describe 'A006: array selection for every supported mode' -Tag 'Unit', 'A006' {
@@ -52,14 +53,15 @@ Describe 'A006: array selection for every supported mode' -Tag 'Unit', 'A006' {
 
 Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
     BeforeEach {
+        $fixtureMedia = $script:FixtureMedia
         Mock Write-Host {}
         Mock Write-Progress {}
+        Mock Start-Sleep {}
         $feedResponse = [pscustomobject]@{ Content = '' }
-        Mock Invoke-WebRequest {
-            if ($OutFile) {
-                Set-Content -LiteralPath $OutFile -Value 'synthetic unit media'
-            }
-            else { $feedResponse }
+        Mock Invoke-WebRequest { $feedResponse }
+        Mock Invoke-PodcastMediaRequest {
+            $DestinationStream.Write($fixtureMedia, 0, $fixtureMedia.Length)
+            [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }
         }
     }
 
@@ -94,7 +96,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         $log | Should -Match "Feed items with valid URLs: $InputCount"
         $log | Should -Match "Episodes to download \(after mode/filter\): $ExpectedCount"
         $log | Should -Match "Summary: Downloaded=$ExpectedCount, Skipped=0, Failed=0"
-        Should -Invoke Invoke-WebRequest -Times $ExpectedCount -Exactly -ParameterFilter { $OutFile -and $UseBasicParsing }
+        Should -Invoke Invoke-PodcastMediaRequest -Times $ExpectedCount -Exactly -ParameterFilter { $DestinationStream }
         Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { -not $Completed }
         for ($i = 1; $i -le $ExpectedCount; $i++) {
             $operation = "Episode $i of $ExpectedCount"
@@ -106,7 +108,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
 
         & $script:DownloaderPath @arguments
 
-        Should -Invoke Invoke-WebRequest -Times $ExpectedCount -Exactly -ParameterFilter { $OutFile }
+        Should -Invoke Invoke-PodcastMediaRequest -Times $ExpectedCount -Exactly
         Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { $Status -like 'Skipping (exists):*' }
         Should -Invoke Write-Progress -Times 0 -Exactly -ParameterFilter { -not $Completed -and ($PercentComplete -lt 0 -or $PercentComplete -gt 100) }
     }
@@ -121,7 +123,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         $output = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $output -Mode $Mode -CustomCount 1 } |
             Should -Throw $Message
-        Should -Invoke Invoke-WebRequest -Times 0 -Exactly -ParameterFilter { $OutFile }
+        Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
         Should -Invoke Write-Progress -Times 0 -Exactly
         @(Get-ChildItem -LiteralPath $output -Filter '*.mp3' -Recurse).Count | Should -Be 0
     }

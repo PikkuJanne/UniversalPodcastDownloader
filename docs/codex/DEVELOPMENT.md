@@ -61,13 +61,13 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## What the current suite covers
 
-After UPD-0102, the full suite contains **196 checks per engine**:
+After UPD-0103, the full suite contains **277 checks per engine**:
 
 | Group | Count | Scope |
 | --- | ---: | --- |
-| Product unit checks | 159 | Import safety, parsing, selection/web regressions, safe naming/containment and no-overwrite boundaries; includes three remaining parser characterizations |
+| Product unit checks | 227 | Import safety, parsing, selection/web regressions, naming/containment, streamed requests, bounded body validation and transactional failures; includes three remaining parser characterizations |
 | Runner guards | 10 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
-| Product integration checks | 27 | HTML/RSS/Atom, mode/count/repeat behavior, hostile metadata, long/colliding names, preserved legacy copies and junctions at initial and later write boundaries |
+| Product integration checks | 40 | HTML/RSS/Atom, mode/count/repeat behavior, hostile metadata, naming/junctions, invalid/lengthless bodies, actual interrupted transfers, finalization crashes and competing files |
 
 Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper functions and returns before startup preferences, logging, prompts and downloads. It is the import seam; no separate runtime module or package is required. A004 tests this against the actual script. Normal invocation with `&` retains the entry-point behavior.
 
@@ -75,7 +75,7 @@ Unit network access is mocked; synthetic external URLs use `.invalid`. Integrati
 
 The three remaining unit characterizations assert Atom updated-before-published behavior, a missing Atom ID and first-enclosure selection even when it is video. Passing those assertions means the defect was reproduced. UPD-0102 converted the three naming defect characterizations into desired-behavior regressions; the parser acceptance cases remain pending.
 
-UPD-0101 replaces both PS5.1 failure characterizations with desired-behavior regressions. Production requests now use `Invoke-PodcastWebRequest`, which always passes `-UseBasicParsing` to the existing network cmdlet. The worker no longer supplies a parsing default. Its HTML discovery check supplies only two exact application UI responses; the hidden child remains `-NonInteractive`, so the web cmdlet's legacy confirmation would fail. Harness control traffic to `/__stats` retains its own safe parsing switch.
+UPD-0101 replaces both PS5.1 failure characterizations with desired-behavior regressions. Page/feed requests use `Invoke-PodcastWebRequest`, which always passes `-UseBasicParsing` to the existing network cmdlet. UPD-0103 media requests use the built-in .NET HttpClient with one streamed GET and headers from that same response; no DOM parsing occurs. The worker supplies no parsing default. Its HTML discovery check supplies only two exact application UI responses; the hidden child remains `-NonInteractive`, so the web cmdlet's legacy confirmation would fail. Harness control traffic retains its own safe parsing switch.
 
 `Select-PodcastEpisode` returns an array for zero, one or many entries. Unit cases cover Latest, All and Custom counts of 1, 2 and 5, null input, invalid Custom counts, sorting, URL filtering, counts, download/skip progress, and explicit empty/no-enclosure errors. The entry point still rejects an empty feed or a feed without downloadable URLs before episode progress/media requests. A006 covers valid arithmetic; byte-level progress timing and other UX changes remain UPD-0303.
 
@@ -88,24 +88,25 @@ pwsh -NoProfile -NonInteractive -File .\scripts\Test.ps1 -Suite Integration
 
 Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008, A009 and A010); use `-Suite Integration` for the real loopback path checks. The worker's two late-boundary hooks insert only tracked test junctions, at Preparing or after a real media response. These are adversarial filesystem fixtures, not alternate product behavior or network mocks.
 
-These checks do not validate the whole application, launcher UX, cancellation, private feeds, recovery or future acceptance cases. Helper-server self-tests are a separate layer. See [UPD-0002 evidence](evidence/UPD-0002.md) for the historical baseline and [UPD-0101 evidence](evidence/UPD-0101.md) for historical commands and outcomes. Current task evidence is [UPD-0102](evidence/UPD-0102.md).
+Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 169 not_run. Run `-Suite Integration` for all 40 loopback cases. Transaction tests kill only their owned worker process after an actual stream write or immediately before/after File.Move. Process-local debugger breakpoints also insert a competing final file and verify the temporary stream has closed; product code has no test hook. Reruns preserve abandoned partials and begin a fresh request. Signature validation is bounded and is not full decoding.
+
+These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, durable history/resume or future acceptance cases. Helper-server self-tests are a separate layer. See historical evidence for [UPD-0002](evidence/UPD-0002.md), [UPD-0101](evidence/UPD-0101.md) and [UPD-0102](evidence/UPD-0102.md). Current task evidence is [UPD-0103](evidence/UPD-0103.md).
 
 ## Static analysis policy
 
 `Analyze.ps1` parses the runtime, runner and test PowerShell files in the selected engine, then runs PSScriptAnalyzer's warning/error rules. [tools/PSScriptAnalyzerSettings.psd1](../../tools/PSScriptAnalyzerSettings.psd1) excludes `PSAvoidUsingWriteHost` intentionally because the existing TUI and developer summaries use host output. Other default rules remain enabled.
 
-[tools/lint-baseline.json](../../tools/lint-baseline.json) retains **8 existing warning allowances** from source commit `2ac82614493be7196c9ebee116f23fec07368b50`. Each allowance matches the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count. The runner permits no new finding or parse error; moving a warning into unrelated source or increasing its count fails. Reduce/remove entries as later tasks fix their causes.
+[tools/lint-baseline.json](../../tools/lint-baseline.json) retains **6 existing warning allowances** from source commit `2ac82614493be7196c9ebee116f23fec07368b50`. Each allowance matches the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count. The runner permits no new finding or parse error; moving a warning into unrelated source or increasing its count fails. Reduce/remove entries as later tasks fix their causes.
 
 | Rule | Baseline count | Source context |
 | --- | ---: | --- |
 | `PSAvoidAssignmentToAutomaticVariable` | 1 | Regex result assigned to `$matches` |
 | `PSAvoidOverwritingBuiltInCmdlets` | 1 | Existing `Write-Log` function |
-| `PSAvoidUsingEmptyCatchBlock` | 3 | Feed-title extraction, date parsing and downloaded-file size lookup |
-| `PSPossibleIncorrectComparisonWithNull` | 1 | `$size -ne $null` |
+| `PSAvoidUsingEmptyCatchBlock` | 2 | Feed-title extraction and date parsing |
 | `PSUseBOMForUnicodeEncodedFile` | 1 | Existing runtime file encoding |
 | `PSUseSingularNouns` | 1 | `Resolve-PodcastItems` |
 
-The local PS7 analysis reports 8 known warnings; PS5.1 reports 7 because its analyzer built-in command profile does not emit the `Write-Log` override warning. Both observations have zero new findings and zero parse errors. These remain acknowledged legacy warnings. Two old naming allowances were removed; the pure naming helpers use narrow, documented suppressions for their retained names. Analysis includes all bundled `src/` helpers.
+The local PS7 analysis reports 6 known warnings; PS5.1 reports 5 because its analyzer built-in command profile does not emit the `Write-Log` override warning. Both observations have zero new findings and zero parse errors. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances. The pure naming helpers use narrow, documented suppressions for their retained names. Analysis includes all bundled `src/` helpers, totaling 25 PowerShell files.
 
 ## CI and verified sources
 

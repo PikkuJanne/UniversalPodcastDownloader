@@ -6,6 +6,7 @@ Describe 'A004: importing the actual downloader script' -Tag 'Unit', 'A004' {
     It 'defines helpers without prompts, requests, output, writes or preference changes' {
         Mock Read-Host { throw 'Import attempted to prompt.' }
         Mock Invoke-WebRequest { throw 'Import attempted a network request.' }
+        Mock Add-Type { throw 'Import attempted to initialize the media client.' }
         Mock New-Item { throw 'Import attempted to create an item.' }
         Mock Set-Content { throw 'Import attempted to write a file.' }
         Mock Add-Content { throw 'Import attempted to append a file.' }
@@ -36,6 +37,7 @@ Describe 'A004: importing the actual downloader script' -Tag 'Unit', 'A004' {
             @(Get-ChildItem -LiteralPath $TestDrive -Force -Recurse).Count | Should -Be $originalChildren
             Should -Invoke Read-Host -Times 0 -Exactly -Scope It
             Should -Invoke Invoke-WebRequest -Times 0 -Exactly -Scope It
+            Should -Invoke Add-Type -Times 0 -Exactly -Scope It
             Should -Invoke New-Item -Times 0 -Exactly -Scope It
             Should -Invoke Set-Content -Times 0 -Exactly -Scope It
             Should -Invoke Add-Content -Times 0 -Exactly -Scope It

@@ -24,10 +24,10 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Place these files together:
   - UniversalPodcastDownloader.ps1
   - UniversalPodcastDownloader.bat (wrapper for double-click)
-  - src/ (included Naming.ps1 and PathSafety.ps1 helpers)
+  - src/ (all included naming, path safety, media request, validation and transfer helpers)
 - Default output root is:
   - %USERPROFILE%\Downloads\Podcasts
-- No external binaries are required; the script uses Invoke-WebRequest and PowerShell’s XML parsing.
+- No external binaries are required; the script uses PowerShell XML parsing, Invoke-WebRequest for pages/feeds and the built-in .NET HttpClient for streamed media.
 
 Usage  
 1. TUI via .bat (my default)
@@ -79,6 +79,11 @@ Usage
   - Already present generated destinations are skipped; their contents are not yet verified against durable history.
   - A file appearing during transfer is preserved. An owned temporary sibling is moved into place only when the final name is available.
   - Older title-only archives remain untouched. They are not automatically adopted or renamed; a new download uses the new names. Feed URL/title changes can also produce a new folder until explicit history/migration support is added.
+- Downloads are validated before final placement:
+  - Each attempt writes to a unique `.upd-<GUID>.tmp` in the destination folder. Streams close before validation and final rename.
+  - Empty bodies, text/error pages, unsupported binary signatures, incomplete HTTP bodies and unsolicited partial responses fail. Valid recognizable audio can succeed without Content-Length. A feed enclosure-length mismatch produces a warning.
+  - Checks read at most 64 KiB for recognizable MPEG audio, WAV, FLAC, Ogg or MP4 signatures. They do not decode the whole file or prove publisher authenticity; Ogg/MP4 audio tracks are not verified.
+  - A caught failure cleans only its own temporary file. A killed process may leave a temporary sibling; rerunning starts a fresh download and preserves that old partial. There is no resume or automatic orphan cleanup.
 
 **Logging**  
 - Each run produces one log file in the podcast’s folder:  
@@ -119,7 +124,8 @@ Usage
 - Download robustness:
   - Each episode is attempted up to 3 times.
   - Short sleep between retries.
-  - Errors and failures are logged with messages from the remote host.
+  - Media failures use local error categories; a run with failed episodes reports an error without an “[OK]” completion message.
+  - HTTP Content-Length is checked against bytes received when the platform exposes it. Original media bytes are kept; unexpected HTTP content encodings are rejected.
 
 **Troubleshooting**
 - Script window closes immediately:
