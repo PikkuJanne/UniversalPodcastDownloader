@@ -65,7 +65,7 @@ jobs:
             "- PowerShell: $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
             "- Runner image: $env:ImageOS $env:ImageVersion"
           )
-          $python = Get-Command python -CommandType Application -ErrorAction SilentlyContinue
+          $python = Get-Command python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($python) {
             $pythonVersion = & $python.Source --version
             $lines += "- Python: $pythonVersion"

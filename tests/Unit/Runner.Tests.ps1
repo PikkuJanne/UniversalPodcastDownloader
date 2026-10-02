@@ -30,7 +30,9 @@ Describe 'A005: development runner failure handling' -Tag 'Unit', 'A005' {
                     $process.WaitForExit()
                     throw 'Owned runner check timed out.'
                 }
-                [pscustomobject]@{ Code = $process.ExitCode; Text = $stdout.Result + $stderr.Result }
+                # Error formatting wraps at different widths on local/hosted PS5.
+                # Assert message content and exit status independently of layout.
+                [pscustomobject]@{ Code = $process.ExitCode; Text = [regex]::Replace($stdout.Result + $stderr.Result, '\s+', ' ') }
             }
             finally { $process.Dispose() }
         }
@@ -45,7 +47,7 @@ Describe 'A005: development runner failure handling' -Tag 'Unit', 'A005' {
         $result = Invoke-UpdRunnerCheck Test.ps1 @('-Suite', 'Unit', '-TestRoot', $script:RunnerFixture,
             '-ToolsPath', (Join-Path $TestDrive 'missing-modules'))
         $result.Code | Should -Be 1
-        $result.Text | Should -Match 'Missing pinned Pester 5.7.1'
+        $result.Text | Should -Match 'Missing\s+pinned\s+Pester\s+5\.7\.1'
     }
 
     It 'fails when a requested suite contains no test files' {
@@ -75,10 +77,24 @@ Describe 'A005: development runner failure handling' -Tag 'Unit', 'A005' {
         $result.Text | Should -Match 'No tests executed'
     }
 
+    It 'fails All when a whole suite is <Label>' -TestCases @(
+        @{ Label = 'empty despite a test filename'; Source = '# empty discovery fixture'; ErrorText = 'No tests discovered in suite Integration' },
+        @{ Label = 'entirely skipped'; Source = "Describe 'integration fixture' { It 'skipped' -Skip { 1 | Should -Be 1 } }"; ErrorText = 'No tests executed in suite Integration' }
+    ) {
+        param($Label, $Source, $ErrorText)
+        $Label | Should -Not -BeNullOrEmpty
+        Set-Content -LiteralPath (Join-Path $script:RunnerFixture 'Unit/Sample.Tests.ps1') -Value "Describe 'unit fixture' { It 'passes' { 1 | Should -Be 1 } }"
+        [void][IO.Directory]::CreateDirectory((Join-Path $script:RunnerFixture 'Integration'))
+        Set-Content -LiteralPath (Join-Path $script:RunnerFixture 'Integration/Sample.Tests.ps1') -Value $Source
+        $result = Invoke-UpdRunnerCheck Test.ps1 @('-Suite', 'All', '-TestRoot', $script:RunnerFixture, '-ToolsPath', $script:RunnerTools)
+        $result.Code | Should -Be 1 -Because $result.Text
+        $result.Text | Should -Match $ErrorText
+    }
+
     It 'fails when pinned PSScriptAnalyzer is missing' {
         $result = Invoke-UpdRunnerCheck Analyze.ps1 @('-ToolsPath', (Join-Path $TestDrive 'missing-modules'))
         $result.Code | Should -Be 1
-        $result.Text | Should -Match 'Missing pinned PSScriptAnalyzer 1.24.0'
+        $result.Text | Should -Match 'Missing\s+pinned\s+PSScriptAnalyzer\s+1\.24\.0'
     }
 
     It 'fails lint for a new warning outside the legacy baseline' {

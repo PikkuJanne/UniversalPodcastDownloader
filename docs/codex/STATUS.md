@@ -29,10 +29,10 @@ Windows 10.0.26300.0; Python 3.14.7; Git 2.56.0.windows.1; gh 2.97.0.
 
 | Engine | Pester All | Analysis |
 |---|---|---|
-| PowerShell 7.6.5 | 31 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 10 baseline warnings |
-| Windows PowerShell 5.1.26100.9444 | 31 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 9 baseline warnings |
+| PowerShell 7.6.5 | 33 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 10 baseline warnings |
+| Windows PowerShell 5.1.26100.9444 | 33 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 9 baseline warnings |
 
-Each run includes 19 product unit checks (six explicit defect characterizations), eight runner checks and four integration checks. These are not 31 completed acceptance cases. A004/A005 locally verified; A006-A060 remain not_run. Historical helper evidence stays separate.
+Each run includes 19 product unit checks (six explicit defect characterizations), ten runner checks and four integration checks. These are not 33 completed acceptance cases. A004/A005 locally verified; A006-A060 remain not_run. Historical helper evidence stays separate.
 
 ## Known limitations
 
@@ -41,7 +41,7 @@ Each run includes 19 product unit checks (six explicit defect characterizations)
 - Filename collisions, reserved/dot names, Atom date/identity and first-enclosure defects remain for assigned later tasks.
 - Analysis retains legacy warnings, including original UTF-8-without-BOM encoding. PS7 reports one additional Write-Log built-in-command-profile warning.
 - Local PS5.1 tests use process-only policy Bypass and a native child module path; no persisted changes. No real archive, private subscriptions or external podcast hosts accessed.
-- CI pending. Manual launcher, live feeds and broader recovery/security/release acceptance remain unrun.
+- Initial CI found test-message wrapping and multiple-Python discovery issues; tooling corrections are implemented and the next CI run is pending. Manual launcher, live feeds and broader recovery/security/release acceptance remain unrun.
 
 ## Continuity and owner gates
 

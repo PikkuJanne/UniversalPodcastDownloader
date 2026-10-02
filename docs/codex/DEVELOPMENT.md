@@ -61,12 +61,12 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## What the foundation suite covers
 
-The current full suite contains **31 checks per engine**:
+The current full suite contains **33 checks per engine**:
 
 | Group | Count | Scope |
 | --- | ---: | --- |
 | Product unit checks | 19 | Import safety, mocked feed parsing and episode names; includes six known-defect characterizations |
-| Runner guards | 8 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
+| Runner guards | 10 | Missing tools, empty/filtered/all-skipped suites, pass/failure exit status, missing analyzer and a new lint warning |
 | Product integration checks | 4 | Real downloader/functions against loopback RSS/Atom and silent media in owned temporary directories |
 
 Dot-sourcing `. .\UniversalPodcastDownloader.ps1` defines the existing helper functions and returns before startup preferences, logging, prompts and downloads. It is the import seam; no separate runtime module or package is required. A004 tests this against the actual script. Normal invocation with `&` retains the entry-point behavior.
