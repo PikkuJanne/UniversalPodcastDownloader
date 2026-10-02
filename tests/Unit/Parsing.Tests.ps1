@@ -79,16 +79,17 @@ Describe 'Feed parsing baseline' -Tag 'Unit' {
     }
 }
 
-Describe 'Known parser defects: characterization only, not future acceptance' -Tag 'Unit', 'BaselineCharacterization' {
-    It 'currently uses Atom updated before published (UPD-0204)' {
+Describe 'A034: Atom publication date precedence' -Tag 'Unit', 'A034' {
+    It 'uses the original Atom publication date despite a recent edit and retains its ID' {
         [xml]$xml = Read-SyntheticFixture 'atom-dates.xml'
         $entry = $xml.SelectSingleNode('//*[local-name()="entry"][1]')
         $episode = Get-EpisodeData -XmlItem $entry
-        $episode.PubDate.ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss') | Should -Be '2026-09-30 12:00:00'
-        # Desired publication ordering is a future regression, not a passing assertion here.
-        $episode.PubDate.Year | Should -Not -Be 2020
+        $episode.PubDate.ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss') | Should -Be '2020-01-01 12:00:00'
+        $episode.AtomId | Should -BeExactly 'urn:fixture:old'
     }
+}
 
+Describe 'Known parser defects: characterization only, not future acceptance' -Tag 'Unit', 'BaselineCharacterization' {
     It 'currently chooses the first enclosure even when it is video (UPD-0205)' {
         [xml]$xml = Read-SyntheticFixture 'rss-media.xml'
         $episode = Get-EpisodeData -XmlItem $xml.rss.channel.item[0]

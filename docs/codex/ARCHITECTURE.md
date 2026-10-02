@@ -72,6 +72,10 @@ Normal execution passes ShouldProcess before archive writes; legacy changes have
 
 `src/FeedDiscovery.ps1` classifies bounded metadata by the document root, carries fetched content forward and returns all static RSS/Atom discovery candidates. Guided input and CLI use `Resolve-PodcastItems`; guided planning reuses its resolved result. Direct feed identity stays the original URL across redirects, while page discovery resolves against the final page URL and first supported base href. A sole candidate is automatic; multiple candidates require a numbered guided choice or a direct CLI URL. Empty feeds, malformed XML, unsupported roots and no-link pages have distinct fixed messages. [FEED_DISCOVERY.md](FEED_DISCOVERY.md) defines the safe scanner subset, entity decoding, deduplication, one-level discovery and remaining limitations. No runtime dependency is added.
 
+## Implemented publication dates (UPD-0204)
+
+`src/PublicationDate.ps1` parses a bounded invariant Gregorian date subset into UTC DateTimeOffset values. RSS uses pubDate; Atom published precedes updated fallback, with actual date namespaces checked. Numeric UTC instants drive selection, dated entries come first, and explicit source positions resolve equal/missing dates. New filename dates are UTC, while history keeps established paths. A separate old-priority/local-date legacy hint is review-only; publisher-ID extraction remains compatible to prevent history rebinding. [PUBLICATION_DATES.md](PUBLICATION_DATES.md) records grammar, precision, missing-offset assumptions and unsupported inputs.
+
 ## Implemented diagnostics (UPD-0106)
 
 Bundled `src/Diagnostics.ps1` defines the run context, URL display, safe error formatting, file sinks and restricted JSON export. Importing it has no side effects. Normal startup initializes it before discovery and tries the local application-data log directory, then the temporary log directory. UTF-8 without BOM, UTC timestamps, random full run IDs and CreateNew avoid engine-specific encoding and accidental log replacement. Diagnostic writes are best effort; failure reports a safe notice on standard error and preserves the primary operation error.

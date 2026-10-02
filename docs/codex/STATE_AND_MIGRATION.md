@@ -40,6 +40,8 @@ Legacy inventory deliberately returns exact filenames, titles and identity data 
 
 ## Identity policy
 
+UPD-0204 date normalization changes chronological selection and new UTC filename prefixes only. Existing stable identities keep their recorded relative destinations. The established publisher-ID lookup remains compatible. Old-priority machine-local date hints are retained solely for unverified legacy review; see [PUBLICATION_DATES.md](PUBLICATION_DATES.md). No media/history is renamed or promoted when a date parses differently.
+
 Prefer a stable feed-scoped RSS GUID or Atom ID. Avoid title/date as the primary key. Handle repeated identical entries across pages but flag contradictory reuse of an identifier rather than silently merging unrelated records. Store a stable local feed ID and explicit alias associations so a publisher/feed title change does not create a new archive automatically.
 
 Fallback identity may use a conservative URI/metadata fingerprint. Do not remove all query parameters from the actual request or assume all query values are disposable tracking tokens. Without a stable publisher identity, changes in title, URL and signing tokens can be genuinely ambiguous; document this limit and preserve conflicting files. Do not assert universal perfect deduplication. A digest suffix solves collisions only when backed by a full key and conflict check; a short hash alone is not a guarantee.

@@ -109,7 +109,7 @@ USAGE
                 -CustomCount 10
 
 NOTES
-    - Episodes are sorted by publication date (PubDate) newest first.
+    - Episodes are sorted by UTC publication instant newest first; tied/undated entries keep source order.
     - New folder and file names include deterministic SHA-256 identity suffixes.
     - Windows names are sanitized and shortened to fit the selected output root.
     - Unsafe archive paths fail before archive writes; startup diagnostics use a separate safe location.
@@ -188,6 +188,7 @@ param(
     [ValidateRange(0, 3600)][double]$MaxDelaySeconds = 30
 )
 
+. (Join-Path $PSScriptRoot 'src/PublicationDate.ps1')
 . (Join-Path $PSScriptRoot 'src/Naming.ps1')
 . (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
 . (Join-Path $PSScriptRoot 'src/Diagnostics.ps1')
@@ -344,16 +345,32 @@ function Get-EpisodeData {
     $title = Get-XPathText -Node $XmlItem -XPath './*[local-name()="title"][1]'
     if (-not $title) { $title = Get-FirstText $XmlItem.title }
 
-    $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="pubDate"][1]'
-    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="updated"][1]' }
-    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="published"][1]' }
-    if (-not $dateStr) { $dateStr = Get-FirstText $XmlItem.pubDate }
+    $isAtom = $XmlItem.LocalName -ceq 'entry' -and $XmlItem.NamespaceURI -ceq 'http://www.w3.org/2005/Atom'
+    $dateStr = $null
+    $dateSource = $null
+    $dateFields = if ($isAtom) { @('published', 'updated') } else { @('pubDate') }
+    $dateNamespace = if ($isAtom) { 'http://www.w3.org/2005/Atom' } else { '' }
+    foreach ($field in $dateFields) {
+        $candidate = Get-XPathText -Node $XmlItem -XPath ('./*[local-name()="{0}" and namespace-uri()="{1}"][1]' -f $field, $dateNamespace)
+        if (-not [string]::IsNullOrWhiteSpace($candidate)) {
+            $dateStr = $candidate
+            $dateSource = $field
+            break
+        }
+    }
+    $pubDate = ConvertTo-PodcastPublicationDate -Value $dateStr
 
-    $pubDate = $null
-    if ($dateStr) { try { $pubDate = [datetime]::Parse($dateStr) } catch {} }
+    # Preserve old date priority only for historical filename review hints.
+    $legacyDateStr = $null
+    foreach ($field in @('pubDate', 'updated', 'published')) {
+        $legacyCandidate = Get-XPathText -Node $XmlItem -XPath ('./*[local-name()="{0}"][1]' -f $field)
+        if (-not [string]::IsNullOrWhiteSpace($legacyCandidate)) { $legacyDateStr = $legacyCandidate; break }
+    }
+    $legacyPubDate = Get-PodcastLegacyPublicationDate -Value $legacyDateStr
 
     $guid = Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
     if (-not $guid) { $guid = Get-FirstText $XmlItem.guid }
+    # Retain the established ID lookup so date normalization cannot rebind history.
     $atomId = Get-XPathText -Node $XmlItem -XPath './*[local-name()="id"][1]'
 
     $url = $null
@@ -399,6 +416,9 @@ function Get-EpisodeData {
     [PSCustomObject]@{
         Title   = ($title -as [string])
         PubDate = $pubDate
+        PubDateOriginal = $dateStr
+        PubDateSource = $dateSource
+        LegacyPubDate = $legacyPubDate
         Url     = $url
         Guid    = ($guid -as [string])
         AtomId  = ($atomId -as [string])
@@ -417,7 +437,7 @@ function Select-PodcastEpisode {
         throw "Mode 'Custom' requires -CustomCount with a value >= 1."
     }
 
-    $selected = @($Episodes | Sort-Object PubDate -Descending)
+    $selected = Get-OrderedPodcastEpisode -Episodes $Episodes
     switch ($Mode) {
         'Latest' { $selected = @($selected | Select-Object -First 1) }
         'Custom' { $selected = @($selected | Select-Object -First $CustomCount) }
@@ -697,7 +717,7 @@ try {
 
         Write-Log ("Starting download {0}/{1}: {2}" -f $index, $total, $planned.EpisodeId)
         Write-Log ("Source URL : {0}" -f (Get-PodcastSafeUrl -Url $ep.Url))
-        if ($ep.PubDate) { Write-Log ("PubDate   : {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
+        if ($ep.PubDate) { Write-Log ("PubDate UTC: {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
 
         $success   = $false
         $attempt   = 1

@@ -32,6 +32,8 @@ FEEDS = {
     '/feeds/empty-atom.xml': 'atom-empty.xml',
     '/feeds/wrong-root.xml': 'xml-wrong-root.xml',
     '/feeds/wrong-atom-namespace.xml': 'atom-wrong-namespace.xml',
+    '/feeds/publication-order.xml': 'rss-publication-order.xml',
+    '/feeds/publication-midnight.xml': 'atom-publication-midnight.xml',
 }
 
 
@@ -381,6 +383,27 @@ class FixtureHandler(BaseHTTPRequestHandler):
                     self.wfile.write(body)
             else:
                 self._send(200, body, head, 'application/xml; charset=utf-8')
+            return
+        if path in ('/feeds/publication-history-rss.xml', '/feeds/publication-history-atom.xml'):
+            changed = self.server.recovered.is_set()
+            if path.endswith('-rss.xml'):
+                date = 'Fri, 01 Jan 2027 00:00:00 +0000' if changed else 'Tue, 01 Sep 2026 00:30:00 +1400'
+                body = ('<rss version="2.0"><channel><title>Publication history</title>'
+                        '<item><title>Publication history episode</title>'
+                        '<guid isPermaLink="false">publication-history-001</guid>'
+                        '<pubDate>{}</pubDate><enclosure url="{}/media/ok.mp3" '
+                        'type="audio/mpeg" length="{}"/></item></channel></rss>').format(
+                            date, self.server.base_url, len(self.server.audio))
+            else:
+                date = '2027-01-01T00:00:00Z' if changed else '2026-09-01T00:30:00+14:00'
+                body = ('<feed xmlns="http://www.w3.org/2005/Atom"><title>Publication history</title>'
+                        '<entry><title>Publication history episode</title>'
+                        '<id>urn:fixture:publication-history-001</id>'
+                        '<published>{}</published><updated>2028-01-01T00:00:00Z</updated>'
+                        '<link rel="enclosure" href="{}/media/ok.mp3" '
+                        'type="audio/mpeg" length="{}"/></entry></feed>').format(
+                            date, self.server.base_url, len(self.server.audio))
+            self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
             return
         if path in ('/feeds/history.xml', '/feeds/legacy-changing.xml'):
             changed = self.server.recovered.is_set()

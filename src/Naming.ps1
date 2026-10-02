@@ -67,7 +67,8 @@ function Get-EpisodeMetadataKey {
 
     $title = [string]$Episode.Title
     $url = [string]$Episode.Url
-    $date = if ($Episode.PubDate) { ([datetime]$Episode.PubDate).ToString('o', [Globalization.CultureInfo]::InvariantCulture) } else { '' }
+    $publication = Get-PodcastPublicationUtc -Value $Episode.PubDate
+    $date = if ($null -ne $publication) { $publication.ToString('o', [Globalization.CultureInfo]::InvariantCulture) } else { '' }
     # Length prefixes keep embedded delimiters unambiguous without exposing them in names.
     return ('{0}:{1}{2}:{3}{4}:{5}' -f $title.Length, $title, $date.Length, $date, $url.Length, $url)
 }
@@ -102,7 +103,8 @@ function New-EpisodeFileName {
     }
 
     $title = Sanitize-ForWindowsName -Name ([string]$Episode.Title) -FallbackName 'Episode'
-    $prefix = if ($Episode.PubDate) { ([datetime]$Episode.PubDate).ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
+    $publication = Get-PodcastPublicationUtc -Value $Episode.PubDate
+    $prefix = if ($null -ne $publication) { $publication.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
     if ($titleBudget -le $prefix.Length) { $prefix = '' }
     $title = Get-ShortenedNameText -Text $title -MaxLength ($titleBudget - $prefix.Length)
     if ([string]::IsNullOrEmpty($title)) { $title = '_' }

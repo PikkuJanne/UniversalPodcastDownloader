@@ -36,6 +36,8 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/discovery/base.html`, `/discovery/single.html` | Relative HTML base, entity-encoded query and duplicate candidates |
 | `/discovery/nonfeed-link.html` | Advertises an HTML page as an RSS target |
 | `/feeds/empty-atom.xml`, `/feeds/wrong-root.xml`, `/feeds/wrong-atom-namespace.xml` | Valid empty Atom, nested RSS under an unsupported root and incorrect Atom namespace |
+| `/feeds/publication-order.xml`, `/feeds/publication-midnight.xml` | Equal UTC instants mixed with missing/malformed dates; Atom publication crosses the UTC calendar-day boundary |
+| `/feeds/publication-history-rss.xml`, `/feeds/publication-history-atom.xml` | Stable IDs, titles and media; `POST /__recover` changes only publication date |
 | `/redirect/show` | Redirect to the show page |
 | `/redirect/loop` | Same-URL redirect loop |
 | `/redirect/feed`, `/redirect/file`, `/redirect/userinfo` | Relative valid feed target, forbidden file scheme, or synthetic embedded credentials |

@@ -13,6 +13,12 @@ $result = [ordered]@{
 }
 
 try {
+    if (-not [string]::IsNullOrEmpty($config.Culture)) {
+        # Culture is confined to this owned child; no parent or system setting changes.
+        $workerCulture = [Globalization.CultureInfo]::GetCultureInfo($config.Culture)
+        [Threading.Thread]::CurrentThread.CurrentCulture = $workerCulture
+        [Threading.Thread]::CurrentThread.CurrentUICulture = $workerCulture
+    }
     if ($config.TransactionHook -eq 'DuringTransferCrash') {
         $requestSource = Join-Path (Split-Path $config.ProductScript -Parent) 'src/MediaRequest.ps1'
         $sourceLines = [IO.File]::ReadAllLines($requestSource)

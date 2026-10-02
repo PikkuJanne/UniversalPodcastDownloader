@@ -16,13 +16,6 @@
       "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
       "context": "}\n} catch {}\n",
       "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSAvoidUsingEmptyCatchBlock",
-      "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
-      "context": "$pubDate = $null\nif ($dateStr) { try { $pubDate = [datetime]::Parse($dateStr) } catch {} }\n",
-      "count": 1
     }
   ]
 }

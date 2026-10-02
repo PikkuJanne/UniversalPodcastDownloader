@@ -99,7 +99,8 @@ function Invoke-UpdIntegrationWorker {
         [ValidateSet('None', 'BeforeFinalizeCrash', 'AfterFinalizeCrash', 'FinalRace', 'BeforeStateReplaceCrash', 'AfterStateReplaceCrash')][string]$TransactionHook = 'None',
         [switch]$InterruptOnPartial,
         [string[]]$Selection = @('1'),
-        [switch]$ReuseResponse
+        [switch]$ReuseResponse,
+        [ValidateSet('en-US', 'de-DE', 'fi-FI')][string]$Culture
     )
 
     $discoveryPaths = @('/show', '/show/not-feed', '/redirect/show', '/redirect/feed',
@@ -120,6 +121,7 @@ function Invoke-UpdIntegrationWorker {
         CustomCount = $CustomCount
         Selection = @($Selection)
         ReuseResponse = [bool]$ReuseResponse
+        Culture = $Culture
         TransactionHook = $TransactionHook
         HookMarkerPath = Join-Path $Context.Root ($identifier + '-hook.json')
     }

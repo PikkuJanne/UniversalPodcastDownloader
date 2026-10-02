@@ -86,6 +86,38 @@ class HelperTests(unittest.TestCase):
         unsupported = ET.fromstring(self.request('/feeds/wrong-atom-namespace.xml')[2])
         self.assertEqual(unsupported.tag, '{urn:fixture:unsupported}feed')
 
+    def test_publication_fixture_ties_and_midnight_are_explicit(self):
+        order = ET.fromstring(self.request('/feeds/publication-order.xml')[2])
+        items = order.findall('./channel/item')
+        self.assertEqual([item.findtext('title') for item in items],
+                         ['Missing first', 'Tie first', 'Missing second', 'Tie second'])
+        self.assertEqual(parsedate_to_datetime(items[1].findtext('pubDate')),
+                         parsedate_to_datetime(items[3].findtext('pubDate')))
+        atom = ET.fromstring(self.request('/feeds/publication-midnight.xml')[2])
+        ns = {'atom': 'http://www.w3.org/2005/Atom'}
+        self.assertEqual(atom.findtext('atom:entry/atom:published', namespaces=ns),
+                         '2026-09-01T00:30:00+14:00')
+        self.assertEqual(atom.findtext('atom:entry/atom:updated', namespaces=ns),
+                         '2028-01-01T00:00:00Z')
+
+    def test_publication_history_changes_only_the_date(self):
+        self.server.recovered.clear()
+        try:
+            paths = ('/feeds/publication-history-rss.xml', '/feeds/publication-history-atom.xml')
+            before = [ET.fromstring(self.request(path)[2]) for path in paths]
+            self.server.recovered.set()
+            after = [ET.fromstring(self.request(path)[2]) for path in paths]
+            ns = {'atom': 'http://www.w3.org/2005/Atom'}
+            date_paths = ('./channel/item/pubDate', 'atom:entry/atom:published')
+            for first, second, date_path in zip(before, after, date_paths):
+                first_date = first.find(date_path, ns)
+                second_date = second.find(date_path, ns)
+                self.assertNotEqual(first_date.text, second_date.text)
+                first_date.text = second_date.text
+                self.assertEqual(ET.tostring(first), ET.tostring(second))
+        finally:
+            self.server.recovered.clear()
+
     def test_history_feed_changes_titles_and_requires_the_exact_renewed_query(self):
         self.server.recovered.clear()
         try:

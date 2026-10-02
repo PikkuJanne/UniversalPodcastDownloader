@@ -10,6 +10,7 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
   - Latest (1 newest episode)
   - Custom (N newest episodes)
   - All (everything in the feed)
+- Publication order compares UTC instants. Atom uses published before updated fallback; equal or missing dates keep feed order, with undated episodes last. See [date policy](docs/codex/PUBLICATION_DATES.md) for supported formats and fallback rules.
 - Creates per-podcast subfolders based on feed title:
   - `<OutputPath>\<SafeFeedTitle>-<feed hash>\YYYY-MM-DD - Episode title-<episode hash>.mp3`
 - Starts a private local log before feed discovery, then continues it in the podcast folder after an ordinary download is confirmed.
@@ -72,7 +73,7 @@ Usage
 - For each feed:
   - A safe title followed by a full SHA-256 suffix derived from the resolved feed URL.
 - Episodes:
-  - `YYYY-MM-DD - Episode title-<episode hash>.mp3` when a date is known.
+  - `YYYY-MM-DD - Episode title-<episode hash>.mp3` using the UTC calendar date when a date is known. Existing history-bound filenames are retained when dates change.
   - `Episode title-<episode hash>.mp3` otherwise. Identity uses the RSS GUID, then Atom ID, then the exact media URL, scoped to the feed.
   - Names are shortened to fit Windows path limits; the full identifier and extension remain. A tight budget can omit the date. A root with insufficient room fails with a request for a shorter path.
   - Reserved device names, control characters and trailing dots/spaces are handled safely. Dot/dot-dot and rooted metadata paths are rejected. Junctions and symbolic links in destination paths are refused.

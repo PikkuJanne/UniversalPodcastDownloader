@@ -42,6 +42,12 @@ The following Microsoft references were checked for the request and parser bound
 - **S20 — RSS Advisory Board and IETF, document roots.** [RSS 2.0 specification](https://www.rssboard.org/rss-specification) describes the rss/channel structure. [RFC 4287 section 2](https://www.rfc-editor.org/rfc/rfc4287.txt) distinguishes an Atom feed document by its atom:feed root. Root-aware classification here is not complete schema validation.
 - **S21 — Microsoft, built-in entity decoding.** [WebUtility.HtmlDecode](https://learn.microsoft.com/en-us/dotnet/api/system.net.webutility.htmldecode?view=netframework-4.8.1) is available in .NET Framework and supports attribute entity decoding without a runtime package. Discovered values are validated after decoding.
 
+## UPD-0204 references checked 2 October 2026
+
+- **S9 rechecked — IETF, Atom publication semantics.** [RFC 4287 sections 3.3, 4.2.6, 4.2.9 and 4.2.15](https://www.rfc-editor.org/rfc/rfc4287.html) distinguish identity, initial publication and meaningful updates, and require RFC3339 date constructs. Published-first ordering, malformed-present handling and compatibility forms are project choices in PUBLICATION_DATES.md.
+- **S22 — RSS Advisory Board and IETF, RSS date compatibility.** [RSS 2.0 date rules](https://www.rssboard.org/rss-specification) permit two/four-digit years. [RFC 2822 section 4.3](https://www.rfc-editor.org/rfc/rfc2822.txt) specifies the fixed two-digit year interpretation and legacy named US zone offsets. The downloader supports a bounded subset rather than every obsolete production.
+- **S23 — Microsoft, explicit offset construction.** [DateTimeOffset numeric Gregorian constructor](https://learn.microsoft.com/en-us/dotnet/api/system.datetimeoffset.-ctor?view=netframework-4.8.1) validates date/time ranges, whole-minute offsets up to fourteen hours and UTC range. This built-in Framework-compatible API avoids culture parsing; PUBLICATION_DATES.md documents precision and unsupported leap seconds.
+
 ## Preparation limitations (original handoff)
 
 No PowerShell runtime was available in the preparation environment. No downloader execution, actual Windows archive migration, patched-Windows prompt reproduction, Authenticode signing, GitHub write or live website action was performed. The bundle validation report separately records structural and helper-only checks actually run.
