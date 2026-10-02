@@ -12,7 +12,11 @@ $diagnosticTestRoot = $null
 $previousLocalAppData = $env:LOCALAPPDATA
 $previousTemp = $env:TEMP
 $previousTmp = $env:TMP
-$diagnosticTestParent = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\', '/')
+# Hosted Windows profiles have longer TEMP paths than local development. Use
+# the runner's supplied temporary workspace when present to keep fixture paths
+# below the same production MAX_PATH limits; never relax the runtime checks.
+$diagnosticTempBase = if ($env:RUNNER_TEMP -and [IO.Directory]::Exists($env:RUNNER_TEMP)) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
+$diagnosticTestParent = [IO.Path]::GetFullPath($diagnosticTempBase).TrimEnd('\', '/')
 try {
     $repo = Split-Path $PSScriptRoot -Parent
     if (-not $TestRoot) { $TestRoot = Join-Path $repo 'tests' }

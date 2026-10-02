@@ -76,8 +76,13 @@ catch {
     $result.ErrorType = $_.Exception.GetType().FullName
 }
 finally {
-    if (Get-Command Close-PodcastDiagnostics -ErrorAction SilentlyContinue) { Close-PodcastDiagnostics }
+    # Main invocations close their own child scope. Searching for their now-
+    # absent functions can trigger host module discovery and unrelated writes.
+    if ($config.Action -in @('ApiWrite', 'AppendFailure')) { Close-PodcastDiagnostics }
 }
+$result.RootEntries = @(if (Test-Path -LiteralPath $config.Root) {
+    Get-ChildItem -LiteralPath $config.Root -Recurse -Force | ForEach-Object { $_.FullName.Substring($config.Root.Length) }
+})
 [IO.File]::WriteAllText($config.ResultPath, ($result | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
 if ($result.Succeeded) { exit 0 }
 exit 1

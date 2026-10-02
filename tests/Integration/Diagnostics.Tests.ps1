@@ -165,7 +165,7 @@ Describe 'A019/A021: startup diagnostics in isolated real processes' -Tag 'Integ
     It 'A019/A021 leaves diagnostic and archive roots absent during normal WhatIf' {
         $run = Receive-UpdDiagnosticWorker (Start-UpdDiagnosticWorker -Context $context -Action Preview -FeedPath '/feeds/single.xml')
         $run.ExitCode | Should -Be 0 -Because ($run.Stdout + $run.Stderr + $run.Result.ErrorMessage)
-        Test-Path -LiteralPath $run.Root | Should -BeFalse
+        Test-Path -LiteralPath $run.Root | Should -BeFalse -Because ($run.Result.RootEntries -join ', ')
         (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -BeNullOrEmpty
     }
 
@@ -173,7 +173,7 @@ Describe 'A019/A021: startup diagnostics in isolated real processes' -Tag 'Integ
         $run = Receive-UpdDiagnosticWorker (Start-UpdDiagnosticWorker -Context $context -Action LegacyPreview -FeedPath '/feeds/single.xml')
         $run.ExitCode | Should -Be 0 -Because ($run.Stdout + $run.Stderr + $run.Result.ErrorMessage)
         Test-Path -LiteralPath (Join-Path $run.Root 'local') | Should -BeFalse
-        Test-Path -LiteralPath (Join-Path $run.Root 'temp') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $run.Root 'temp') | Should -BeFalse -Because ($run.Result.RootEntries -join ', ')
         $entries = @(Get-ChildItem -LiteralPath (Join-Path $run.Root 'output') -Recurse -Force)
         $entries.Count | Should -Be 1
         $entries[0].Name | Should -Be 'Synthetic legacy show'
