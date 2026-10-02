@@ -99,3 +99,7 @@ Use appropriate generic collections internally rather than repeatedly growing la
 ## Out of scope
 
 No GUI rewrite, playback, transcoding/tag rewriting, hosted media downloader, DRM/auth bypass, podcast-provider scraper, browser automation, mandatory scheduler, cloud accounts, unrelated website deployment or aggressive parallelism. Saved shows, batch, progress and keep-awake are optional user-facing features, not mandatory new steps in the basic workflow.
+
+## Implemented UPD-0206 pagination
+
+`src/FeedPagination.ps1` collects one supported advertised chain through the shared resolver before identity/date selection. Requested/effective URI aliases detect cycles; source fields and original archive identity remain anchored to the initial feed. Catalogue metadata carries stop reasons and accessible counts. Exact duplicate identities collapse; contradictory metadata stops before writes. Limits and failed later pages preserve accessible work but prevent the completed banner in every mode. Preview remains metadata-only, and guided resolution is reused. See [FEED_PAGINATION.md](FEED_PAGINATION.md) for relation/base, bounds, selection and incomplete-result semantics; the result/launcher overhaul remains UPD-0301.

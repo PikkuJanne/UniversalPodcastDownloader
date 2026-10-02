@@ -9,7 +9,7 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Downloads newest episodes first, with three modes:
   - Latest (1 newest episode)
   - Custom (N newest episodes)
-  - All (everything in the feed)
+  - All (accessible entries in the bounded feed catalogue)
 - Publication order compares UTC instants. Atom uses published before updated fallback; equal or missing dates keep feed order, with undated episodes last. See [date policy](docs/codex/PUBLICATION_DATES.md) for supported formats and fallback rules.
 - Audio enclosures are selected in feed order using supported MIME/URL hints. Completed bytes determine new MP3/M4A/Ogg/WAVE/FLAC file extensions; original bytes are retained. See [audio policy](docs/codex/AUDIO_FORMATS.md) for ambiguous containers and inspection limits.
 - Creates per-podcast subfolders based on feed title:
@@ -42,7 +42,7 @@ Usage
      - Choose how many episodes to download (newest first):
        - Enter = latest only
        - Number = N newest
-       - all = entire feed
+       - all = bounded accessible feed catalogue
    - The episodes are saved under:
      - `%USERPROFILE%\Downloads\Podcasts\<SafeFeedTitle>-<feed hash>\`
    - A log file for the run is written next to the audio files when that location is writable. Startup failures have a fallback log as described below.
@@ -101,7 +101,7 @@ Usage
 
 ## Review and migrate a legacy archive
 
-Start with a copy of an older archive. `LegacyPath` must name an existing immediate show directory inside `OutputPath`; it can be an absolute path or that folder's name. Supply `FeedUrl` explicitly. Legacy actions use the whole current feed for identity matching and do not ask for a download count.
+Start with a copy of an older archive. `LegacyPath` must name an existing immediate show directory inside `OutputPath`; it can be an absolute path or that folder's name. Supply `FeedUrl` explicitly. Legacy actions use the bounded accessible feed catalogue for identity matching and do not ask for a download count.
 
 Set these example paths and URL to the copied archive and its feed:
 
@@ -219,11 +219,13 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
     - <link rel="enclosure" href="...">
     - Fallback: .mp3 URLs in <guid> or <link>.
 - Sorting & selection:
+  - Follows explicit feed-level Atom `next` / `prev-archive` links before selection, with duplicate and cycle checks. `-MaxFeedPages` defaults to 20 (range 1–100); entry and metadata bounds also apply.
   - Episodes are sorted by publication date, newest first.
   - Modes:
     - Latest = first 1
     - Custom = first N
-    - All = everything
+    - All = all accessible entries
+  - Page order is not assumed to be date order. Latest/Custom use the fetched collection, so unavailable pages can change the correct selection. Cycles, limits and retrieval gaps produce an incomplete error after accessible downloads, with no `[OK]` banner. A complete historical catalogue is never guaranteed. See [feed pagination policy](docs/codex/FEED_PAGINATION.md).
 - Download robustness:
   - Metadata and episodes get up to 3 attempts for transient failures. Permanent HTTP, validation and local-file errors stop immediately.
   - Exponential backoff respects `Retry-After`. A server delay beyond the retry budget reports a deferred failure.

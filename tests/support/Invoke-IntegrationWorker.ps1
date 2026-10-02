@@ -13,6 +13,12 @@ $result = [ordered]@{
 }
 
 try {
+    $paginationParameters = @{}
+    $paginationResolveParameters = @{}
+    if ($config.PSObject.Properties['MaxFeedPages']) {
+        $paginationParameters.MaxFeedPages = [int]$config.MaxFeedPages
+        $paginationResolveParameters.MaxPages = [int]$config.MaxFeedPages
+    }
     if (-not [string]::IsNullOrEmpty($config.Culture)) {
         # Culture is confined to this owned child; no parent or system setting changes.
         $workerCulture = [Globalization.CultureInfo]::GetCultureInfo($config.Culture)
@@ -165,18 +171,24 @@ try {
         }
         'Resolve' {
             . $config.ProductScript
-            $resolved = Resolve-PodcastItems -Feeds @($config.FeedUrl)
+            if ($config.ReuseResponse) {
+                $response = Invoke-PodcastWebRequest -Uri $config.FeedUrl
+                $initial = Resolve-PodcastSource -Uri $config.FeedUrl -Response $response
+                $resolved = Resolve-PodcastItems -Feeds @($config.FeedUrl) -InitialResolution $initial @paginationResolveParameters
+            }
+            else { $resolved = Resolve-PodcastItems -Feeds @($config.FeedUrl) @paginationResolveParameters }
             $result.ItemCount = $resolved.Items.Count
             $result.ResolvedUrl = $resolved.Url
+            if ($resolved.PSObject.Properties['Catalogue']) { $result.Catalogue = $resolved.Catalogue }
             $episodes = @($resolved.Items | ForEach-Object { Get-EpisodeData $_ })
             $result.EpisodeTitles = @($episodes | ForEach-Object { $_.Title })
             $result.EpisodeUrls = @($episodes | ForEach-Object { $_.Url })
         }
         'Preview' {
-            & $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -WhatIf
+            & $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -WhatIf @paginationParameters
         }
         'InteractivePreview' {
-            & $config.ProductScript -Mode $config.Mode -OutputPath $config.OutputPath -WhatIf
+            & $config.ProductScript -Mode $config.Mode -OutputPath $config.OutputPath -WhatIf @paginationParameters
             $result.PromptCount = $discoveryPromptState.Count
         }
         'Download' {
@@ -194,7 +206,7 @@ try {
                     Microsoft.PowerShell.Utility\Write-Progress @PSBoundParameters
                 }
             }
-            & $config.ProductScript -Mode $config.Mode -CustomCount $config.CustomCount -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose
+            & $config.ProductScript -Mode $config.Mode -CustomCount $config.CustomCount -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose @paginationParameters
         }
         default { throw 'Unknown integration worker action.' }
     }

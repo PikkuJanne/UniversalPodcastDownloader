@@ -10,6 +10,6 @@ For one candidate, both workflows select it automatically. For several candidate
 
 Direct feed identity remains the exact original request string across redirects. For a page, archive identity uses the selected discovered feed URL, retaining that URL across its own redirects. Effective/base URIs support discovery and do not silently replace established history identities.
 
-Metadata may be fetched during preview. Planned enclosures, archive directories, diagnostic files/exports, locks and state are still behind the existing preview/confirmation boundary. No new runtime package, parser dependency or CLI parameter is required. Date ordering, audio selection, pagination and process exit classifications remain later tasks.
+Metadata may be fetched during preview. Planned enclosures, archive directories, diagnostic files/exports, locks and state are still behind the existing preview/confirmation boundary. Discovery adds no runtime package, parser dependency or CLI parameter. Date ordering, audio selection and bounded pagination are implemented separately in [PUBLICATION_DATES.md](PUBLICATION_DATES.md), [AUDIO_FORMATS.md](AUDIO_FORMATS.md) and [FEED_PAGINATION.md](FEED_PAGINATION.md). Process exit classifications remain UPD-0301.
 
 This scanner supports static discovery markup, not every browser HTML error-recovery rule, JavaScript-generated subscription links, HTTP `Link` discovery, RSS 1.0/RDF, arbitrary XML namespaces or provider-specific scraping. Test evidence records the exact supported cases and limits.

@@ -11,6 +11,7 @@ import time
 import threading
 import unittest
 import xml.etree.ElementTree as ET
+from urllib.parse import urljoin
 from email.utils import parsedate_to_datetime
 
 KIT = Path(__file__).resolve().parents[1]
@@ -190,6 +191,80 @@ class HelperTests(unittest.TestCase):
             self.assertEqual(later[1].attrib, {'url': self.server.base_url + '/media/format-m4a', 'type': 'audio/mp4'})
         finally:
             self.server.recovered.clear()
+
+    def test_pagination_finite_rss_and_atom_pages_have_exact_duplicates_and_a_later_newer_entry(self):
+        for kind in ('rss', 'atom'):
+            with self.subTest(kind=kind):
+                _, _, first = self.request('/feeds/pagination-' + kind + '.xml')
+                _, _, second = self.request('/feeds/pagination-' + kind + '-page-2.xml')
+                first_root, second_root = ET.fromstring(first), ET.fromstring(second)
+                if kind == 'rss':
+                    first_entries = first_root.findall('./channel/item')
+                    second_entries = second_root.findall('./channel/item')
+                    identity = 'guid'
+                else:
+                    first_entries = first_root.findall('{http://www.w3.org/2005/Atom}entry')
+                    second_entries = second_root.findall('{http://www.w3.org/2005/Atom}entry')
+                    identity = '{http://www.w3.org/2005/Atom}id'
+                self.assertEqual(len(first_entries) + len(second_entries), 4)
+                self.assertEqual(ET.tostring(first_entries[0]), ET.tostring(second_entries[0]))
+                ids = {entry.findtext(identity) for entry in first_entries + second_entries}
+                self.assertEqual(len(ids), 3)
+                self.assertIn(b'2026-09-02' if kind == 'atom' else b'02 Sep 2026', second)
+                self.assertNotIn(b'rel="next"', second)
+
+    def test_pagination_archive_and_gap_routes_advertise_only_named_targets(self):
+        for scenario, relation, target in (
+                ('archive', 'prev-archive', '/feeds/pagination-rss-page-2.xml'),
+                ('gap', 'next', '/pagination/missing.xml'),
+                ('malformed', 'next', '/feeds/malformed.xml'),
+                ('html', 'next', '/show/not-feed')):
+            with self.subTest(scenario=scenario):
+                _, _, body = self.request('/feeds/pagination-' + scenario + '.xml')
+                link = ET.fromstring(body).find('./channel/{http://www.w3.org/2005/Atom}link')
+                self.assertEqual(link.attrib, {'rel': relation, 'href': self.server.base_url + target})
+        status, _, _ = self.request('/pagination/missing.xml')
+        self.assertEqual(status, 404)
+
+    def test_pagination_redirect_and_inherited_xml_base_resolve_to_the_named_page(self):
+        status, headers, _ = self.request('/feeds/pagination-relative.xml')
+        self.assertEqual((status, headers['Location']), (302, '/pagination/redirected/start.xml'))
+        _, _, body = self.request(headers['Location'])
+        root = ET.fromstring(body)
+        channel = root.find('channel')
+        link = channel.find('{http://www.w3.org/2005/Atom}link')
+        effective = self.server.base_url + headers['Location']
+        for node in (root, channel, link):
+            effective = urljoin(effective, node.attrib['{http://www.w3.org/XML/1998/namespace}base'])
+        target = urljoin(effective, link.attrib['href'])
+        self.assertEqual(target, self.server.base_url + '/pagination/redirected/catalog/page-2.xml')
+        status, _, body = self.request('/pagination/redirected/catalog/page-2.xml')
+        self.assertEqual(status, 200)
+        self.assertEqual(ET.fromstring(body).findtext('./channel/item/guid'), 'pagination-new')
+
+    def test_pagination_ambiguous_and_unsafe_targets_are_explicit(self):
+        _, _, body = self.request('/feeds/pagination-ambiguous.xml')
+        links = ET.fromstring(body).findall('./channel/{http://www.w3.org/2005/Atom}link')
+        self.assertEqual([link.attrib['rel'] for link in links], ['next', 'prev-archive'])
+        self.assertEqual(len({link.attrib['href'] for link in links}), 2)
+        _, _, body = self.request('/feeds/pagination-unsafe.xml')
+        link = ET.fromstring(body).find('./channel/{http://www.w3.org/2005/Atom}link')
+        self.assertEqual(link.attrib['href'], 'file:///C:/synthetic-pagination-must-not-read.xml')
+
+    def test_pagination_ignored_relations_and_http_header_remain_visible_to_the_client(self):
+        _, headers, body = self.request('/feeds/pagination-ignored.xml')
+        root = ET.fromstring(body)
+        self.assertIn('rel="next"', headers['Link'])
+        self.assertEqual(root.find('./channel/{http://www.w3.org/2005/Atom}link').attrib['rel'], 'prev')
+        self.assertEqual(root.find('./channel/link').attrib['rel'], 'next')
+
+    def test_pagination_media_is_the_original_fixture_with_complete_head_framing(self):
+        status, headers, body = self.request('/media/pagination.mp3?id=shared')
+        self.assertEqual((status, body), (200, self.audio))
+        self.assertEqual(int(headers['Content-Length']), len(self.audio))
+        status, headers, body = self.request('/media/pagination.mp3?id=new', method='HEAD')
+        self.assertEqual((status, body), (200, b''))
+        self.assertEqual(int(headers['Content-Length']), len(self.audio))
 
     def test_history_feed_changes_titles_and_requires_the_exact_renewed_query(self):
         self.server.recovered.clear()

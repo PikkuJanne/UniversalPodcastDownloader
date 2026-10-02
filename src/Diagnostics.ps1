@@ -72,6 +72,8 @@ function Get-PodcastDiagnosticError {
     # Only exact application-authored messages may retain actionable wording.
     # Never accept a prefix match or append details from an external exception.
     $publicMessages = @(
+        'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved.',
+        'Feed catalogue incomplete; no accessible episodes were found.',
         'No episodes found in the feed. Double-check the RSS URL.',
         'The RSS or Atom feed is valid but contains no episodes.',
         'Source XML is invalid or exceeds safe parser limits.',

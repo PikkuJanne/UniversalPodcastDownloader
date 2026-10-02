@@ -100,7 +100,8 @@ function Invoke-UpdIntegrationWorker {
         [switch]$InterruptOnPartial,
         [string[]]$Selection = @('1'),
         [switch]$ReuseResponse,
-        [ValidateSet('en-US', 'de-DE', 'fi-FI')][string]$Culture
+        [ValidateSet('en-US', 'de-DE', 'fi-FI')][string]$Culture,
+        [ValidateRange(1, 100)][int]$MaxFeedPages
     )
 
     $discoveryPaths = @('/show', '/show/not-feed', '/redirect/show', '/redirect/feed',
@@ -125,6 +126,7 @@ function Invoke-UpdIntegrationWorker {
         TransactionHook = $TransactionHook
         HookMarkerPath = Join-Path $Context.Root ($identifier + '-hook.json')
     }
+    if ($PSBoundParameters.ContainsKey('MaxFeedPages')) { $config.MaxFeedPages = $MaxFeedPages }
     if ($InterruptOnPartial) { $config.TransactionHook = 'DuringTransferCrash' }
     if ($BoundaryJunctionPath -or $BoundaryJunctionTarget) {
         $prefix = [IO.Path]::GetFullPath($Context.Root).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar

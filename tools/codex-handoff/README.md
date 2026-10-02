@@ -40,6 +40,9 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/feeds/publication-history-rss.xml`, `/feeds/publication-history-atom.xml` | Stable IDs, titles and media; `POST /__recover` changes only publication date |
 | `/feeds/format-<scenario>.xml` | Named RSS/Atom enclosure choices, conflicting labels, generic response types and rejected container/text scenarios |
 | `/feeds/format-identity-selection.xml` | No publisher ID; URL-only MP3 first, with a later typed M4A alternative added by `POST /__recover` |
+| `/feeds/pagination-<scenario>.xml` | Finite RSS/Atom next chains, exact duplicate IDs/metadata, a newer entry on page two, explicit prev-archive, missing/malformed/HTML continuations and unsafe/ambiguous/ignored links |
+| `/feeds/pagination-relative.xml`, `/pagination/redirected/*` | Redirected effective URI plus inherited root/channel/link xml:base values resolve a named continuation |
+| `/media/pagination.mp3` | Original silent MP3, known framing and strong synthetic validator; query IDs distinguish entries without being logged |
 | `/media/format-*` | Original silent MP3 or deterministic M4A/isom/WAVE/FLAC/Ogg structural probes, audio-labelled HTML, video/unknown container evidence |
 | `/redirect/show` | Redirect to the show page |
 | `/redirect/loop` | Same-URL redirect loop |

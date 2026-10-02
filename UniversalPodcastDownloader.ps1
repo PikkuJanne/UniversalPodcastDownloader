@@ -31,7 +31,7 @@ FEATURES
         - Asks how many newest episodes to download:
             - Enter  = latest only
             - Number = N newest episodes
-            - all    = whole feed
+            - all    = accessible entries in the bounded feed catalogue
     - Per-podcast subfolders based on feed title:
         - Root:   <OutputPath> (default: %USERPROFILE%\Downloads\Podcasts)
         - Folder: <SafeFeedTitle>-<feed identity hash>
@@ -40,6 +40,11 @@ FEATURES
         - Up to 3 attempts per episode with short delay between tries.
         - Skips episodes only after checking recorded size and SHA-256 on disk.
         - Summarizes downloaded / skipped / failed at the end.
+    - Explicit feed pagination:
+        - Follows feed-level Atom next/prev-archive links before date selection.
+        - MaxFeedPages defaults to 20 (1-100); entry/metadata limits also apply.
+        - Gaps, limits and cycles report incomplete after accessible downloads.
+        - A complete historical catalogue is not guaranteed.
     - Private per-run UTF-8 diagnostics:
         - Startup: LOCALAPPDATA\UniversalPodcastDownloader\Logs (TEMP fallback).
         - Confirmed downloads also keep a log in the podcast folder.
@@ -83,7 +88,7 @@ USAGE
             3) Choose how many newest episodes to download:
                  - Enter  = latest only
                  - Number = N newest
-                 - all    = entire feed
+                 - all    = bounded accessible feed catalogue
         - Output:
             - Audio files under:
                 %USERPROFILE%\Downloads\Podcasts\<FeedTitle>\
@@ -180,6 +185,7 @@ param(
 
     [string]$DiagnosticExportPath,
 
+    [ValidateRange(1, 100)][int]$MaxFeedPages = 20,
     [ValidateRange(1, 10)][int]$MaxAttempts = 3,
     [ValidateRange(0.001, 86400)][double]$HeaderTimeoutSeconds = 30,
     [ValidateRange(0.001, 86400)][double]$IdleTimeoutSeconds = 30,
@@ -199,6 +205,7 @@ param(
 . (Join-Path $PSScriptRoot 'src/NetworkPolicy.ps1')
 . (Join-Path $PSScriptRoot 'src/FeedXml.ps1')
 . (Join-Path $PSScriptRoot 'src/FeedDiscovery.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedPagination.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
 . (Join-Path $PSScriptRoot 'src/ResumeStore.ps1')
@@ -209,6 +216,7 @@ param(
 $script:PodcastTransportPolicy = New-PodcastTransportPolicy -MaxAttempts $MaxAttempts `
     -HeaderTimeoutSeconds $HeaderTimeoutSeconds -IdleTimeoutSeconds $IdleTimeoutSeconds `
     -RetryBudgetSeconds $RetryBudgetSeconds -BaseDelaySeconds $BaseDelaySeconds -MaxDelaySeconds $MaxDelaySeconds
+$script:PodcastMaxFeedPages = $MaxFeedPages
 
 function Write-Log {
     param(
@@ -254,7 +262,8 @@ function Get-FeedUrlInteractive {
 function Resolve-PodcastItems {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Retains the established import-safe helper name for existing callers.')]
     [CmdletBinding()]
-    param([string[]]$Feeds, [switch]$Interactive, [AllowNull()]$InitialResolution)
+    param([string[]]$Feeds, [switch]$Interactive, [AllowNull()]$InitialResolution,
+        [ValidateRange(1, 100)][int]$MaxPages = $script:PodcastMaxFeedPages)
 
     $lastFailure = 'No RSS or Atom feed links were found on the page.'
     $initial = $InitialResolution
@@ -267,6 +276,7 @@ function Resolve-PodcastItems {
                 if (-not [StringComparer]::Ordinal.Equals([string]$source.Url, $u)) {
                     throw 'The initial feed resolution does not belong to the supplied URL.'
                 }
+                if ($null -ne $source.PSObject.Properties['Catalogue']) { return $source }
             } else {
                 $source = Resolve-PodcastSource -Uri $u
             }
@@ -298,16 +308,23 @@ function Resolve-PodcastItems {
             } else {
                 $feed = $source
             }
-            if (@($feed.Items).Count -eq 0) { throw 'The RSS or Atom feed is valid but contains no episodes.' }
+            $catalogue = Resolve-PodcastCatalogue -InitialResolution $feed -MaxPages $MaxPages
+            if (@($catalogue.Items).Count -eq 0) {
+                if (-not $catalogue.Catalogue.Complete) {
+                    throw 'Feed catalogue incomplete; no accessible episodes were found.'
+                }
+                throw 'The RSS or Atom feed is valid but contains no episodes.'
+            }
             return [pscustomobject]@{
                 Url = $feed.Url
                 Xml = $feed.Xml
-                Items = @($feed.Items)
+                Items = @($catalogue.Items)
                 Kind = $feed.Kind
                 FinalUri = $feed.FinalUri
                 Content = $feed.Content
                 Candidates = $candidates
                 SourceUrl = $source.Url
+                Catalogue = $catalogue.Catalogue
             }
         } catch {
             $transportFailure = Get-PodcastTransportFailure -ErrorObject $_
@@ -481,7 +498,7 @@ try {
         Write-Host "How many episodes to download (newest first)?" -ForegroundColor Yellow
         Write-Host "  - Press Enter for only the latest episode."
         Write-Host "  - Enter a number like 5 to download the 5 newest."
-        Write-Host "  - Type 'all' to download everything from the feed."
+        Write-Host "  - Type 'all' to download all accessible entries within the feed limits."
         Write-Host ""
 
         while ($true) {
@@ -528,6 +545,13 @@ try {
     Write-Host "[*] Fetching podcast feed..."
     if ($null -eq $resolved) { $resolved = Resolve-PodcastItems -Feeds $candidateFeeds }
     Write-Host ("    Using feed: " + (Get-PodcastSafeUrl -Url $resolved.Url))
+    Write-Host ('    Feed pages retrieved: {0}; repeated entries removed: {1}.' -f $resolved.Catalogue.PagesFetched, $resolved.Catalogue.DuplicateCount)
+    Write-Host '    Selection uses accessible entries; a complete historical catalogue is not guaranteed.'
+    if (-not $resolved.Catalogue.Complete) {
+        $catalogueMessage = Get-PodcastCatalogueMessage -Catalogue $resolved.Catalogue
+        Write-Warning $catalogueMessage
+        Write-Log $catalogueMessage 'WARN'
+    }
 
     # Feed title, PS5.1-safe
     $feedTitle = $null
@@ -565,6 +589,9 @@ try {
         Invoke-PodcastLegacyMigration -Root $baseOutputPath -LegacyRoot $LegacyPath -FeedUrl $resolved.Url `
             -Episodes $allEpisodes -Action $LegacyAction -EpisodeId $LegacyEpisodeId -FileName $LegacyFile `
             -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint -Policy $script:PodcastTransportPolicy
+        if (-not $resolved.Catalogue.Complete -and -not $WhatIfPreference -and $LegacyAction -ne 'Preview') {
+            throw 'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved.'
+        }
         return
     }
 
@@ -660,6 +687,7 @@ try {
     Write-Log ("Resolved URL : {0}" -f (Get-PodcastSafeUrl -Url $resolved.Url))
     Write-Log ("Mode         : {0}" -f $Mode)
     Write-Log ("CustomCount  : {0}" -f ($CustomCount -as [string]))
+    if (-not $resolved.Catalogue.Complete) { Write-Log (Get-PodcastCatalogueMessage -Catalogue $resolved.Catalogue) 'WARN' }
 
     Write-Log ("Feed items with valid URLs: {0}" -f $episodeCount)
 
@@ -790,6 +818,9 @@ try {
         throw ('Download incomplete: {0} episode(s) failed or require review; existing files were preserved.' -f $failed.Count)
     }
 
+    if (-not $resolved.Catalogue.Complete) {
+        throw 'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved.'
+    }
     Write-Log "Run completed." 'INFO'
 
     Write-Host ""

@@ -413,10 +413,85 @@ class FixtureHandler(BaseHTTPRequestHandler):
         self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
         return True
 
+    def _pagination(self, path: str, head: bool) -> bool:
+        if path == '/media/pagination.mp3':
+            self._send(200, self.server.audio, head, 'audio/mpeg', {'ETag': '"pagination-v1"'})
+            return True
+        if path == '/feeds/pagination-relative.xml':
+            self._send(302, b'', head, extra={'Location': '/pagination/redirected/start.xml'})
+            return True
+        if path == '/pagination/missing.xml':
+            self._send(404, b'Synthetic missing continuation', head, 'text/plain')
+            return True
+        known = {
+            '/feeds/pagination-rss.xml', '/feeds/pagination-rss-page-2.xml',
+            '/feeds/pagination-atom.xml', '/feeds/pagination-atom-page-2.xml',
+            '/feeds/pagination-archive.xml', '/feeds/pagination-gap.xml',
+            '/feeds/pagination-malformed.xml', '/feeds/pagination-html.xml',
+            '/feeds/pagination-ambiguous.xml', '/feeds/pagination-unsafe.xml',
+            '/feeds/pagination-ignored.xml', '/pagination/redirected/start.xml',
+            '/pagination/redirected/catalog/page-2.xml',
+        }
+        if path not in known:
+            return False
+
+        dates = {'shared': ('Tue, 01 Sep 2026 12:00:00 +0000', '2026-09-01T12:00:00Z'),
+                 'old': ('Sun, 30 Aug 2026 12:00:00 +0000', '2026-08-30T12:00:00Z'),
+                 'new': ('Wed, 02 Sep 2026 12:00:00 +0000', '2026-09-02T12:00:00Z')}
+        atom = 'pagination-atom' in path
+        names = ['shared', 'old'] if path in {'/feeds/pagination-rss.xml', '/feeds/pagination-atom.xml', '/feeds/pagination-archive.xml'} else ['shared']
+        if path.endswith('page-2.xml'):
+            names = ['shared', 'new'] if '/feeds/' in path else ['new']
+        entries = []
+        for name in names:
+            url = self.server.base_url + '/media/pagination.mp3?id=' + name
+            if atom:
+                entries.append('<entry><title>Pagination {0}</title><id>urn:fixture:pagination-{0}</id>'
+                               '<published>{1}</published><link rel="enclosure" href="{2}" type="audio/mpeg"/></entry>'.format(name, dates[name][1], url))
+            else:
+                entries.append('<item><title>Pagination {0}</title><guid>pagination-{0}</guid>'
+                               '<pubDate>{1}</pubDate><enclosure url="{2}" type="audio/mpeg"/></item>'.format(name, dates[name][0], url))
+        targets = {
+            '/feeds/pagination-rss.xml': ('next', '/feeds/pagination-rss-page-2.xml'),
+            '/feeds/pagination-atom.xml': ('next', '/feeds/pagination-atom-page-2.xml'),
+            '/feeds/pagination-archive.xml': ('prev-archive', '/feeds/pagination-rss-page-2.xml'),
+            '/feeds/pagination-gap.xml': ('next', '/pagination/missing.xml'),
+            '/feeds/pagination-malformed.xml': ('next', '/feeds/malformed.xml'),
+            '/feeds/pagination-html.xml': ('next', '/show/not-feed'),
+        }
+        link = ''
+        if path in targets:
+            relation, target = targets[path]
+            prefix = '' if atom else 'atom:'
+            link = '<{0}link rel="{1}" href="{2}"/>'.format(prefix, relation, self.server.base_url + target)
+        elif path == '/feeds/pagination-ambiguous.xml':
+            link = ('<atom:link rel="next" href="{0}/feeds/pagination-rss-page-2.xml"/>'
+                    '<atom:link rel="prev-archive" href="{0}/feeds/pagination-atom-page-2.xml"/>').format(self.server.base_url)
+        elif path == '/feeds/pagination-unsafe.xml':
+            link = '<atom:link rel="next" href="file:///C:/synthetic-pagination-must-not-read.xml"/>'
+        elif path == '/feeds/pagination-ignored.xml':
+            link = ('<atom:link rel="prev" href="{0}/feeds/pagination-rss-page-2.xml"/>'
+                    '<link rel="next" href="{0}/feeds/pagination-atom-page-2.xml"/>').format(self.server.base_url)
+
+        if atom:
+            body = '<feed xmlns="http://www.w3.org/2005/Atom"><title>Pagination fixtures</title>' + link + ''.join(entries) + '</feed>'
+        elif path == '/pagination/redirected/start.xml':
+            body = ('<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xml:base="catalog/">'
+                    '<channel xml:base="nested/"><title>Pagination fixtures</title>'
+                    '<atom:link xml:base="../" rel="next" href="page-2.xml"/>' + ''.join(entries) + '</channel></rss>')
+        else:
+            body = ('<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'
+                    '<title>Pagination fixtures</title>' + link + ''.join(entries) + '</channel></rss>')
+        extra = {'Link': '<' + self.server.base_url + '/feeds/pagination-rss-page-2.xml>; rel="next"'} if path == '/feeds/pagination-ignored.xml' else None
+        self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8', extra)
+        return True
+
     def _dispatch(self, head: bool) -> None:
         path = urlsplit(self.path).path
         number = self.server.count(path)
         if self._format(path, head):
+            return
+        if self._pagination(path, head):
             return
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')

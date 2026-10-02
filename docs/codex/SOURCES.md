@@ -57,3 +57,8 @@ The following Microsoft references were checked for the request and parser bound
 ## Preparation limitations (original handoff)
 
 No PowerShell runtime was available in the preparation environment. No downloader execution, actual Windows archive migration, patched-Windows prompt reproduction, Authenticode signing, GitHub write or live website action was performed. The bundle validation report separately records structural and helper-only checks actually run.
+
+## UPD-0206 references checked 2 October 2026
+
+- **S27 — IETF, feed paging and archives.** [RFC 5005 sections 3, 4.2 and 6](https://www.rfc-editor.org/rfc/rfc5005) define next/prev-archive relations, archived copies and the limits of coherent paging snapshots. This project's single-chain subset, bounds, conflict preservation and fetch-before-date-selection policy are explicit conservative choices in FEED_PAGINATION.md.
+- **S9 rechecked — IETF, Atom link and base semantics.** [RFC 4287 sections 3 and 4.2.7.2](https://www.rfc-editor.org/rfc/rfc4287) define inherited xml:base and exact IANA HTTP relation equivalence. Atom rel is a single token/IRI. [RSS namespaced extensions](https://www.rssboard.org/rss-specification#extendingRss) support channel-level Atom links without treating plain RSS website links as pagination.
