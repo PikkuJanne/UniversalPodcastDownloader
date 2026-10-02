@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0107",
+  "current_task": "UPD-0201",
   "status_values": [
     "todo",
     "ready",
@@ -271,7 +271,7 @@
       "id": "UPD-0107",
       "milestone": "M1",
       "title": "Enforce preview and untrusted-input boundaries",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0106"
       ],
@@ -298,14 +298,14 @@
       "evidence": [
         "docs/codex/evidence/UPD-0107.md"
       ],
-      "implementation_commit": null,
+      "implementation_commit": "388054d439ac3ee7ee336297148c5dd58683f2fa",
       "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0201",
       "milestone": "M2",
       "title": "Implement bounded retry and timeout policy",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0107"
       ],

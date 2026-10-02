@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A021 passed through UPD-0106; A022-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A024 passed through UPD-0107; A025-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -245,8 +245,8 @@
       "when": "Run -WhatIf and decline -Confirm.",
       "expected": "Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0107.md"
     },
     {
       "id": "A023",
@@ -256,8 +256,8 @@
       "when": "Validate initial input and each redirect/discovery target.",
       "expected": "Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0107.md"
     },
     {
       "id": "A024",
@@ -267,8 +267,8 @@
       "when": "Parse under bounded XML settings.",
       "expected": "DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse.",
       "fixture": "xml-with-dtd.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0107.md"
     },
     {
       "id": "A025",

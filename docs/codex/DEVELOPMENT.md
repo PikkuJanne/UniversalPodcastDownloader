@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## What the current suite covers
 
-The settled UPD-0107 suite contains **612 checks per engine**. This is the suite inventory; full-run results remain pending at this documentation checkpoint.
+The settled UPD-0107 suite contains **612 checks per engine**. Full local and implementation CI runs pass all 612 checks on each supported engine.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -123,7 +123,7 @@ The new cases check both initial and redirected request targets, disabled reques
 
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; current task evidence is [UPD-0107](evidence/UPD-0107.md). Full 612-check runs and the final native analysis result are pending at this checkpoint; focused passes do not stand in for them.
+These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; current task evidence is [UPD-0107](evidence/UPD-0107.md). Both full local runs and implementation CI passed 612/0/0/0 per engine. Full analysis passed on both engines.
 
 ## Static analysis policy
 
@@ -138,7 +138,7 @@ These checks do not validate the whole application, launcher UX, catchable cance
 | `PSAvoidUsingEmptyCatchBlock` | 2 | Feed-title extraction and date parsing |
 | `PSUseSingularNouns` | 1 | `Resolve-PodcastItems` |
 
-The known baseline is 5 warnings on PS7 and 4 on PS5.1, whose analyzer built-in command profile does not emit the `Write-Log` override warning. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances; UPD-0104 added the main script's UTF-8 BOM and removed that allowance. Pure helpers use narrow, documented suppressions for their retained names. The UPD-0107 analysis covers 50 PowerShell files. Current full PS7 analysis has zero parse errors, zero new findings and 5 baseline warnings; full native PS5.1 analysis is pending at this checkpoint. The network/media implementation and test subset has passed analysis in both engines with zero findings or parse errors.
+The known baseline is 5 warnings on PS7 and 4 on PS5.1, whose analyzer built-in command profile does not emit the `Write-Log` override warning. These remain acknowledged legacy warnings. UPD-0102 removed two naming allowances; UPD-0103 removed the obsolete size lookup and its two allowances; UPD-0104 added the main script's UTF-8 BOM and removed that allowance. Pure helpers use narrow, documented suppressions for their retained names. The UPD-0107 analysis covers 50 PowerShell files. Full analysis has zero parse errors and zero new findings on both engines, with 5 baseline warnings on PS7 and 4 on native PS5.1.
 
 ## CI and verified sources
 
