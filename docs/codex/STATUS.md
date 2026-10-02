@@ -1,52 +1,50 @@
 # Current implementation status
 
-Updated 2026-10-02 (Europe/Berlin). This thread completes **UPD-0001 only**.
+Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0002 only**, following completed UPD-0001.
 
-- Completed task: **UPD-0001 — done**; handoff committed/pushed, remote SHA verified, draft PR created.
-- Current/next task: **UPD-0002 — regression and CI foundations**, ready and not started.
-- Downloader behavior/source: unchanged; no downloader execution or product tests.
-- Handoff v1.0.0: 65 overlay files installed, plus task evidence.
-- Evidence: [UPD-0001](evidence/UPD-0001.md). Historical bundle validation remains unchanged.
+- UPD-0001: done; [historical evidence](evidence/UPD-0001.md).
+- UPD-0002: **in_progress**; implementation and local checks complete, push/CI pending.
+- Next after completion: **UPD-0101 — collections and safe Windows web requests**, not started.
+- Branch/upstream: `codex/upd-m0-foundation` / `origin/codex/upd-m0-foundation`.
+- Reused [draft PR #1](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1), base `main`.
+- [Commands](DEVELOPMENT.md) and [UPD-0002 evidence](evidence/UPD-0002.md).
 
-## Observed local and remote inventory
+## Observed repository state
 
-- Actual checkout: `D:\projects\UniversalPodcastDownloader`.
-- Original workspace: `D:\projects\UniversalPodcastDownloader-main`; seven files, no Git metadata or AGENTS.md. Left untouched; its seven file hashes match the reviewed Git blobs.
-- No existing checkout at the targeted sibling or conventional same-repository locations inspected. Cloned into a previously absent sibling directory; no unrelated repository repurposed.
-- Origin fetch/push identity: `git@github.com:PikkuJanne/UniversalPodcastDownloader.git`.
-- Source/default branch: `main`.
-- Source HEAD and fetched `origin/main`: `2ac82614493be7196c9ebee116f23fec07368b50`.
-- Source tree: `a46e7bb21432a64581fb9c3d0d3ed3286102e61f`.
-- Baseline drift: **none**. Commit, tree and all seven blobs in BASELINE.json match fetched main. No reset, stash, rebase or merge.
-- Initial clone: no tracked/untracked changes, instruction/status files or unfinished merge. No applicable AGENTS.md at the checkout or inspected parent paths.
-- Initial GitHub state: only `main`; no PRs or foundation branch.
-- Feature branch: `codex/upd-m0-foundation`, created from fetched `origin/main`. Upstream is `origin/codex/upd-m0-foundation`.
-- Actual overlay: preview 65 CREATE / 0 UNCHANGED / 0 CONFLICT and no writes; apply created 65 files; repeat apply 0 CREATE / 65 UNCHANGED / 0 CONFLICT and no writes.
+Actual root: `D:\projects\UniversalPodcastDownloader`. Original `UniversalPodcastDownloader-main` snapshot remains untouched. Origin fetch/push: `git@github.com:PikkuJanne/UniversalPodcastDownloader.git`.
 
-## Environment and constraints
+Starting local/remote/PR HEAD: `9fc4c004a55943fe9e099a93247299921bfa8f1e`; clean tree. Verified fetch found 0 ahead/0 behind. Remote main remains `2ac82614493be7196c9ebee116f23fec07368b50`. No newer work or instruction conflict; no reset/stash/merge/rebase.
 
-Windows build 10.0.26300; PowerShell 7.6.5; Windows PowerShell 5.1.26100.9444; Python 3.14.7; Git 2.56.0.windows.1; GitHub CLI 2.97.0. Pester 3.4.0 is discoverable in both engines; PSScriptAnalyzer is absent. Product runners and CI do not exist yet; selecting/verifying development dependencies belongs to UPD-0002.
+SSH remains unavailable; use the existing authenticated GitHub CLI HTTPS fallback and command-scoped author settings from UPD-0001 evidence. Saved origin and persistent credential settings stay unchanged.
 
-Direct SSH fails with `git@github.com: Permission denied (publickey).` Existing authenticated GitHub CLI credentials work over HTTPS. Clone/fetch use command-scoped URL rewriting and `gh auth git-credential`; the saved SSH origin and persistent Git/credential settings remain unchanged. Use the exact fallback in the evidence file while SSH remains unavailable.
+## Implemented foundation
 
-The actual overlay ran with the inspected helper under PowerShell 7.6.5. Separate synthetic helper checks found a Windows PowerShell 5.1 limitation: `-Apply -WhatIf` fails during hashing without writing. Default preview, actual apply, idempotence and refusal checks pass. PS5.1 tests needed process-only execution-policy and module-path settings; no persisted policy changes. Use the documented default preview; see evidence. No package installations, downloader execution, real archive/private subscription access or unrelated repository operations.
+Dot-sourcing the original script now loads functions without startup preferences or main execution. Its parameter block, nine function bodies and main block remain unchanged. Batch launcher and six other original files are unchanged; no runtime module/dependency added.
 
-## Verification summary
+Added explicit repository-local setup, Pester 5.7.1/PSScriptAnalyzer 1.24.0 package hash locks, test/analysis runners, synthetic product tests and a Windows 5.1/7 CI matrix. Python is integration tooling only. Runners never install tools and fail on missing dependencies, empty/all-skipped selections and test failures. Analysis retains known warnings and rejects unmatched findings.
 
-- Bundle verifier: PASS; 74 files, 26 tasks, 60 cases, 23 review items covered; 0 product tests.
-- Fixture helper: 20 passed, 0 failed, 0 skipped; Python standard library, loopback only.
-- All seven original application files unchanged.
-- Workflow acceptance: **A001-A003 passed**; 3 passed / 0 failed / 0 skipped, 57 future cases not_run. These three workflow checks are not downloader tests.
-- Synthetic helper controls: PowerShell 7: 10 passed / 0 failed / 0 skipped; Windows PowerShell 5.1: 9 passed / 1 failed / 0 skipped. Both engines parse the helper without errors.
-- Product unit/integration/manual checks: NOT RUN; future acceptance remains not_run.
+## Actual local checks
 
-## Git continuity and owner gates
+Windows 10.0.26300.0; Python 3.14.7; Git 2.56.0.windows.1; gh 2.97.0.
 
-- Tested original source: `2ac82614493be7196c9ebee116f23fec07368b50`; unchanged in the handoff commit.
-- Handoff implementation commit: `3a997c8290f9a6f4c9b159e8d1b082e1cc610f71`.
-- Last observed feature push: local HEAD = remote HEAD = `3a997c8290f9a6f4c9b159e8d1b082e1cc610f71`, verified 2026-10-02 10:52:28 +02:00.
-- Draft PR: [#1 — UPD-0001: bootstrap handoff and verify repository](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1), OPEN and draft, head `codex/upd-m0-foundation`, base `main`; confirmed 10:53:09 +02:00. No CI checks configured or reported.
-- Working tree was clean after the first push. This documentation checkpoint changes only the six named status/register/evidence/prompt files. Its final HEAD must be checked after push and reported from Git and in the PR; it cannot be embedded in itself.
-- Git author identity was initially absent; command-scoped author settings use the authenticated GitHub account's public name and no-reply address. See evidence for exact arguments.
+| Engine | Pester All | Analysis |
+|---|---|---|
+| PowerShell 7.6.5 | 31 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 10 baseline warnings |
+| Windows PowerShell 5.1.26100.9444 | 31 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 9 baseline warnings |
 
-No approvals remain for UPD-0001. The feature branch is published and its PR remains draft. Merges, rebases, resets, force pushes, existing branch/issue deletion, repository settings, release tags/publication, purchases and website deployment remain outside scope. Stop after UPD-0001.
+Each run includes 19 product unit checks (six explicit defect characterizations), eight runner checks and four integration checks. These are not 31 completed acceptance cases. A004/A005 locally verified; A006-A060 remain not_run. Historical helper evidence stays separate.
+
+## Known limitations
+
+- Unmodified PS5.1 noninteractive entrypoint fails during legacy web parsing/confirmation.
+- Harness-only UseBasicParsing exposes the PS5.1 singleton Count/division-by-zero defect. Successful PS5.1 multi-item transfers use that labeled test default; production requests are unchanged.
+- Filename collisions, reserved/dot names, Atom date/identity and first-enclosure defects remain for assigned later tasks.
+- Analysis retains legacy warnings, including original UTF-8-without-BOM encoding. PS7 reports one additional Write-Log built-in-command-profile warning.
+- Local PS5.1 tests use process-only policy Bypass and a native child module path; no persisted changes. No real archive, private subscriptions or external podcast hosts accessed.
+- CI pending. Manual launcher, live feeds and broader recovery/security/release acceptance remain unrun.
+
+## Continuity and owner gates
+
+Last observed remote feature SHA at task start: `9fc4c004a55943fe9e099a93247299921bfa8f1e`. Local implementation tested before commit. Final checkpoint will record implementation SHA and CI; final HEAD is reported after push rather than embedded in itself.
+
+No approval needed for authorized feature-branch work/draft PR updates. Merges, rebases, resets, force pushes, existing branch/issue deletion, settings, release tags/publication, purchases and deployment remain outside scope. Stop after UPD-0002.

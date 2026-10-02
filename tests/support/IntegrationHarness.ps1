@@ -1,0 +1,169 @@
+# Development-only harness. Every child and temporary directory has one owner.
+function New-UpdIntegrationContext {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Test harness creates only a new GUID temporary directory; preview semantics would leave the test context unusable.')]
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$RepositoryRoot)
+
+    $token = [guid]::NewGuid().ToString('N')
+    $root = Join-Path ([IO.Path]::GetTempPath()) ('UPD-Integration-' + $token)
+    $null = New-Item -ItemType Directory -Path $root -ErrorAction Stop
+    [IO.File]::WriteAllText((Join-Path $root '.upd-test-owner'), $token)
+    [pscustomobject]@{
+        Root = [IO.Path]::GetFullPath($root)
+        Token = $token
+        RepositoryRoot = $RepositoryRoot
+        Processes = New-Object 'System.Collections.Generic.List[object]'
+        BaseUrl = $null
+    }
+}
+
+function Start-UpdOwnedProcess {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Test harness starts and tracks its own bounded child processes; tests require actual execution.')]
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Context,
+        [Parameter(Mandatory)][string]$FilePath,
+        [Parameter(Mandatory)][string[]]$ArgumentList
+    )
+
+    # These are executable/file paths or fixed harness arguments, never feed data.
+    # Windows paths cannot contain double quotes. Reject them rather than allowing
+    # an argument to escape the quoting used by .NET Framework's Arguments API.
+    foreach ($argument in $ArgumentList) {
+        if ($argument.Contains('"') -or $argument.EndsWith('\')) {
+            throw 'Unsupported process argument in integration harness.'
+        }
+    }
+    $start = New-Object Diagnostics.ProcessStartInfo
+    $start.FileName = $FilePath
+    $start.Arguments = ($ArgumentList | ForEach-Object { '"' + $_ + '"' }) -join ' '
+    $start.WorkingDirectory = $Context.Root
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $process = New-Object Diagnostics.Process
+    $process.StartInfo = $start
+    if (-not $process.Start()) { throw "Could not start integration child: $FilePath" }
+    $owned = [pscustomobject]@{
+        Process = $process
+        Output = $process.StandardOutput.ReadToEndAsync()
+        ErrorOutput = $process.StandardError.ReadToEndAsync()
+    }
+    $Context.Processes.Add($owned)
+    return $owned
+}
+
+function Start-UpdFixtureServer {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Test harness starts only its owned loopback fixture server; tests require an actual listener.')]
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Context,
+        [Parameter(Mandatory)][string]$PythonPath
+    )
+
+    $ready = Join-Path $Context.Root 'server-ready.json'
+    $server = Start-UpdOwnedProcess -Context $Context -FilePath $PythonPath -ArgumentList @(
+        '-B', (Join-Path $Context.RepositoryRoot 'tools/codex-handoff/fixture_server.py'),
+        '--port', '0', '--ready-file', $ready
+    )
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    while (-not (Test-Path -LiteralPath $ready)) {
+        if ($server.Process.HasExited) {
+            throw ('Fixture server exited before readiness: ' + $server.ErrorOutput.Result)
+        }
+        if ($watch.Elapsed.TotalSeconds -gt 15) { throw 'Fixture server readiness timed out after 15 seconds.' }
+        Start-Sleep -Milliseconds 50
+    }
+    $payload = Get-Content -LiteralPath $ready -Raw | ConvertFrom-Json
+    $uri = [uri]$payload.base_url
+    if ($uri.Scheme -ne 'http' -or $uri.Host -ne '127.0.0.1' -or $uri.Port -lt 1) {
+        throw 'Fixture server did not report its expected loopback address.'
+    }
+    $Context.BaseUrl = $uri.AbsoluteUri.TrimEnd('/')
+}
+
+function Invoke-UpdIntegrationWorker {
+    param(
+        [Parameter(Mandatory)]$Context,
+        [Parameter(Mandatory)][ValidateSet('Resolve', 'Download')][string]$Action,
+        [Parameter(Mandatory)][string]$FeedPath,
+        [switch]$BasicParsing,
+        [string]$OutputName = 'output'
+    )
+
+    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$') { throw 'Only named local feed fixtures are allowed.' }
+    if ($OutputName -notmatch '^[a-z0-9-]+$') { throw 'OutputName must be a simple test directory name.' }
+    $identifier = [guid]::NewGuid().ToString('N')
+    $resultPath = Join-Path $Context.Root ($identifier + '-result.json')
+    $configPath = Join-Path $Context.Root ($identifier + '-config.json')
+    $config = @{
+        Action = $Action
+        ProductScript = Join-Path $Context.RepositoryRoot 'UniversalPodcastDownloader.ps1'
+        FeedUrl = $Context.BaseUrl + $FeedPath
+        OutputPath = Join-Path $Context.Root $OutputName
+        ResultPath = $resultPath
+        BasicParsing = [bool]$BasicParsing
+    }
+    $config | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
+    $engineName = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+    $worker = Start-UpdOwnedProcess -Context $Context -FilePath (Join-Path $PSHOME $engineName) -ArgumentList @(
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', (Join-Path $Context.RepositoryRoot 'tests/support/Invoke-IntegrationWorker.ps1'),
+        '-ConfigPath', $configPath
+    )
+    if (-not $worker.Process.WaitForExit(30000)) {
+        $worker.Process.Kill()
+        $worker.Process.WaitForExit()
+        throw 'Downloader integration child timed out after 30 seconds; only this owned child was stopped.'
+    }
+    $stdout = $worker.Output.Result
+    $stderr = $worker.ErrorOutput.Result
+    if (-not (Test-Path -LiteralPath $resultPath)) {
+        throw "Integration child produced no result. Exit=$($worker.Process.ExitCode); stdout=$stdout; stderr=$stderr"
+    }
+    [pscustomobject]@{
+        ExitCode = $worker.Process.ExitCode
+        Result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+        Stdout = $stdout
+        Stderr = $stderr
+        OutputPath = $config.OutputPath
+    }
+}
+
+function Get-UpdFixtureState {
+    param([Parameter(Mandatory)]$Context)
+    # BasicParsing here belongs to harness control traffic, not the downloader.
+    $response = Invoke-WebRequest -Uri ($Context.BaseUrl + '/__stats') -UseBasicParsing -TimeoutSec 10
+    return ($response.Content | ConvertFrom-Json)
+}
+
+function Remove-UpdIntegrationContext {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Mandatory test cleanup verifies canonical containment and a matching ownership marker, then stops only tracked child processes.')]
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Context)
+
+    foreach ($owned in $Context.Processes) {
+        if (-not $owned.Process.HasExited) {
+            $owned.Process.Kill()
+            $owned.Process.WaitForExit()
+        }
+        $owned.Process.Dispose()
+    }
+    $root = [IO.Path]::GetFullPath($Context.Root)
+    $temp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\', '/')
+    if ([IO.Path]::GetDirectoryName($root) -ne $temp -or
+        [IO.Path]::GetFileName($root) -ne ('UPD-Integration-' + $Context.Token)) {
+        throw "Refusing cleanup outside the owned temporary test root: $root"
+    }
+    $marker = Join-Path $root '.upd-test-owner'
+    if (-not (Test-Path -LiteralPath $marker) -or [IO.File]::ReadAllText($marker) -ne $Context.Token) {
+        throw "Refusing cleanup without the matching integration ownership marker: $root"
+    }
+    $entries = @(Get-Item -LiteralPath $root) + @(Get-ChildItem -LiteralPath $root -Force -Recurse)
+    if ($entries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
+        throw "Refusing cleanup of a test root containing reparse points: $root"
+    }
+    Remove-Item -LiteralPath $root -Recurse -Force
+}

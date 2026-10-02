@@ -20,6 +20,12 @@ These are proposed project defaults for this improvement project. Record any nec
 | D014 | Website means product/distribution content, not hosted downloading. | No server storage, hosting selection or unrelated-site changes. |
 | D015 | Release tags/publication, merges/settings and paid signing remain owner-gated. | Review and explicit publication control. |
 
+## UPD-0002 decisions (2026-10-02)
+
+- **D016:** Dot-source the existing script to load functions without startup/main execution. Relocating startup configuration below a dot-source return preserves parameters, nine function bodies, main block and two-file distribution. No runtime module is needed yet.
+- **D017:** Pin Pester 5.7.1/PSScriptAnalyzer 1.24.0 to reviewed Gallery hashes in a local developer cache. These fixed versions were exercised on both Windows engines; they are not claims about the newest releases. Setup is explicit and never runs from the downloader/test runners.
+- **D018:** Use a source-context/count baseline for original lint warnings, with zero unmatched findings allowed. Exclude Write-Host for retained TUI/developer summaries. Defect characterizations are separate from future acceptance; PS5.1 BasicParsing injection is a labeled harness aid, not a production fix. See evidence/UPD-0002.md.
+
 ## Future decision entry
 
 ID; date; task; problem; considered alternatives; choice; compatibility/security/archive implications; evidence; owner approval where needed.

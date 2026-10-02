@@ -44,7 +44,7 @@
       "id": "UPD-0002",
       "milestone": "M0",
       "title": "Create efficient regression and CI foundations",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0001"
       ],
@@ -67,9 +67,11 @@
         "A004",
         "A005"
       ],
-      "evidence": [],
+      "evidence": [
+        "docs/codex/evidence/UPD-0002.md"
+      ],
       "implementation_commit": null,
-      "pr": null
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1"
     },
     {
       "id": "UPD-0101",
