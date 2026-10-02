@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0102",
+  "current_task": "UPD-0103",
   "status_values": [
     "todo",
     "ready",
@@ -109,7 +109,7 @@
       "id": "UPD-0102",
       "milestone": "M1",
       "title": "Enforce safe deterministic Windows destinations",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0101"
       ],
@@ -135,14 +135,14 @@
       "evidence": [
         "docs/codex/evidence/UPD-0102.md"
       ],
-      "implementation_commit": null,
+      "implementation_commit": "ff908a8c67449aa8808471c4e1f738a60397284f",
       "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0103",
       "milestone": "M1",
       "title": "Make file completion transactional",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0102"
       ],
