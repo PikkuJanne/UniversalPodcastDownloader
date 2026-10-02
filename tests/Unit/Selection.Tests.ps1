@@ -117,7 +117,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
 
     It 'rejects <Kind> input explicitly in <Mode> without media requests or episode progress' -ForEach @(
         foreach ($mode in 'Latest', 'Custom', 'All') {
-            @{ Mode = $mode; Kind = 'empty'; Items = ''; Message = '*No episodes found in the feed*' }
+            @{ Mode = $mode; Kind = 'empty'; Items = ''; Message = 'The RSS or Atom feed is valid but contains no episodes.' }
             @{ Mode = $mode; Kind = 'no enclosure'; Items = '<item><title>No media</title></item>'; Message = '*no downloadable enclosure URLs*' }
         }
     ) {

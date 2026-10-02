@@ -32,6 +32,10 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/feeds/deep.xml`, `/feeds/many-nodes.xml` | Valid XML exceeding the proposed depth 64 / node 100,000 parser budgets |
 | `/feeds/redirect-media.xml`, `/feeds/redirect-file-media.xml` | Feeds pointing to a valid or forbidden media redirect |
 | `/show`, `/show/not-feed` | Multiple candidates/base/relative links; false feed substring |
+| `/discovery/redirect`, `/discovery/final/show.html` | Redirect to a deeper page with a relative feed link, proving final-response URI resolution |
+| `/discovery/base.html`, `/discovery/single.html` | Relative HTML base, entity-encoded query and duplicate candidates |
+| `/discovery/nonfeed-link.html` | Advertises an HTML page as an RSS target |
+| `/feeds/empty-atom.xml`, `/feeds/wrong-root.xml`, `/feeds/wrong-atom-namespace.xml` | Valid empty Atom, nested RSS under an unsupported root and incorrect Atom namespace |
 | `/redirect/show` | Redirect to the show page |
 | `/redirect/loop` | Same-URL redirect loop |
 | `/redirect/feed`, `/redirect/file`, `/redirect/userinfo` | Relative valid feed target, forbidden file scheme, or synthetic embedded credentials |

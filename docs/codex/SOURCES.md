@@ -36,6 +36,12 @@ The following Microsoft references were checked for the request and parser bound
 - **S17 — Microsoft, durable stream and metadata operations.** [FileStream.Flush(Boolean)](https://learn.microsoft.com/en-us/dotnet/api/system.io.filestream.flush?view=netframework-4.8.1) flushes intermediate file buffers when requested. [File.Replace](https://learn.microsoft.com/en-us/dotnet/api/system.io.file.replace?view=netframework-4.8.1) replaces a file and can retain its predecessor at a backup path. These APIs support the checkpoint order; they do not establish universal power-loss guarantees.
 - **S18 — Microsoft, PowerShell null string interop.** [NullString](https://learn.microsoft.com/en-us/dotnet/api/system.management.automation.language.nullstring?view=powershellsdk-7.4.0) supplies a true null for a .NET string parameter. Checkpoint replacement uses its Value singleton when no backup is needed, avoiding PowerShell's empty-string binding.
 
+## UPD-0203 references checked 2 October 2026
+
+- **S19 — WHATWG, static HTML base semantics.** [The base element](https://html.spec.whatwg.org/multipage/semantics.html#the-base-element) uses the document fallback URL to resolve the first base href and ignores later base href elements. This project's safe bounded scanner accepts a documented subset of HTML and fails closed for targets outside its network policy; it does not claim browser-equivalent parsing.
+- **S20 — RSS Advisory Board and IETF, document roots.** [RSS 2.0 specification](https://www.rssboard.org/rss-specification) describes the rss/channel structure. [RFC 4287 section 2](https://www.rfc-editor.org/rfc/rfc4287.txt) distinguishes an Atom feed document by its atom:feed root. Root-aware classification here is not complete schema validation.
+- **S21 — Microsoft, built-in entity decoding.** [WebUtility.HtmlDecode](https://learn.microsoft.com/en-us/dotnet/api/system.net.webutility.htmldecode?view=netframework-4.8.1) is available in .NET Framework and supports attribute entity decoding without a runtime package. Discovered values are validated after decoding.
+
 ## Preparation limitations (original handoff)
 
 No PowerShell runtime was available in the preparation environment. No downloader execution, actual Windows archive migration, patched-Windows prompt reproduction, Authenticode signing, GitHub write or live website action was performed. The bundle validation report separately records structural and helper-only checks actually run.

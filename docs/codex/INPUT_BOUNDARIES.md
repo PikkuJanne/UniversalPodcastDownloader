@@ -61,6 +61,8 @@ The metadata cap does not limit episode audio to 8 MiB. Media still streams into
 
 ## Compatibility and evidence
 
+UPD-0203 adds [shared feed discovery](FEED_DISCOVERY.md) for both entry paths. The scanner keeps the 8 MiB character limit and 250 ms regex timeouts, adds a 100,000 token limit, ignores inert/raw text markup, validates decoded discovery/base targets, and stops at one selected feed. Final page/base URIs do not replace original direct-feed identities. Numbered guided choices and explicit CLI ambiguity errors occur before archive locks/writes; already fetched metadata is reused.
+
 The request and XML helpers use built-in .NET APIs available to Windows PowerShell 5.1 and PowerShell 7 on Windows. They add no runtime package, external binary or persistent configuration. Imports define helpers without starting requests or writing files.
 
 Primary API references and their check date are in [SOURCES.md](SOURCES.md), especially S7 and S11-S14. Task evidence records actual mocked/loopback tests, engine versions and limitations separately from these policy statements. No real archive or private subscription is required to verify the boundaries.

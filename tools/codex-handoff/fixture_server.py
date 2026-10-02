@@ -25,6 +25,13 @@ FEEDS = {
     '/feeds/dtd.xml': 'xml-with-dtd.xml', '/feeds/malformed.xml': 'xml-malformed.xml',
     '/feeds/single-alias.xml': 'rss-single.xml',
     '/show': 'show-multiple.html', '/show/not-feed': 'show-not-feed.html',
+    '/discovery/final/show.html': 'show-relative.html',
+    '/discovery/base.html': 'show-base.html',
+    '/discovery/single.html': 'show-single.html',
+    '/discovery/nonfeed-link.html': 'show-nonfeed-link.html',
+    '/feeds/empty-atom.xml': 'atom-empty.xml',
+    '/feeds/wrong-root.xml': 'xml-wrong-root.xml',
+    '/feeds/wrong-atom-namespace.xml': 'atom-wrong-namespace.xml',
 }
 
 
@@ -439,8 +446,11 @@ class FixtureHandler(BaseHTTPRequestHandler):
             mime = 'text/html; charset=utf-8' if name.endswith('.html') else 'application/xml; charset=utf-8'
             self._send(200, text.encode('utf-8'), head, mime)
             return
-        if path in ('/redirect/show', '/redirect/loop'):
-            target = '/show' if path == '/redirect/show' else '/redirect/loop'
+        if path in ('/redirect/show', '/redirect/loop', '/discovery/redirect'):
+            target = {
+                '/redirect/show': '/show', '/redirect/loop': '/redirect/loop',
+                '/discovery/redirect': '/discovery/final/show.html',
+            }[path]
             self._send(302, b'', head, 'text/plain', {'Location': target})
             return
         redirects = {

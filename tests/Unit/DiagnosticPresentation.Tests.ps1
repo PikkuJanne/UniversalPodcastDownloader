@@ -88,7 +88,7 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
         }
         catch { $caught = $_ }
         $caught | Should -Not -BeNullOrEmpty
-        $caught.Exception.Message | Should -Match '^No episodes found in the feed\.'
+        $caught.Exception.Message | Should -Match 'privateErrorCanary'
         $caught.ErrorDetails.Message | Should -Not -Match 'privateErrorCanary|privateExceptionPath|privateFeedCanary'
         Test-Path -LiteralPath $root | Should -BeFalse
     }

@@ -368,7 +368,7 @@
       "id": "UPD-0203",
       "milestone": "M2",
       "title": "Unify feed discovery and resolution",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0202"
       ],

@@ -85,11 +85,11 @@ Describe 'A019/A021: startup diagnostics in isolated real processes' -Tag 'Integ
     It 'A019 records discovery failure before a podcast title or archive exists' {
         $run = Receive-UpdDiagnosticWorker (Start-UpdDiagnosticWorker -Context $context -Action FeedFailure)
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match '^No episodes found in the feed\.'
+        $run.Result.ErrorMessage | Should -Be 'Source XML is invalid or exceeds safe parser limits.'
         $logs = @(Read-UpdDiagnosticLog -Root $run.Root)
         $logs.Count | Should -Be 1
         $logs[0].Path | Should -Match '[\\/]local[\\/]UniversalPodcastDownloader[\\/]Logs[\\/]'
-        $logs[0].Text | Should -Match 'No episodes found|Fatal|ERROR'
+        $logs[0].Text | Should -Match 'Source XML is invalid|Fatal|ERROR'
         Test-Path -LiteralPath (Join-Path $run.Root 'output') | Should -BeFalse
         (Get-UpdFixtureState -Context $context).'/feeds/malformed.xml' | Should -Be 1
     }
@@ -97,7 +97,7 @@ Describe 'A019/A021: startup diagnostics in isolated real processes' -Tag 'Integ
     It 'A019 falls back when the preferred log directory cannot be created' {
         $run = Receive-UpdDiagnosticWorker (Start-UpdDiagnosticWorker -Context $context -Action FeedFailure -BlockPrimary)
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match '^No episodes found in the feed\.'
+        $run.Result.ErrorMessage | Should -Be 'Source XML is invalid or exceeds safe parser limits.'
         $logs = @(Read-UpdDiagnosticLog -Root $run.Root)
         $logs.Count | Should -Be 1
         $logs[0].Path | Should -Match '[\\/]temp[\\/]UniversalPodcastDownloader[\\/]Logs[\\/]'
@@ -107,7 +107,7 @@ Describe 'A019/A021: startup diagnostics in isolated real processes' -Tag 'Integ
     It 'A019 reports unavailable logging on stderr and retains the discovery failure' {
         $run = Receive-UpdDiagnosticWorker (Start-UpdDiagnosticWorker -Context $context -Action FeedFailure -BlockBoth)
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match '^No episodes found in the feed\.'
+        $run.Result.ErrorMessage | Should -Be 'Source XML is invalid or exceeds safe parser limits.'
         $run.Stderr | Should -Match '(?i)diagnostic|log'
         $run.Stderr | Should -Match '(?i)unavailable|could not|cannot|failed'
         @(Read-UpdDiagnosticLog -Root $run.Root).Count | Should -Be 0

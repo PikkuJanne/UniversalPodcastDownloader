@@ -75,23 +75,25 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
     }
 
     It 'validates <Kind> before creating podcast folders or logs' -ForEach @(
-        @{ Kind = 'hostile episode title'; Items = '<item><title>..</title><guid>one</guid><enclosure url="https://media.example.invalid/one.mp3" /></item>' }
-        @{ Kind = 'conflicting episode identity'; Items = '<item><title>First</title><guid>same</guid><enclosure url="https://media.example.invalid/one.mp3" /></item><item><title>Second</title><guid>same</guid><enclosure url="https://media.example.invalid/two.mp3" /></item>' }
+        @{ Kind = 'hostile episode title'; Items = '<item><title>..</title><guid>one</guid><enclosure url="https://media.example.invalid/one.mp3" /></item>'; ExpectedMessage = 'A Windows name cannot be a dot or dot-dot path component.' }
+        @{ Kind = 'conflicting episode identity'; Items = '<item><title>First</title><guid>same</guid><enclosure url="https://media.example.invalid/one.mp3" /></item><item><title>Second</title><guid>same</guid><enclosure url="https://media.example.invalid/two.mp3" /></item>'; ExpectedMessage = 'Conflicting episode metadata reuses one identity in this feed snapshot; no media destinations were created.' }
     ) {
         Mock Write-Host {}
-        $response = [pscustomobject]@{ Content = '<rss><channel><title>Show</title>' + $Items + '</channel></rss>' }
-        Mock Invoke-PodcastMetadataRequest { $response }
+        $destinationFeedFixture = [pscustomobject]@{ Content = '<rss><channel><title>Show</title>' + $Items + '</channel></rss>' }
+        Mock Invoke-PodcastMetadataRequest { $destinationFeedFixture }
         { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All } |
-            Should -Throw
+            Should -Throw $ExpectedMessage
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Force).Count | Should -Be 0
+        Should -Invoke Invoke-PodcastMetadataRequest -Times 1 -Exactly
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
     }
 
     It 'fits both full identifiers under a tight absolute output-root budget' {
         Mock Write-Host {}
         Mock Write-Progress {}
-        $response = [pscustomobject]@{ Content = '<rss><channel><title>Show</title><item><title>Episode</title><guid>one</guid><pubDate>2026-09-01</pubDate><enclosure url="https://media.example.invalid/one.mp3" /></item></channel></rss>' }
-        Mock Invoke-PodcastMetadataRequest { $response }
+        Mock Invoke-PodcastMetadataRequest {
+            [pscustomobject]@{ Content = '<rss><channel><title>Show</title><item><title>Episode</title><guid>one</guid><pubDate>2026-09-01</pubDate><enclosure url="https://media.example.invalid/one.mp3" /></item></channel></rss>' }
+        }
         Mock Invoke-PodcastMediaRequest {
             $DestinationStream.Write($fixtureMedia, 0, $fixtureMedia.Length)
             [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }

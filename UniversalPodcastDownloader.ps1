@@ -196,6 +196,7 @@ param(
 . (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
 . (Join-Path $PSScriptRoot 'src/NetworkPolicy.ps1')
 . (Join-Path $PSScriptRoot 'src/FeedXml.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedDiscovery.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
 . (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
 . (Join-Path $PSScriptRoot 'src/ResumeStore.ps1')
@@ -225,56 +226,12 @@ function Invoke-PodcastWebRequest {
     Invoke-PodcastMetadataRequest -Uri $Uri -Policy $script:PodcastTransportPolicy
 }
 
-# --- RSS autodetect helpers ---
-function Find-RssInHtml {
-    param(
-        [Parameter(Mandatory)][string]$Html,
-        [Parameter(Mandatory)][string]$BaseUrl
-    )
-
-    if ($Html.Length -gt 8388608) { throw 'HTML metadata exceeds the safe character limit.' }
-    $pattern = '<link[^>]+type=["'']application/(rss|atom)\+xml["''][^>]*>'
-    $matches = [System.Text.RegularExpressions.Regex]::Matches(
-        $Html,
-        $pattern,
-        [System.Text.RegularExpressions.RegexOptions]::IgnoreCase,
-        [TimeSpan]::FromMilliseconds(250)
-    )
-
-    foreach ($m in $matches) {
-        $hrefMatch = [System.Text.RegularExpressions.Regex]::Match(
-            $m.Value,
-            'href=["''](?<url>[^"\'']+)["'']',
-            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase,
-            [TimeSpan]::FromMilliseconds(250)
-        )
-
-        if ($hrefMatch.Success) {
-            $href = $hrefMatch.Groups['url'].Value
-            try {
-                if ($href -match '[\\\x00-\x20\x7f]') { throw 'Invalid discovered target.' }
-                $base = Get-PodcastRequestUri -Uri $BaseUrl
-                $uri  = [Uri]::new($base, $href)
-                return (Get-PodcastRequestUri -Uri $uri.AbsoluteUri).AbsoluteUri
-            } catch {
-                throw 'Discovered feed URL is not allowed by the network policy.'
-            }
-        }
-    }
-
-    return $null
-}
-
+# --- Shared RSS/Atom resolution and guided input ---
 function Get-FeedUrlInteractive {
     Write-Host "==== Universal Podcast Downloader ====" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "How to find the RSS feed for your podcast:" -ForegroundColor Yellow
-    Write-Host "  1. Open the podcast's main page in your browser."
-    Write-Host "  2. Look for an icon or link labelled 'RSS', 'Feed', or 'Subscribe'."
-    Write-Host "  3. Copy that link (often ends with .xml or /feed)."
-    Write-Host ""
-    Write-Host "You can also paste a normal podcast web page URL (show page),"
-    Write-Host "and I'll TRY to auto-detect the RSS feed from there."
+    Write-Host "Paste a direct RSS/Atom feed URL or a podcast show page URL." -ForegroundColor Yellow
+    Write-Host "For pages with several feeds, choose the feed number shown below."
     Write-Host ""
 
     while ($true) {
@@ -283,64 +240,81 @@ function Get-FeedUrlInteractive {
             Write-Host "Please paste a URL (or press Ctrl+C to quit)." -ForegroundColor Red
             continue
         }
-
         try {
             Write-Host "  Fetching URL..." -ForegroundColor DarkCyan
-            $resp = Invoke-PodcastWebRequest -Uri $inputUrl
-            $html = $resp.Content
-
-            if ($html -match '<rss' -or $html -match '<feed') {
-                Write-Host "  This looks like a direct RSS/Atom feed." -ForegroundColor Green
-                return $inputUrl
-            }
-
-            $pageBase = $inputUrl
-            if ($resp.FinalUri) { $pageBase = $resp.FinalUri.AbsoluteUri }
-            $rssUrl = Find-RssInHtml -Html $html -BaseUrl $pageBase
-            if ($rssUrl) {
-                Write-Host ("  Found RSS candidate: " + (Get-PodcastSafeUrl -Url $rssUrl)) -ForegroundColor Green
-                $ans = Read-Host "Use this feed? (Y/n)"
-                if ($ans -match '^(n|no)$') {
-                    Write-Host "  Okay, let's try another URL." -ForegroundColor Yellow
-                    continue
-                }
-                return $rssUrl
-            }
-
-            Write-Host "  Could not auto-detect an RSS feed on that page." -ForegroundColor Red
-            Write-Host "  Try a different URL or copy a direct 'RSS' link." -ForegroundColor Yellow
+            return (Resolve-PodcastItems -Feeds @($inputUrl) -Interactive)
         } catch {
-            Write-Host ("  Failed to fetch URL: " + (Get-PodcastDiagnosticError -Error $_)) -ForegroundColor Red
+            Write-Host ("  Could not resolve the feed: " + (Get-PodcastDiagnosticError -Error $_)) -ForegroundColor Red
         }
     }
 }
 
-# --- Feed parsing ---
 function Resolve-PodcastItems {
-    param([string[]]$Feeds)
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Retains the established import-safe helper name for existing callers.')]
+    [CmdletBinding()]
+    param([string[]]$Feeds, [switch]$Interactive, [AllowNull()]$InitialResolution)
 
+    $lastFailure = 'No RSS or Atom feed links were found on the page.'
+    $initial = $InitialResolution
     foreach ($u in $Feeds) {
         Write-Verbose ("Trying feed: " + (Get-PodcastSafeUrl -Url $u))
         try {
-            $resp = Invoke-PodcastWebRequest -Uri $u
-            $xml  = ConvertFrom-PodcastFeedXml -Content $resp.Content
-
-            $items = $xml.SelectNodes('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="item"]')
-            if (-not $items -or $items.Count -eq 0) {
-                $items = $xml.SelectNodes('//*[local-name()="feed"]/*[local-name()="entry"]')
+            if ($null -ne $initial) {
+                $source = $initial
+                $initial = $null
+                if (-not [StringComparer]::Ordinal.Equals([string]$source.Url, $u)) {
+                    throw 'The initial feed resolution does not belong to the supplied URL.'
+                }
+            } else {
+                $source = Resolve-PodcastSource -Uri $u
             }
-
-            if ($items -and $items.Count -gt 0) {
-                return [PSCustomObject]@{ Url = $u; Xml = $xml; Items = $items }
+            $candidates = @($source.Candidates)
+            if ($source.Kind -eq 'Html') {
+                if ($candidates.Count -eq 0) { throw 'No RSS or Atom feed links were found on the page.' }
+                if ($candidates.Count -gt 1 -and -not $Interactive) {
+                    throw 'Multiple feed links were found. Supply a direct feed URL with -FeedUrl.'
+                }
+                $index = 0
+                if ($candidates.Count -gt 1) {
+                    Write-Host 'Multiple feeds found:' -ForegroundColor Yellow
+                    for ($i = 0; $i -lt $candidates.Count; $i++) {
+                        Write-Host ("  {0}. {1}" -f ($i + 1), (Get-PodcastSafeUrl -Url $candidates[$i]))
+                    }
+                    while ($true) {
+                        $choice = Read-Host ("Choose feed number (1-{0})" -f $candidates.Count)
+                        $number = 0
+                        if ([int]::TryParse($choice, [ref]$number) -and $number -ge 1 -and $number -le $candidates.Count) {
+                            $index = $number - 1
+                            break
+                        }
+                        Write-Host 'Enter one of the listed feed numbers.' -ForegroundColor Red
+                    }
+                }
+                # A page can discover one selected feed, never a recursive crawl.
+                $feed = Resolve-PodcastSource -Uri $candidates[$index]
+                if ($feed.Kind -eq 'Html') { throw 'The discovered URL did not return an RSS or Atom feed.' }
+            } else {
+                $feed = $source
+            }
+            if (@($feed.Items).Count -eq 0) { throw 'The RSS or Atom feed is valid but contains no episodes.' }
+            return [pscustomobject]@{
+                Url = $feed.Url
+                Xml = $feed.Xml
+                Items = @($feed.Items)
+                Kind = $feed.Kind
+                FinalUri = $feed.FinalUri
+                Content = $feed.Content
+                Candidates = $candidates
+                SourceUrl = $source.Url
             }
         } catch {
             $transportFailure = Get-PodcastTransportFailure -ErrorObject $_
             if ($null -ne $transportFailure) { throw $transportFailure }
-            Write-Verbose ("Feed failed: {0} ({1})" -f (Get-PodcastSafeUrl -Url $u), (Get-PodcastDiagnosticError -Error $_))
+            $lastFailure = $_
+            Write-Verbose ("Feed resolution stopped: {0} ({1})" -f (Get-PodcastSafeUrl -Url $u), (Get-PodcastDiagnosticError -Error $_))
         }
     }
-
-    throw "No episodes found in the feed. Double-check the RSS URL."
+    throw $lastFailure
 }
 
 # --- Robust episode extraction + collision-proof filenames ---
@@ -482,8 +456,10 @@ try {
     $needFeed  = -not $PSBoundParameters.ContainsKey('FeedUrl')
     $needCount = -not $legacyRequested -and -not $PSBoundParameters.ContainsKey('Mode') -and -not $PSBoundParameters.ContainsKey('CustomCount')
 
+    $resolved = $null
     if ($needFeed) {
-        $FeedUrl = Get-FeedUrlInteractive
+        $resolved = Get-FeedUrlInteractive
+        $FeedUrl = $resolved.Url
     }
 
     if ($needCount) {
@@ -536,7 +512,7 @@ try {
     $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
 
     Write-Host "[*] Fetching podcast feed..."
-    $resolved = Resolve-PodcastItems -Feeds $candidateFeeds
+    if ($null -eq $resolved) { $resolved = Resolve-PodcastItems -Feeds $candidateFeeds }
     Write-Host ("    Using feed: " + (Get-PodcastSafeUrl -Url $resolved.Url))
 
     # Feed title, PS5.1-safe

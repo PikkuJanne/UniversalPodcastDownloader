@@ -68,6 +68,10 @@ The script resolves and parses metadata, validates all parsed enclosure targets,
 
 Normal execution passes ShouldProcess before archive writes; legacy changes have their own ShouldProcess decision. After acceptance, both reread and validate relevant state under writer protection. Diagnostics remain in memory for preview, including the finally/export path. Metadata reads and local hashing are allowed, so preview is not an offline operation. Original feed identity is retained across redirects; relative discovered HTML links use the effective page URI. The complete [input and preview policy](INPUT_BOUNDARIES.md) records limits and remaining scope.
 
+## Implemented shared discovery (UPD-0203)
+
+`src/FeedDiscovery.ps1` classifies bounded metadata by the document root, carries fetched content forward and returns all static RSS/Atom discovery candidates. Guided input and CLI use `Resolve-PodcastItems`; guided planning reuses its resolved result. Direct feed identity stays the original URL across redirects, while page discovery resolves against the final page URL and first supported base href. A sole candidate is automatic; multiple candidates require a numbered guided choice or a direct CLI URL. Empty feeds, malformed XML, unsupported roots and no-link pages have distinct fixed messages. [FEED_DISCOVERY.md](FEED_DISCOVERY.md) defines the safe scanner subset, entity decoding, deduplication, one-level discovery and remaining limitations. No runtime dependency is added.
+
 ## Implemented diagnostics (UPD-0106)
 
 Bundled `src/Diagnostics.ps1` defines the run context, URL display, safe error formatting, file sinks and restricted JSON export. Importing it has no side effects. Normal startup initializes it before discovery and tries the local application-data log directory, then the temporary log directory. UTF-8 without BOM, UTC timestamps, random full run IDs and CreateNew avoid engine-specific encoding and accidental log replacement. Diagnostic writes are best effort; failure reports a safe notice on standard error and preserves the primary operation error.

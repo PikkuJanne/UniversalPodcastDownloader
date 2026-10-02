@@ -8,7 +8,7 @@ Describe 'A024: explicit bounded feed XML parsing' -Tag 'Unit', 'A024' {
         Mock Invoke-PodcastWebRequest {
             [pscustomobject]@{ Content = '<!DOCTYPE rss [<!ENTITY title "Expanded title">]><rss><channel><item><title>&title;</title></item></channel></rss>' }
         }
-        { Resolve-PodcastItems -Feeds 'https://feed.example.invalid/rss' } | Should -Throw '*No episodes found*'
+        { Resolve-PodcastItems -Feeds 'https://feed.example.invalid/rss' } | Should -Throw 'Source XML is invalid or exceeds safe parser limits.'
     }
 
     It 'rejects external and internal DTDs with a fixed error' -TestCases @(

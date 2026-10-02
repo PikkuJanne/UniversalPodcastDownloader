@@ -41,10 +41,10 @@ Describe 'Feed parsing baseline' -Tag 'Unit' {
         Should -Invoke Invoke-PodcastMetadataRequest -Times 2 -Exactly
     }
 
-    It 'reports the current no-episodes error for an empty RSS feed' {
+    It 'reports a distinct valid-but-empty error for an empty RSS feed' {
         Mock Invoke-PodcastMetadataRequest { [PSCustomObject]@{ Content = Read-SyntheticFixture 'rss-empty.xml' } }
         { Resolve-PodcastItems -Feeds 'https://feed.example.invalid/empty' } |
-            Should -Throw '*No episodes found in the feed*'
+            Should -Throw 'The RSS or Atom feed is valid but contains no episodes.'
     }
 
     It 'extracts Atom enclosure links through the namespace-aware fixture' {

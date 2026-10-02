@@ -55,6 +55,37 @@ class HelperTests(unittest.TestCase):
         self.assertEqual(int(enclosure.attrib['length']), len(self.audio))
         self.assertTrue(enclosure.attrib['url'].startswith(self.server.base_url))
 
+    def test_discovery_redirect_and_relative_base_fixtures_are_named_and_local(self):
+        status, headers, body = self.request('/discovery/redirect')
+        self.assertEqual((status, headers['Location'], body),
+                         (302, '/discovery/final/show.html', b''))
+        status, _, body = self.request(headers['Location'])
+        self.assertEqual(status, 200)
+        self.assertIn(b'href="../../feeds/single.xml"', body)
+        status, _, body = self.request('/discovery/base.html')
+        self.assertEqual(status, 200)
+        self.assertIn(b'<base href="base/">', body)
+        self.assertIn(b'fixture=base&amp;part=1', body)
+
+    def test_discovery_duplicate_entities_and_nonfeed_targets_are_preserved(self):
+        status, _, body = self.request('/discovery/single.html')
+        self.assertEqual(status, 200)
+        self.assertIn(b'fixture=single&amp;part=1', body)
+        self.assertIn(b'fixture=single&#38;part=1', body)
+        status, _, body = self.request('/discovery/nonfeed-link.html')
+        self.assertEqual(status, 200)
+        self.assertIn(b'href="/show/not-feed"', body)
+
+    def test_empty_atom_and_unsupported_xml_root_shapes_are_distinct(self):
+        empty = ET.fromstring(self.request('/feeds/empty-atom.xml')[2])
+        self.assertEqual(empty.tag, '{http://www.w3.org/2005/Atom}feed')
+        self.assertEqual(len(empty.findall('{http://www.w3.org/2005/Atom}entry')), 0)
+        nested = ET.fromstring(self.request('/feeds/wrong-root.xml')[2])
+        self.assertEqual(nested.tag, 'document')
+        self.assertIsNotNone(nested.find('rss'))
+        unsupported = ET.fromstring(self.request('/feeds/wrong-atom-namespace.xml')[2])
+        self.assertEqual(unsupported.tag, '{urn:fixture:unsupported}feed')
+
     def test_history_feed_changes_titles_and_requires_the_exact_renewed_query(self):
         self.server.recovered.clear()
         try:

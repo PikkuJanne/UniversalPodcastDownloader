@@ -39,8 +39,9 @@ Describe 'A011: failed transfer attempts cannot become completed episodes' -Tag 
             $temporaryNames.Add($DestinationStream.Name)
             throw 'Unexpected media request.'
         }
-        $response = [pscustomobject]@{ Content = '<rss><channel><title>Failure fixture</title><item><title>Synthetic</title><guid>one</guid><enclosure url="https://media.example.invalid/audio.mp3"/></item></channel></rss>' }
-        Mock Invoke-PodcastMetadataRequest { $response }
+        Mock Invoke-PodcastMetadataRequest {
+            [pscustomobject]@{ Content = '<rss><channel><title>Failure fixture</title><item><title>Synthetic</title><guid>one</guid><enclosure url="https://media.example.invalid/audio.mp3"/></item></channel></rss>' }
+        }
     }
 
     It 'stops on an invalid empty response and reports an incomplete run' {

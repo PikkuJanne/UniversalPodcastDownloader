@@ -5,6 +5,7 @@ Minimal, no-frills podcast downloader I use to archive my favorite shows for off
 - Accepts either:
   - A direct RSS/Atom feed URL, or  
   - A normal “show page” URL and tries to auto-detect the RSS feed.  
+  - A single discovered feed is selected automatically. Several feeds require a numbered TUI choice; CLI users receive an explicit error and must supply a direct `-FeedUrl`.
 - Downloads newest episodes first, with three modes:
   - Latest (1 newest episode)
   - Custom (N newest episodes)
@@ -203,7 +204,8 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
 
 **Technical details**
 - Feed resolution:
-  - Direct RSS/Atom content is detected via <rss> / <feed>.
+  - Direct feeds are recognized by their actual RSS/Atom XML root; already fetched content is reused.
+  - Page discovery uses the final response URL and first supported HTML base URL, decodes attribute entities and deduplicates candidates. See [feed discovery policy](docs/codex/FEED_DISCOVERY.md).
   - For normal HTML pages, the tool scans for:
     - <link type="application/rss+xml" ... href="..."> or Atom equivalents.
   - Relative discovered links use the final page URL after validated redirects. Redirects alone do not change a stored feed identity.
@@ -232,8 +234,8 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
 - Script window closes immediately:
   - Run UniversalPodcastDownloader.bat from an existing cmd window to see errors.
   - Check PowerShell’s ExecutionPolicy and any corporate restrictions.
-- “No episodes found in the feed”:
-  - The URL may not be a real RSS/Atom feed.
+- “The RSS or Atom feed is valid but contains no episodes”:
+  - The feed is recognized but currently empty. Malformed XML, unsupported document roots and pages without feed links have separate errors.
   - Try copying the RSS link from the host (Apple Podcasts, Podbean, etc.).
 - “Feed parsed, but no downloadable enclosure URLs were found”:
   - The feed might not expose direct audio URLs, or it uses a custom format.

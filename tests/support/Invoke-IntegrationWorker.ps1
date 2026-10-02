@@ -92,26 +92,50 @@ try {
             }
         }
     }
+    if ($config.Action -in @('Discover', 'InteractivePreview')) {
+        $discoveryPromptState = @{ Count = 0; SelectionIndex = 0 }
+        function Read-Host {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidOverwritingBuiltInCmdlets', '', Justification = 'This bounded test worker supplies only expected URL and numbered-choice application UI responses; web cmdlet host prompts still fail under NonInteractive.')]
+            [CmdletBinding()]
+            param([string]$Prompt)
+
+            $discoveryPromptState.Count++
+            if ($discoveryPromptState.Count -eq 1 -and $Prompt -eq 'Paste RSS feed URL OR podcast page URL') {
+                return $config.FeedUrl
+            }
+            if ($Prompt -eq 'Choose feed number (1-2)' -and $discoveryPromptState.SelectionIndex -lt @($config.Selection).Count) {
+                $selection = @($config.Selection)[$discoveryPromptState.SelectionIndex]
+                $discoveryPromptState.SelectionIndex++
+                return $selection
+            }
+            throw 'Unexpected or repeated application prompt in discovery integration worker.'
+        }
+    }
     switch ($config.Action) {
         'Discover' {
             . $config.ProductScript
-            $script:discoveryPromptCount = 0
-            function Read-Host {
-                [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidOverwritingBuiltInCmdlets', '', Justification = 'This bounded test worker supplies only the two expected application UI responses; web cmdlet host prompts still fail under NonInteractive.')]
-                [CmdletBinding()]
-                param([string]$Prompt)
-
-                $script:discoveryPromptCount++
-                if ($script:discoveryPromptCount -eq 1 -and $Prompt -eq 'Paste RSS feed URL OR podcast page URL') {
-                    return $config.FeedUrl
-                }
-                if ($script:discoveryPromptCount -eq 2 -and $Prompt -eq 'Use this feed? (Y/n)') {
-                    return 'y'
-                }
-                throw 'Unexpected or repeated application prompt in discovery integration worker.'
+            $initial = Get-FeedUrlInteractive
+            $resolved = Resolve-PodcastItems -Feeds @($initial.Url) -InitialResolution $initial
+            $result.ResolvedUrl = $resolved.Url
+            $result.ItemCount = @($resolved.Items).Count
+            $result.Kind = $resolved.Kind
+            $result.FinalUri = $resolved.FinalUri.AbsoluteUri
+            $result.Candidates = @($resolved.Candidates)
+            $result.PromptCount = $discoveryPromptState.Count
+        }
+        'Source' {
+            . $config.ProductScript
+            if ($config.ReuseResponse) {
+                $response = Invoke-PodcastWebRequest -Uri $config.FeedUrl
+                $source = Resolve-PodcastSource -Uri $config.FeedUrl -Response $response
             }
-            $result.ResolvedUrl = Get-FeedUrlInteractive
-            $result.PromptCount = $script:discoveryPromptCount
+            else { $source = Resolve-PodcastSource -Uri $config.FeedUrl }
+            $result.ResolvedUrl = $source.Url
+            $result.Kind = $source.Kind
+            $result.FinalUri = $source.FinalUri.AbsoluteUri
+            $result.Candidates = @($source.Candidates)
+            $result.ItemCount = @($source.Items).Count
+            $result.ContentLength = $source.Content.Length
         }
         'Resolve' {
             . $config.ProductScript
@@ -121,6 +145,13 @@ try {
             $episodes = @($resolved.Items | ForEach-Object { Get-EpisodeData $_ })
             $result.EpisodeTitles = @($episodes | ForEach-Object { $_.Title })
             $result.EpisodeUrls = @($episodes | ForEach-Object { $_.Url })
+        }
+        'Preview' {
+            & $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -WhatIf
+        }
+        'InteractivePreview' {
+            & $config.ProductScript -Mode $config.Mode -OutputPath $config.OutputPath -WhatIf
+            $result.PromptCount = $discoveryPromptState.Count
         }
         'Download' {
             if ($config.BoundaryJunctionPath -and $config.BoundaryStage -eq 'Preparing') {

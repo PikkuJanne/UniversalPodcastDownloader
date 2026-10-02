@@ -88,7 +88,7 @@ function Start-UpdFixtureServer {
 function Invoke-UpdIntegrationWorker {
     param(
         [Parameter(Mandatory)]$Context,
-        [Parameter(Mandatory)][ValidateSet('Discover', 'Resolve', 'Download')][string]$Action,
+        [Parameter(Mandatory)][ValidateSet('Discover', 'Resolve', 'Source', 'Preview', 'InteractivePreview', 'Download')][string]$Action,
         [Parameter(Mandatory)][string]$FeedPath,
         [ValidateSet('Latest', 'Custom', 'All')][string]$Mode = 'All',
         [int]$CustomCount = 1,
@@ -97,10 +97,15 @@ function Invoke-UpdIntegrationWorker {
         [string]$BoundaryJunctionTarget,
         [ValidateSet('Preparing', 'AfterTransfer')][string]$BoundaryStage = 'Preparing',
         [ValidateSet('None', 'BeforeFinalizeCrash', 'AfterFinalizeCrash', 'FinalRace', 'BeforeStateReplaceCrash', 'AfterStateReplaceCrash')][string]$TransactionHook = 'None',
-        [switch]$InterruptOnPartial
+        [switch]$InterruptOnPartial,
+        [string[]]$Selection = @('1'),
+        [switch]$ReuseResponse
     )
 
-    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -ne '/show') { throw 'Only named local feed or show fixtures are allowed.' }
+    $discoveryPaths = @('/show', '/show/not-feed', '/redirect/show', '/redirect/feed',
+        '/discovery/redirect', '/discovery/final/show.html', '/discovery/base.html',
+        '/discovery/single.html', '/discovery/nonfeed-link.html')
+    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -notin $discoveryPaths) { throw 'Only named local feed or show fixtures are allowed.' }
     if ($OutputName -notmatch '^[a-z0-9-]+(?:[\\/][a-z0-9-]+)*$') { throw 'OutputName must contain only simple relative test directory names.' }
     $identifier = [guid]::NewGuid().ToString('N')
     $resultPath = Join-Path $Context.Root ($identifier + '-result.json')
@@ -113,6 +118,8 @@ function Invoke-UpdIntegrationWorker {
         ResultPath = $resultPath
         Mode = $Mode
         CustomCount = $CustomCount
+        Selection = @($Selection)
+        ReuseResponse = [bool]$ReuseResponse
         TransactionHook = $TransactionHook
         HookMarkerPath = Join-Path $Context.Root ($identifier + '-hook.json')
     }
