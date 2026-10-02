@@ -1,39 +1,42 @@
 # Durable state, completion and legacy migration
 
+## Implemented in UPD-0104 and UPD-0105
+
+Each show uses `.upd/state.json`, with `.upd/state.json.bak` retaining the previous validated generation. Ordinary new histories use schema 1; an explicit legacy action promotes a validated copy to schema 2. Normal runs keep schema-1 archives at schema 1, and preview never promotes or writes history. Schema 2 adds `adopted` and `unverified` evidence levels. Writes reject schema downgrades, including a manually downgraded primary paired with a newer-schema backup.
+
+The original exact feed URL's full SHA-256 identifies the feed and its first alias. Discovery scans immediate output folders for an exact alias fingerprint; it preserves the established directory when the title changes. Alias associations are explicit state entries, never inferred from titles, redirects or stripped URL queries. There is no alias-management CLI yet. Duplicate alias ownership, unreadable history or reparse directories stop discovery without creating a replacement archive.
+
+Episode identity prefers RSS GUID, then Atom ID, then the exact media request URL. The identity source and its full fingerprint are persisted; the episode ID hashes that fingerprint with the feed ID. Exact source strings remain in memory. The planner rejects contradictory entries in the complete current snapshot before applying Latest/Custom selection. Across refreshes, a stable publisher ID binds the existing relative filename even if metadata changes. Without one, a new URL can create a new identity. Publisher reuse of a GUID across separate refreshes cannot be reliably distinguished from an edit.
+
+Both schemas require exactly these top-level fields: `schema_version`, `feed_id`, `feed_alias_fingerprints`, `generation`, `episodes`. Episode records require `episode_id`, `identity_source`, `identity_fingerprint`, `relative_path`, `status`, `bytes`, `local_sha256`, `completed_utc`, and `verification` (`method`, `media_kind`, `notes`). Destinations are single Windows filenames, unique under case-insensitive comparison. Schema-1 statuses are `prepared`, `transfer_verified`, `missing`, `conflict`, `failed`; schema 2 also permits `adopted` and `unverified`. Prepared/completed records require positive bytes, a digest, UTC timestamp and recognized completion/signature evidence. Adopted records require positive bytes, a digest, UTC timestamp, a recognized local media signature, method `owner-approved-local-signature` and the exact confidence note `local-signature-only; transfer-completeness-unverified`. Adoption evidence cannot satisfy a `prepared` or `transfer_verified` record. History contains no raw feed URLs, media URLs or publisher IDs. Its relative filenames and fingerprints remain sensitive local archive data and are excluded from diagnostic exports.
+
+Reads enforce strict UTF-8, 16 MiB, nesting depth 12, at most 100,000 episodes, 128 aliases and 16 notes of 256 characters each. Unknown/missing/duplicate fields, escaped property names, unsupported versions, invalid types and contradictory primary/backup pairs fail closed. Persisted generations start at 1; in-memory new state starts at 0. Schema promotion requires an explicit legacy action. There is no automatic backup restoration; preserve both files for inspection on error.
+
+The brief output-root `.upd-archive.lock` covers a second discovery pass, show creation and initial state commit. The selected show then holds `.upd/writer.lock` through its run. Both are persistent files opened with exclusive OS handles; process exit/death releases ownership without deleting the file or trusting a PID. Writes require that show lock, validate the current generation, serialize to an owned `.upd/state.<GUID>.tmp`, flush and use same-volume File.Replace (or no-overwrite File.Move for first creation). No non-atomic replacement fallback is used. The previous valid state becomes the backup. Unclaimed temporary files remain untouched.
+
+After media transfer validation, the downloader hashes the closed temporary file and commits `prepared` evidence before no-overwrite final placement. It then commits `transfer_verified`. A restart hashes the final file and compares bytes/digest against prepared or completed evidence before a verified skip; this closes the placement/history crash gap. Missing media with transfer evidence is safely downloaded again at its recorded path. Changed or unknown planned destinations become conflicts and produce an incomplete run. Adopted files are skipped only when their recorded bytes and SHA-256 still match, and the summary counts them separately as `Adopted`. Missing or changed adopted files and `unverified` records require review without automatic redownload or promotion to transfer evidence. Hashing denies write/delete sharing while the read handle is open. These checks do not promise a sandbox against a privileged concurrent filesystem attacker.
+
+Local Windows tests exercise actual process death before/after media placement and state replacement, plus lock contention/release. Legacy tests use synthetic copied archives and compare every original filename, byte count and SHA-256 before and after preview, adoption, redownload and rollback. Hardware power-loss durability and live UNC filesystems remain unverified. Resume remains future work.
+
 ## Completion is an evidence level
 
 A nonzero file is not necessarily complete. A matching historical filename is not identity. A local SHA-256 digest proves the bytes stayed the same relative to that digest, not that the publisher supplied the whole correct episode. Audio sniffing rejects obvious wrong data but is not a full decoder or a cryptographic guarantee. Use names like `transfer_verified`, `adopted`, `unverified` and `conflict` rather than an unexplained single boolean.
 
 The HTTP body's expected byte count, when meaningful for the delivered representation, is stronger transfer evidence than the RSS enclosure length. Publisher metadata can be stale, and dynamically inserted content can change media. Mismatch against an enclosure estimate is a warning/review signal, not an automatic deletion/replacement rule. Missing length is supported when stream completion and other checks are satisfactory.
 
-## Suggested state layout — implement and version, do not copy blindly
+## State and checkpoint files
 
-Keep local state beneath each established podcast directory, for example `.upd/state.json`, plus owned partial/resume records. Keep an owner-only local subscription index/config outside source control. Existing output folders stay in place unless explicitly migrated.
+`src/HistoryStore.ps1` defines and validates the current schemas. Keep the existing show directory and media names. Migration stores additional full-history snapshots as `.upd/legacy-<32 lowercase hex characters>.json`; it never copies media into a checkpoint. These snapshots use the same strict schema reader and limits as live history. Local subscription configuration and resume sidecars remain future work.
 
-```json
-{
-  "schema_version": 1,
-  "feed_id": "stable-local-feed-identifier",
-  "feed_alias_fingerprints": [],
-  "generation": 1,
-  "episodes": [
-    {
-      "episode_id": "feed-scoped-stable-identifier",
-      "identity_source": "rss-guid",
-      "identity_fingerprint": "digest-not-raw-secret",
-      "relative_path": "2026-09-01 - Example.mp3",
-      "status": "transfer_verified",
-      "bytes": 12345,
-      "local_sha256": null,
-      "validator": null,
-      "completed_utc": "2026-10-01T12:00:00Z",
-      "verification": {"method": "completed-transfer", "notes": []}
-    }
-  ]
-}
-```
+Unknown newer schemas and corrupt primary, backup or selected checkpoint files fail clearly and remain untouched. History is parsed as data, never evaluated as PowerShell.
 
-This is an illustrative contract, not a production schema or a file to place in someone's archive. Define field limits, unknown-version behavior, serialization depth and migration strategy. Never evaluate strings as PowerShell. Unknown newer schema: preserve and fail clearly. Corrupt state: preserve it, do not silently initialize an empty successful history.
+### Data retention and diagnostic boundary
+
+Keep history, its backup and migration checkpoints with the archive: they support verification, identity binding and explicit metadata rollback. The downloader does not age them out or delete originals, unknown partials or old checkpoints. Removing history can remove the evidence needed for a verified skip or a recovery decision.
+
+Diagnostics have separate retention. Startup logs, show logs and optional JSON exports remain until the owner deletes them; no automatic upload, rotation or deletion is implemented. Older logs may contain raw credentials and are never ingested or re-exported. Current logs avoid raw URLs, titles and paths, but hostnames and identity fingerprints may still reveal or correlate subscriptions. The restricted export includes none of those archive fields. See [DIAGNOSTICS.md](DIAGNOSTICS.md).
+
+Legacy inventory deliberately returns exact filenames, titles and identity data needed for local adoption decisions. Those objects, checkpoint result values, shell input history, transcripts and caller-inspected original exceptions are sensitive local review data. They are excluded from diagnostic export; manually saving or sharing them is a separate owner action.
 
 ## Identity policy
 
@@ -45,24 +48,46 @@ Persist only relative destinations and validate containment when reading state. 
 
 ## Safe write/finalize sequence
 
-Acquire archive writer protection before modifying state/download ownership. Reserve an owned temporary file next to the destination on the same volume. Associate its episode identity, expected entity evidence and byte count with a versioned sidecar. Never adopt a random `.part` left by another program based solely on extension.
+Acquire archive writer protection before modifying state/download ownership. Reserve an owned temporary file next to the destination on the same volume. After transfer validation, associate its episode identity and byte/hash evidence with a durable `prepared` record before final placement. Resume sidecars are not implemented. Never adopt a random `.part` left by another program based solely on extension.
 
 Stream to the temporary path, close it and validate. Recheck the destination. Finalize using a no-overwrite operation. Then update state through a temporary state file plus same-volume replacement/backup strategy supported on the chosen Windows runtimes. Keep the previous good state until the new record is valid. Release handles in finally. Document filesystem/UNC constraints; a rename is not a universal guarantee against hardware power-loss corruption.
 
-Test crash gaps: before final rename; after rename before state commit; during state replacement; after cancellation; with concurrent writers; with changed/deleted completed files. Reconciliation must never overwrite a final file because history lagged. The basic exclusive writer primitive lands with history, not only in later usability polish.
+Test crash gaps: before final rename; after rename before state commit; during state replacement; after cancellation; with concurrent writers; with changed/deleted completed files. Reconciliation must never overwrite a final file because history lagged. Both history and migration use the existing exclusive writer handles.
 
-## Resume policy
+## Future resume policy
 
 Resume only program-owned partials with consistent episode and entity evidence. Prefer a suitable strong validator; otherwise restart conservatively. Validate resumed response/offset/total before appending. Full-body responses replace/restart the owned partial safely, not append. Inconsistent range, changed entity, weak/absent evidence, corrupted sidecars and 416 require an explicit tested branch. Partial files belonging to the user or another program are not cleanup targets.
 
 Resume mechanics depend on HTTP semantics [S6 in SOURCES.md]. The supplied HTTP scenarios are adversarial tests for this project's implementation. They are not proof that all real providers implement ranges correctly.
 
-## Legacy adoption procedure
+## Implemented legacy review and migration
 
-1. **Inventory without mutation.** Match existing names and potential identities; classify obvious empty/bad files and ambiguous collisions. Hash originals in a copied test archive to prove safety.
-2. **Preview.** List would-adopt, unverified, ambiguous and would-download actions. Do not create history/log/config folders in WhatIf.
-3. **Explicit choice.** Adoption can accept an existing file with a clearly stated confidence level; redownload goes to a separate safe target and never overwrites the old file by default. A remote size comparison is not guaranteed proof of identical media.
-4. **Record, do not rewrite.** Preserve all original filenames/bytes. Bind accepted identities to existing paths; leave uncertain files untouched. Record adoption policy and observed evidence.
-5. **Recovery.** Preserve prior state for rollback. Rollback restores owned metadata only, never deletes originals. A rerun should offer reconciliation rather than blindly redownload the whole archive.
+`-LegacyPath` selects an existing immediate show directory under `-OutputPath`, as either an absolute path or folder name. It requires an explicit `-FeedUrl`; the legacy workflow uses the complete current feed snapshot, independent of the ordinary Latest/Custom selection. Conflicting feed ownership, invalid paths and reparse directories fail before a decision is applied. The [README examples](../../README.md#review-and-migrate-a-legacy-archive) show the commands and returned objects.
 
-For normal runs, report unknown existing files as `legacy_unverified`/conflict and an incomplete/review-needed outcome, not as verified skips. Do not make migration an automatic destructive startup operation.
+`-LegacyAction Preview` is the default. It may fetch the feed and read local files, but never creates output directories, media, state, logs, configuration or lock files. `-WhatIf` also leaves the output tree unchanged for normal downloads and all legacy actions. A changing legacy action with `-WhatIf` still validates its explicit selection and reports its proposed operation.
+
+Inventory includes immediate ordinary files regardless of extension. It hashes readable originals and holds a read-only handle while hashing and inspecting up to 64 KiB for a recognizable local signature. It reports unsafe/reparse paths without following them and does not recurse into child directories or `.upd`. Files named as partials, empty bodies and obvious text remain conflicts. Unknown plausible media remains `unverified`; no observation claims an observed HTTP transfer.
+
+Matching covers the original title/date naming scheme and its short SHA-1 fallback, UPD-0102 full-hash suffixes and current feed-scoped identity suffixes. Names only identify candidates. A suggestion requires exactly one candidate file for one episode, with no other history record owning that path. Repeated title/date names, multiple copies and ownership collisions remain conflicts. The plan exposes `Files` and `Episodes`; episode rows include the full `EpisodeId`, candidate paths and a nullable `SuggestedPath`. Existing confirmed history paths are labelled `recorded`, with `RecordedStatus` retaining the actual evidence level.
+
+An ordinary run checks the proposed archive and, for a new feed binding, the old title-only folder. If selected unbound episodes could cause new downloads while that folder contains unclaimed media, it returns a review plan under `-WhatIf` or stops with a review message. The check repeats under writer protection before initial state writes. A folder title is a reason to request review; it never establishes the feed or episode identity. Existing archives with an unrelated recorded feed are not claimed by title.
+
+In an established archive, an abandoned file with the exact `.upd-<32 lowercase hex characters>.tmp` transfer naming pattern is preserved without blocking a fresh transfer. Its name grants no completion or adoption evidence, and the downloader never reuses that partial. Other unclaimed partial names remain part of legacy review.
+
+### Adopt
+
+`-LegacyAction Adopt` requires a full `-LegacyEpisodeId`, an exact `-LegacyFile` basename and the reviewed `-LegacySha256` from the preview. Only one current episode and one plausible local file can be selected. The owner may explicitly resolve ambiguous names or choose a differently named file. A path owned by another episode is refused. Existing completed/adopted evidence must be handled through explicit redownload rather than silently rebound.
+
+The workflow repeats inventory and validates the chosen bytes while holding the archive writer locks, then keeps a read-only media handle through the state commit. A changed reviewed digest, partial name, empty/text file or unrecognized signature prevents adoption. It records `adopted` with the limited confidence described above and preserves the original path and bytes. No media request or remote size comparison supplies adoption evidence.
+
+### Redownload
+
+`-LegacyAction Redownload -LegacyEpisodeId <full ID>` downloads only the explicit current episode to a new filename with a fresh full-hash suffix. Existing filenames and bytes survive, including an earlier file at the usual modern destination. The existing prepared/finalize history protocol records the new observed transfer. A changed remote body never authorizes overwriting an original. Other unmatched files stay available for later review; the action does not adopt or redownload the rest of the archive.
+
+### Checkpoints and rollback
+
+Before its final metadata change, each changing legacy action saves a unique `.upd/legacy-<id>.json` checkpoint and prints its basename. Successful results also return it as `Checkpoint`. The snapshot contains the entire pre-action history metadata, including unrelated episode records; it contains no media bytes. A first migration initializes schema-2 empty history before saving that checkpoint. Existing schema-1 metadata is copied into schema 2 without discarding records; its prior generation remains protected by the ordinary atomic backup mechanism.
+
+`-LegacyAction Rollback -LegacyCheckpoint <basename>` requires a readable checkpoint for the same feed and exact aliases whose generation is no newer than the current state. Its preview includes `Operation.RestoreRecords`. Rollback restores all snapshot records in a new current generation, keeps schema 2 and the feed association, and saves another checkpoint before restoring. Thus rolling back an older checkpoint also removes later metadata decisions. Rolling back the first adoption leaves an empty schema-2 history with the same feed association.
+
+Rollback never deletes, renames or restores original media, separate redownloads, logs or existing checkpoints. Files whose bindings were removed remain on disk and need review. A failed redownload can use its printed checkpoint for metadata recovery; media already placed before a failure remains preserved. Corrupt state still fails closed, so checkpoint rollback is not a bypass around an unreadable primary/backup. Preserve those files for inspection instead of replacing them automatically.

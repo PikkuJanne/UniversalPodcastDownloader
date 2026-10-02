@@ -54,12 +54,54 @@ class HelperTests(unittest.TestCase):
         self.assertEqual(int(enclosure.attrib['length']), len(self.audio))
         self.assertTrue(enclosure.attrib['url'].startswith(self.server.base_url))
 
+    def test_history_feed_changes_titles_and_requires_the_exact_renewed_query(self):
+        self.server.recovered.clear()
+        try:
+            _, _, original = self.request('/feeds/history.xml')
+            before = ET.fromstring(original)
+            old_url = before.find('./channel/item/enclosure').attrib['url']
+            old_path = old_url.removeprefix(self.server.base_url)
+            self.assertEqual(self.request(old_path)[2], self.audio)
+            self.assertEqual(self.request('/media/history.mp3')[0], 403)
+            self.request('/__recover', method='POST')
+            _, _, renewed = self.request('/feeds/history.xml')
+            after = ET.fromstring(renewed)
+            self.assertNotEqual(before.find('./channel/title').text, after.find('./channel/title').text)
+            self.assertNotEqual(before.find('./channel/item/title').text, after.find('./channel/item/title').text)
+            self.assertEqual(before.find('./channel/item/guid').text, after.find('./channel/item/guid').text)
+            new_url = after.find('./channel/item/enclosure').attrib['url']
+            self.assertEqual(self.request(new_url.removeprefix(self.server.base_url))[2], self.audio)
+            self.assertEqual(self.request(old_path)[0], 403)
+        finally:
+            self.server.recovered.clear()
+
     def test_safe_xml_fixture_shapes(self):
         for name in ('rss-single.xml', 'rss-empty.xml', 'rss-collisions.xml',
                      'atom-dates.xml', 'rss-date-cases.xml', 'rss-media.xml',
                      'rss-page-1.xml', 'rss-page-2.xml'):
             with self.subTest(name=name):
                 ET.fromstring((KIT / 'fixtures' / name).read_bytes())
+
+    def test_legacy_remote_change_preserves_guid_but_changes_url_bytes_and_validator(self):
+        self.server.recovered.clear()
+        try:
+            before = ET.fromstring(self.request('/feeds/legacy-changing.xml')[2])
+            old_path = before.find('./channel/item/enclosure').attrib['url'].removeprefix(self.server.base_url)
+            status, old_headers, old_body = self.request(old_path)
+            self.assertEqual((status, old_body), (200, self.audio))
+            self.request('/__recover', method='POST')
+            after = ET.fromstring(self.request('/feeds/legacy-changing.xml')[2])
+            new_path = after.find('./channel/item/enclosure').attrib['url'].removeprefix(self.server.base_url)
+            self.assertNotEqual(old_path, new_path)
+            self.assertEqual(before.find('./channel/item/guid').text, after.find('./channel/item/guid').text)
+            status, new_headers, new_body = self.request(new_path)
+            self.assertEqual(status, 200)
+            self.assertNotEqual(old_body, new_body)
+            self.assertNotEqual(old_headers['ETag'], new_headers['ETag'])
+            self.assertEqual(int(new_headers['Content-Length']), len(new_body))
+            self.assertEqual(self.request(old_path)[0], 403)
+        finally:
+            self.server.recovered.clear()
 
     def test_malformed_fixture_really_is_malformed(self):
         with self.assertRaises(ET.ParseError):
@@ -69,6 +111,61 @@ class HelperTests(unittest.TestCase):
         data = (KIT / 'fixtures/xml-with-dtd.xml').read_text()
         self.assertIn('<!DOCTYPE', data)
         self.assertIn('entity-must-never-be-fetched.invalid', data)
+
+    def test_entity_routes_only_return_xml_and_do_not_read_external_resources(self):
+        _, _, http_xml = self.request('/feeds/external-http.xml')
+        self.assertIn(b'<!DOCTYPE rss', http_xml)
+        self.assertIn((self.server.base_url + '/entity/never').encode(), http_xml)
+        _, _, file_xml = self.request('/feeds/external-file.xml?file=file%3A%2F%2F%2Fsynthetic%2Fdoes-not-exist')
+        self.assertIn(b'file:///synthetic/does-not-exist', file_xml)
+        self.assertIn(b'&xxe;', file_xml)
+        self.assertEqual(self.request('/feeds/external-file.xml?file=https%3A%2F%2Fexample.invalid')[0], 400)
+
+    def test_internal_dtd_fixture_has_an_entity_reference(self):
+        _, _, data = self.request('/feeds/internal-dtd.xml')
+        self.assertIn(b'<!ENTITY', data)
+        self.assertIn(b'<title>&y;</title>', data)
+
+    def test_oversized_metadata_is_finite_with_both_framing_variants(self):
+        _, headers, data = self.request('/feeds/oversized.xml')
+        self.assertGreater(len(data), 8 * 1024 * 1024)
+        self.assertLess(len(data), 8 * 1024 * 1024 + 4096)
+        self.assertEqual(int(headers['Content-Length']), len(data))
+        _, headers, unframed = self.request('/feeds/oversized-no-length.xml')
+        self.assertNotIn('Content-Length', headers)
+        self.assertEqual(unframed, data)
+
+    def test_depth_and_node_fixtures_are_well_formed_but_exceed_policy_budgets(self):
+        _, _, deep = self.request('/feeds/deep.xml')
+        self.assertEqual(deep.count(b'<n>'), 70)
+        ET.fromstring(deep)
+        _, _, wide = self.request('/feeds/many-nodes.xml')
+        self.assertEqual(wide.count(b'<n/>'), 100010)
+        ET.fromstring(wide)
+
+    def test_boundary_redirect_routes_expose_controlled_locations(self):
+        cases = {
+            '/redirect/feed': '../feeds/single.xml',
+            '/redirect/file': 'file:///synthetic/never',
+            '/media/redirect.mp3': '/media/ok.mp3',
+            '/media/redirect-file.mp3': 'file:///synthetic/never',
+        }
+        for route, location in cases.items():
+            with self.subTest(route=route):
+                status, headers, body = self.request(route)
+                self.assertEqual((status, headers['Location'], body), (302, location, b''))
+        _, headers, _ = self.request('/redirect/userinfo')
+        self.assertIn('fake:FAKE_TOKEN@127.0.0.1', headers['Location'])
+        _, headers, _ = self.request('/redirect/cookie')
+        self.assertIn('localhost:', headers['Location'])
+        self.assertEqual(headers['Set-Cookie'], 'synthetic=FAKE_COOKIE; Path=/')
+
+    def test_redirect_media_feed_points_to_its_controlled_redirect(self):
+        for route, target in (
+                ('/feeds/redirect-media.xml', '/media/redirect.mp3'),
+                ('/feeds/redirect-file-media.xml', '/media/redirect-file.mp3')):
+            tree = ET.fromstring(self.request(route)[2])
+            self.assertEqual(tree.find('./channel/item/enclosure').attrib['url'], self.server.base_url + target)
 
     def test_normal_media_and_head(self):
         status, hdr, data = self.request('/media/ok.mp3')

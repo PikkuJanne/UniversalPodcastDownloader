@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A005 passed; A006-A060 remain NOT RUN. Helper results and defect characterizations are separate from future downloader acceptance; see evidence/UPD-0001.md and evidence/UPD-0002.md.
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A021 passed; A022-A060 remain NOT RUN. Helper results and known-defect characterizations are separate from downloader acceptance. See evidence/UPD-0106.md.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -9,22 +9,22 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A005 passed; A006-A060 rem
 | A003 | UPD-0001 | workflow | passed | Remote branch SHA equals local HEAD; draft PR created/reused or an authentication/permission blocker is reported honestly. |
 | A004 | UPD-0002 | unit | passed | No prompts, network calls, directories, downloads or preference mutations occur. |
 | A005 | UPD-0002 | workflow | passed | Versions and engine are recorded; missing test tools produce a clear failure, not an empty green result; no runtime dependency added. |
-| A006 | UPD-0101 | unit | not_run | Selections are arrays; valid counts and progress; empty input is handled explicitly; no null/divide-by-zero errors on either Windows engine. |
-| A007 | UPD-0101 | integration | not_run | No legacy DOM parsing or security confirmation prompt; existing system security policy is not changed. |
-| A008 | UPD-0102 | unit | not_run | Valid deterministic components; identifiers retained after shortening; Windows limits handled clearly. |
-| A009 | UPD-0102 | integration | not_run | No escape from output root, no metadata-controlled drive/UNC path and no silent traversal through unsafe reparse points. |
-| A010 | UPD-0102 | unit | not_run | No accidental skip or overwrite; case-insensitive collisions also handled. |
-| A011 | UPD-0103 | integration | not_run | Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete. |
-| A012 | UPD-0103 | integration | not_run | Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption. |
-| A013 | UPD-0103 | integration | not_run | No existing file is overwritten; temporary file is on destination volume; all streams close on failure. |
-| A014 | UPD-0104 | unit | not_run | Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title. |
-| A015 | UPD-0104 | integration | not_run | Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset. |
-| A016 | UPD-0104 | integration | not_run | History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted. |
-| A017 | UPD-0105 | integration | not_run | Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion. |
-| A018 | UPD-0105 | integration | not_run | No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites. |
-| A019 | UPD-0106 | integration | not_run | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |
-| A020 | UPD-0106 | unit | not_run | Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports. |
-| A021 | UPD-0106 | integration | not_run | Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear. |
+| A006 | UPD-0101 | unit | passed | Selections are arrays; valid counts and progress; empty input is handled explicitly; no null/divide-by-zero errors on either Windows engine. |
+| A007 | UPD-0101 | integration | passed | No legacy DOM parsing or security confirmation prompt; existing system security policy is not changed. |
+| A008 | UPD-0102 | unit | passed | Valid deterministic components; identifiers retained after shortening; Windows limits handled clearly. |
+| A009 | UPD-0102 | integration | passed | No escape from output root, no metadata-controlled drive/UNC path and no silent traversal through unsafe reparse points. |
+| A010 | UPD-0102 | unit | passed | No accidental skip or overwrite; case-insensitive collisions also handled. |
+| A011 | UPD-0103 | integration | passed | Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete. |
+| A012 | UPD-0103 | integration | passed | Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption. |
+| A013 | UPD-0103 | integration | passed | No existing file is overwritten; temporary file is on destination volume; all streams close on failure. |
+| A014 | UPD-0104 | unit | passed | Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title. |
+| A015 | UPD-0104 | integration | passed | Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset. |
+| A016 | UPD-0104 | integration | passed | History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted. |
+| A017 | UPD-0105 | integration | passed | Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion. |
+| A018 | UPD-0105 | integration | passed | No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites. |
+| A019 | UPD-0106 | integration | passed | A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved. |
+| A020 | UPD-0106 | unit | passed | Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports. |
+| A021 | UPD-0106 | integration | passed | Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear. |
 | A022 | UPD-0107 | integration | not_run | Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion. |
 | A023 | UPD-0107 | unit | not_run | Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible. |
 | A024 | UPD-0107 | integration | not_run | DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse. |

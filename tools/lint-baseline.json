@@ -33,41 +33,6 @@
     },
     {
       "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSAvoidUsingEmptyCatchBlock",
-      "message": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks.",
-      "context": "$size = $null\ntry { $size = (Get-Item -LiteralPath $destFile).Length } catch {}\nWrite-Host \"    Saved: $fileName\"",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSPossibleIncorrectComparisonWithNull",
-      "message": "$null should be on the left side of equality comparisons.",
-      "context": "Write-Log (\"Download succeeded: {0}\" -f $destFile)\nif ($size -ne $null) { Write-Log (\"File size: {0} bytes\" -f $size) }\n} else {",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSUseApprovedVerbs",
-      "message": "The cmdlet 'Sanitize-ForWindowsName' uses an unapproved verb.",
-      "context": "\nfunction Sanitize-ForWindowsName {\nparam([string]$Name)",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSUseBOMForUnicodeEncodedFile",
-      "message": "Missing BOM encoding for non-ASCII encoded file 'UniversalPodcastDownloader.ps1'",
-      "context": "<file>",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
-      "rule": "PSUseShouldProcessForStateChangingFunctions",
-      "message": "Function 'New-EpisodeFileName' has verb that could change system state. Therefore, the function has to support 'ShouldProcess'.",
-      "context": "\nfunction New-EpisodeFileName {\nparam(",
-      "count": 1
-    },
-    {
-      "path": "UniversalPodcastDownloader.ps1",
       "rule": "PSUseSingularNouns",
       "message": "The cmdlet 'Resolve-PodcastItems' uses a plural noun. A singular noun should be used instead.",
       "context": "# --- Feed parsing ---\nfunction Resolve-PodcastItems {\nparam([string[]]$Feeds)",

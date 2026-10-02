@@ -1,6 +1,6 @@
 # Implementation design and behavior contracts
 
-This document specifies proposed behavior. It is not a description of already implemented functions. Prefer the smallest change that satisfies each task; introduce seams early and consolidate after evidence. Keep root entry-point names and current simple default workflow.
+This document specifies proposed behavior except where a section explicitly identifies implemented work. Prefer the smallest change that satisfies each task; introduce seams early and consolidate after evidence. Keep root entry-point names and current simple default workflow.
 
 ## Suggested structure
 
@@ -46,7 +46,7 @@ Do not hold an archive lock during interactive questions, HTML/feed discovery or
 
 ## Transport design
 
-Small early tasks may retain Invoke-WebRequest with safe parsing. The later transport should expose feed retrieval and streamed media transfer separately behind one policy layer. A .NET HttpClient adapter is a reasonable candidate when it simplifies idle timeouts/resume, but verify every API used on .NET Framework/PowerShell 5.1 and the selected PowerShell 7 runtime. Do not maintain two diverging engines without evidence that it is necessary.
+UPD-0107 uses the built-in .NET HttpClient for metadata and streamed media behind one URL/redirect policy. `src/NetworkPolicy.ps1` provides `Get-PodcastRequestUri`, `Invoke-PodcastHttpGet` and `Invoke-PodcastMetadataRequest`; `src/MediaRequest.ps1` retains media framing and streaming checks. No runtime package is added. Later timeout/retry/resume work should reuse these boundaries and verify APIs in both .NET Framework/PowerShell 5.1 and PowerShell 7.
 
 Keep connect/headers, idle-body and optional total-budget settings explicit. A slow but progressing long episode should not hit an arbitrary short total request limit. Dispose responses/streams on all paths. Inject retry waits/clock for fast unit tests. Use the fixture server for byte-level integration checks. Preserve default proxy and certificate validation behavior unless the user explicitly configures supported alternatives; never bypass TLS for convenience.
 
@@ -54,11 +54,29 @@ HTTP-specific mechanics must follow the primary references in SOURCES.md [S6]. I
 
 ## Untrusted content and privacy
 
-Treat RSS/Atom/HTML, headers, filenames, URLs, saved config and history as untrusted data. Configure explicit XML limits; prohibit DTDs and external resolution [S5]. Use a bounded metadata/HTML response size separately from large streamed audio. Validate URL scheme at entry and redirect boundaries. Respect an original HTTP feed with a clear policy; do not silently disable valid user input, but warn/refuse HTTPS-to-HTTP downgrade according to a documented security policy.
+Treat RSS/Atom/HTML, headers, filenames, URLs, saved config and history as untrusted data. UPD-0107 validates absolute HTTP(S) targets without user information at entry, discovery, enclosure planning and redirect boundaries. Private/loopback hosts and initial HTTP requests remain supported. At most five manually checked redirects are allowed; HTTPS-to-HTTP downgrade is refused. Automatic cookies, default request credentials and automatic redirects are disabled. Platform TLS verification and proxy defaults remain unchanged [S11-S12].
+
+Metadata responses are bounded to 8 MiB before XML parsing. `src/FeedXml.ps1` uses explicit XmlReader settings: DTD prohibited, null resolver, 8,388,608 document characters, and `MaxCharactersFromEntities` set to 1,024. Built-in character references remain subject to the document limit. A first streaming pass checks depth at most 64 and at most 100,000 reader nodes plus attributes; a second pass loads a DOM with the same settings and its own null resolver. HTML discovery also limits direct input to 8,388,608 characters and uses 250 ms regex timeouts. These are explicit input limits, not a claim that the earlier default parser had a demonstrated exploit [S5, S13-S14].
 
 Feed titles and server Content-Disposition names are never arbitrary paths. Canonical path containment is necessary but not sufficient against junction/reparse-point races; fail safely for unsupported cases. Do not claim a perfect sandbox against a concurrent privileged local adversary. Validate output components and existing ancestors at relevant write boundaries [S4].
 
-Private subscriptions may encode secrets anywhere in URLs. Default diagnostics should retain only hostname plus opaque request ID rather than a guessed list of safe path/query fields. Do not log Authorization, cookie values, raw signed URLs, raw response bodies or full exception objects. An explicit local sensitive debug mode, if later added, needs clear consent and must not be included in shareable exports.
+Private subscriptions may encode secrets anywhere in URLs. Default diagnostics retain only hostname plus a random request ID, omitting all user information, path, query and fragment content. Do not log Authorization, cookie values, raw signed URLs, raw response bodies or full exception objects. An explicit local sensitive debug mode, if later added, needs clear consent and must not be included in shareable exports.
+
+## Implemented preview boundary (UPD-0107)
+
+The script resolves and parses metadata, validates all parsed enclosure targets, reads local state and builds a plan before archive execution. Normal WhatIf returns a diagnostic projection of that plan, or a local legacy inventory when review is required. Legacy Preview returns that review inventory, and changing legacy WhatIf validates the requested choice. Each path exits before writer locks, directory creation, history/checkpoint updates and enclosure transfer. It never reaches the completed-download banner. There is no implemented keep-awake or power-setting mutation. Metadata retrieval can receive arbitrary server content, including audio returned by the supplied URL or an allowed redirect; it remains bounded by the metadata reader.
+
+Normal execution passes ShouldProcess before archive writes; legacy changes have their own ShouldProcess decision. After acceptance, both reread and validate relevant state under writer protection. Diagnostics remain in memory for preview, including the finally/export path. Metadata reads and local hashing are allowed, so preview is not an offline operation. Original feed identity is retained across redirects; relative discovered HTML links use the effective page URI. The complete [input and preview policy](INPUT_BOUNDARIES.md) records limits and remaining scope.
+
+## Implemented diagnostics (UPD-0106)
+
+Bundled `src/Diagnostics.ps1` defines the run context, URL display, safe error formatting, file sinks and restricted JSON export. Importing it has no side effects. Normal startup initializes it before discovery and tries the local application-data log directory, then the temporary log directory. UTF-8 without BOM, UTC timestamps, random full run IDs and CreateNew avoid engine-specific encoding and accidental log replacement. Diagnostic writes are best effort; failure reports a safe notice on standard error and preserves the primary operation error.
+
+After a confirmed ordinary download creates or opens its show directory, the sink switches to a new same-run log there and replays at most 256 recent events. The original startup log remains. If the show sink fails, the startup sink continues. Legacy changes retain their startup sink. Preview and WhatIf keep only a bounded in-memory buffer. Explicit confirmation delays diagnostic writes until acceptance, then initializes a fresh run context and discards the pre-confirmation buffer.
+
+Application-authored messages use safe error categories and omit untrusted titles, publisher IDs, paths and headers. URL correlation IDs are random and scoped to an in-memory bounded run map; exact request strings stay separate from display values. The original exception remains available in process, while rendered errors use safe ErrorDetails. PowerShell caller inspection, transcripts, input history and legacy review objects are outside the shareable diagnostic boundary.
+
+`-DiagnosticExportPath` serializes a strict allowlist of run metadata and bounded event times, levels and fixed codes into a new UTF-8 JSON file. It never reads log files or serializes free text, arbitrary runtime properties, local history, inventory, configuration, checkpoints, media, request URLs or exceptions. Preview suppresses this write too. The complete [diagnostic and retention policy](DIAGNOSTICS.md) distinguishes logs from the smaller export and documents remaining hostname/identity correlation, sensitive local data and manual retention.
 
 ## Compatibility details
 

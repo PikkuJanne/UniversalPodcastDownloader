@@ -8,10 +8,11 @@ import re
 import socket
 import threading
 import time
+from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, Optional, Tuple
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 FIXTURES = Path(__file__).resolve().parent / 'fixtures'
 FEEDS = {
@@ -20,6 +21,7 @@ FEEDS = {
     '/feeds/dates.xml': 'rss-date-cases.xml', '/feeds/media.xml': 'rss-media.xml',
     '/feeds/page-1.xml': 'rss-page-1.xml', '/feeds/page-2.xml': 'rss-page-2.xml',
     '/feeds/dtd.xml': 'xml-with-dtd.xml', '/feeds/malformed.xml': 'xml-malformed.xml',
+    '/feeds/single-alias.xml': 'rss-single.xml',
     '/show': 'show-multiple.html', '/show/not-feed': 'show-not-feed.html',
 }
 
@@ -32,6 +34,7 @@ class FixtureServer(ThreadingHTTPServer):
     def __init__(self, port: int = 0):
         self.counts: Dict[str, int] = {}
         self.count_lock = threading.Lock()
+        self.recovered = threading.Event()
         self.audio = (FIXTURES / 'silence.mp3').read_bytes()
         super().__init__(('127.0.0.1', port), FixtureHandler)
 
@@ -64,6 +67,10 @@ class FixtureHandler(BaseHTTPRequestHandler):
         self._safe_dispatch(True)
 
     def do_POST(self) -> None:
+        if urlsplit(self.path).path == '/__recover':
+            self.server.recovered.set()
+            self._send(200, b'{"recovered":true}', False, 'application/json')
+            return
         if urlsplit(self.path).path != '/__reset':
             self._send(404, b'Unknown fixture route', False, 'text/plain')
             return
@@ -103,6 +110,114 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == '/__stats':
             self._send(200, json.dumps(self.server.stats()).encode(), head, 'application/json')
             return
+        if path == '/entity/never':
+            self._send(200, b'ENTITY_MUST_NOT_BE_READ', head, 'text/plain')
+            return
+        boundary_xml = {
+            '/feeds/external-http.xml', '/feeds/external-file.xml',
+            '/feeds/internal-dtd.xml', '/feeds/oversized.xml',
+            '/feeds/oversized-no-length.xml', '/feeds/deep.xml',
+            '/feeds/many-nodes.xml', '/feeds/redirect-media.xml',
+            '/feeds/redirect-file-media.xml', '/feeds/no-cookie.xml',
+        }
+        if path in boundary_xml:
+            declaration = ''
+            title = 'Input boundary fixture'
+            extra_xml = ''
+            media_path = '/media/ok.mp3'
+            if path in ('/feeds/external-http.xml', '/feeds/external-file.xml'):
+                target = self.server.base_url + '/entity/never'
+                if path.endswith('external-file.xml'):
+                    # Reflect a bounded URI into XML only. Never open the path.
+                    target = parse_qs(urlsplit(self.path).query).get('file', ['file:///synthetic/never'])[0]
+                    if len(target) > 4096 or not target.startswith('file:///'):
+                        self._send(400, b'Expected a bounded synthetic file URI', head, 'text/plain')
+                        return
+                declaration = '<!DOCTYPE rss [<!ENTITY xxe SYSTEM "{}">]>'.format(escape(target, quote=True))
+                title = '&xxe;'
+            elif path.endswith('internal-dtd.xml'):
+                declaration = '<!DOCTYPE rss [<!ENTITY x "synthetic"><!ENTITY y "&x;&x;&x;&x;">]>'
+                title = '&y;'
+            elif 'oversized' in path:
+                extra_xml = '<description>' + ('x' * (8 * 1024 * 1024 + 64)) + '</description>'
+            elif path.endswith('deep.xml'):
+                extra_xml = '<n>' * 70 + 'bounded depth fixture' + '</n>' * 70
+            elif path.endswith('many-nodes.xml'):
+                extra_xml = '<n/>' * 100010
+            elif path.endswith('redirect-media.xml'):
+                media_path = '/media/redirect.mp3'
+            elif path.endswith('redirect-file-media.xml'):
+                media_path = '/media/redirect-file.mp3'
+            elif path.endswith('no-cookie.xml'):
+                if self.headers.get('Cookie') or self.headers.get('Authorization'):
+                    self.server.count('/credential-received')
+            body = ('{}<rss version="2.0"><channel><title>{}</title>{}'
+                    '<item><title>Boundary episode</title><guid>boundary-001</guid>'
+                    '<enclosure url="{}{}" type="audio/mpeg"/></item></channel></rss>').format(
+                        declaration, title, extra_xml, self.server.base_url, media_path).encode('utf-8')
+            if path.endswith('oversized-no-length.xml'):
+                self._headers(200, None, 'application/xml; charset=utf-8')
+                if not head:
+                    self.wfile.write(body)
+            else:
+                self._send(200, body, head, 'application/xml; charset=utf-8')
+            return
+        if path in ('/feeds/history.xml', '/feeds/legacy-changing.xml'):
+            changed = self.server.recovered.is_set()
+            title = 'Renamed history show' if changed else 'Original history show'
+            episode = 'Renamed episode' if changed else 'Original episode'
+            token = 'renewed' if changed else 'original'
+            media_name = 'legacy-changing' if path == '/feeds/legacy-changing.xml' else 'history'
+            body = ('<rss version="2.0"><channel><title>{}</title>'
+                    '<item><title>{}</title><guid isPermaLink="false">history-stable-001</guid>'
+                    '<pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate>'
+                    '<enclosure url="{}/media/{}.mp3?signature={}&amp;part=1" '
+                    'type="audio/mpeg" length="{}"/></item></channel></rss>').format(
+                        title, episode, self.server.base_url, media_name, token, len(self.server.audio))
+            self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
+            return
+        transaction_media = {
+            '/feeds/transaction-empty.xml': ('/media/empty.mp3', len(self.server.audio)),
+            '/feeds/transaction-html.xml': ('/media/html.mp3', len(self.server.audio)),
+            '/feeds/transaction-truncated.xml': ('/media/truncated.mp3', len(self.server.audio)),
+            '/feeds/transaction-no-length.xml': ('/media/no-length.mp3', len(self.server.audio)),
+            '/feeds/transaction-octet.xml': ('/media/octet-stream', len(self.server.audio)),
+            '/feeds/transaction-enclosure-mismatch.xml': ('/media/ok.mp3', len(self.server.audio) + 12345),
+            '/feeds/transaction-crash.xml': ('/media/ok.mp3', len(self.server.audio)),
+            '/feeds/transaction-recover.xml': ('/media/recover.mp3', len(self.server.audio)),
+            '/feeds/transaction-interrupt.xml': ('/media/interrupt.mp3', len(self.server.audio) * 64),
+            '/feeds/transaction-json.xml': ('/media/json.mp3', len(self.server.audio)),
+            '/feeds/transaction-xml.xml': ('/media/xml.mp3', len(self.server.audio)),
+            '/feeds/transaction-partial.xml': ('/media/unsolicited-partial.mp3', len(self.server.audio)),
+        }
+        if path in transaction_media:
+            media_path, estimate = transaction_media[path]
+            body = ('<rss version="2.0"><channel><title>Transactional fixtures</title>'
+                    '<item><title>Transactional episode</title><guid isPermaLink="false">transactional-001</guid>'
+                    '<pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate>'
+                    '<enclosure url="{}{}" type="audio/mpeg" length="{}"/></item></channel></rss>').format(
+                        self.server.base_url, media_path, estimate)
+            self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
+            return
+        hostile_titles = {
+            '/feeds/hostile-dot.xml': '.',
+            '/feeds/hostile-dotdot.xml': '..',
+            '/feeds/hostile-drive.xml': r'C:\UPD-Synthetic-DoNotCreate',
+            '/feeds/hostile-unc.xml': r'\\127.0.0.1\upd-fixture-do-not-create',
+        }
+        if path in hostile_titles or path == '/feeds/long-names.xml':
+            title = hostile_titles.get(path, 'Long podcast title ' * 25)
+            episode_title = 'Long episode title ' * 30 if path == '/feeds/long-names.xml' else 'Synthetic episode'
+            identifiers = ('long-one', 'long-two') if path == '/feeds/long-names.xml' else ('hostile',)
+            items = ''.join(
+                '<item><title>{}</title><guid isPermaLink="false">{}</guid>'
+                '<pubDate>Tue, 01 Sep 2026 12:00:00 +0000</pubDate>'
+                '<enclosure url="{}/media/ok.mp3?id={}" type="audio/mpeg"/></item>'.format(
+                    escape(episode_title), identifier, self.server.base_url, identifier)
+                for identifier in identifiers)
+            body = '<rss version="2.0"><channel><title>{}</title>{}</channel></rss>'.format(escape(title), items)
+            self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
+            return
         if path in FEEDS:
             name = FEEDS[path]
             text = (FIXTURES / name).read_text(encoding='utf-8')
@@ -114,6 +229,20 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path in ('/redirect/show', '/redirect/loop'):
             target = '/show' if path == '/redirect/show' else '/redirect/loop'
             self._send(302, b'', head, 'text/plain', {'Location': target})
+            return
+        redirects = {
+            '/redirect/feed': '../feeds/single.xml',
+            '/redirect/file': 'file:///synthetic/never',
+            '/redirect/userinfo': self.server.base_url.replace('http://', 'http://fake:FAKE_TOKEN@') + '/feeds/single.xml',
+            '/media/redirect.mp3': '/media/ok.mp3',
+            '/media/redirect-file.mp3': 'file:///synthetic/never',
+            '/redirect/cookie': 'http://localhost:{}/feeds/no-cookie.xml'.format(self.server.server_address[1]),
+        }
+        if path in redirects:
+            headers = {'Location': redirects[path]}
+            if path == '/redirect/cookie':
+                headers['Set-Cookie'] = 'synthetic=FAKE_COOKIE; Path=/'
+            self._send(302, b'', head, 'text/plain', headers)
             return
         if path in ('/status/403', '/status/404', '/status/429', '/status/503'):
             status = int(path.rsplit('/', 1)[1])
@@ -129,12 +258,23 @@ class FixtureHandler(BaseHTTPRequestHandler):
             '/media/always-416.mp3', '/media/truncated.mp3', '/media/empty.mp3',
             '/media/html.mp3', '/media/octet-stream', '/media/no-length.mp3',
             '/media/stall.mp3', '/media/stall-headers.mp3', '/retry/once.mp3',
+            '/media/recover.mp3', '/media/interrupt.mp3', '/media/json.mp3',
+            '/media/xml.mp3', '/media/unsolicited-partial.mp3', '/media/history.mp3',
+            '/media/legacy-changing.mp3',
         }
         if path not in known:
             self._send(404, b'Unknown fixture route', head, 'text/plain')
             return
+        if path in ('/media/history.mp3', '/media/legacy-changing.mp3'):
+            token = 'renewed' if self.server.recovered.is_set() else 'original'
+            if urlsplit(self.path).query != 'signature={}&part=1'.format(token):
+                self._send(403, b'Synthetic signature mismatch', head, 'text/plain')
+                return
         data = self.server.audio
         etag = '"fixture-v1"'
+        if path == '/media/legacy-changing.mp3' and self.server.recovered.is_set():
+            data = data + b'\0' * 32
+            etag = '"legacy-changed-v2"'
         if path == '/media/changed.mp3':
             # Still MP3 data, but a different representation and validator.
             data = data + b'\0' * 16
@@ -150,10 +290,29 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == '/media/html.mp3':
             self._send(200, b'<!doctype html><html><body>Synthetic error</body></html>', head)
             return
+        if path in ('/media/json.mp3', '/media/xml.mp3'):
+            body = b'{"error":"synthetic denial"}' if path.endswith('json.mp3') else b'<?xml version="1.0"?><error>synthetic denial</error>'
+            self._send(200, body, head, 'audio/mpeg')
+            return
+        if path == '/media/unsolicited-partial.mp3':
+            self._send(206, data[:len(data) // 2], head, extra={'Content-Range': 'bytes 0-{}/{}'.format(len(data) // 2 - 1, len(data))})
+            return
+        if path == '/media/interrupt.mp3':
+            data = data * 64
+            self._headers(200, len(data), 'audio/mpeg', extra)
+            if not head:
+                boundary = min(65536, len(data) - 1)
+                self.wfile.write(data[:boundary])
+                self.wfile.flush()
+                # Tests release this loopback-only gate after terminating their
+                # owned downloader child. The bounded wait cannot hang cleanup.
+                self.server.recovered.wait(timeout=15)
+                self.wfile.write(data[boundary:])
+            return
         if path == '/media/always-416.mp3':
             self._send(416, b'', head, extra={'Content-Range': 'bytes */{}'.format(len(data))})
             return
-        if path == '/media/truncated.mp3':
+        if path == '/media/truncated.mp3' or (path == '/media/recover.mp3' and not self.server.recovered.is_set()):
             self._headers(200, len(data), 'audio/mpeg', extra)
             if not head:
                 self.wfile.write(data[:len(data) // 3])

@@ -3,4 +3,6 @@
 <item><title>Same title</title><guid isPermaLink="false">two</guid><pubDate>Tue, 01 Sep 2026 13:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=two" type="audio/mpeg"/></item>
 <item><title>One:Two</title><guid isPermaLink="false">three</guid><pubDate>Tue, 01 Sep 2026 14:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=three" type="audio/mpeg"/></item>
 <item><title>One?Two</title><guid isPermaLink="false">four</guid><pubDate>Tue, 01 Sep 2026 15:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=four" type="audio/mpeg"/></item>
+<item><title>Case title</title><guid isPermaLink="false">five</guid><pubDate>Tue, 01 Sep 2026 16:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=five" type="audio/mpeg"/></item>
+<item><title>CASE TITLE</title><guid isPermaLink="false">six</guid><pubDate>Tue, 01 Sep 2026 17:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=six" type="audio/mpeg"/></item>
 </channel></rss>

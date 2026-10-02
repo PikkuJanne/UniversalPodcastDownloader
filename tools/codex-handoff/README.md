@@ -26,9 +26,17 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/feeds/atom.xml`, `/feeds/dates.xml`, `/feeds/media.xml` | Atom/date/enclosure fixtures |
 | `/feeds/page-1.xml`, `/feeds/page-2.xml` | Duplicate across pages, with a next-link cycle |
 | `/feeds/dtd.xml`, `/feeds/malformed.xml` | Rejected XML cases |
+| `/feeds/external-http.xml`, `/feeds/external-file.xml?file=<encoded file URI>` | DTD entity declarations; HTTP references `/entity/never`, file URI is reflected into XML only and never read by the server |
+| `/feeds/internal-dtd.xml`, `/entity/never` | Internal entity expansion fixture; countable external-entity sentinel response |
+| `/feeds/oversized.xml`, `/feeds/oversized-no-length.xml` | Finite valid XML just above 8 MiB, with Content-Length or connection-close framing |
+| `/feeds/deep.xml`, `/feeds/many-nodes.xml` | Valid XML exceeding the proposed depth 64 / node 100,000 parser budgets |
+| `/feeds/redirect-media.xml`, `/feeds/redirect-file-media.xml` | Feeds pointing to a valid or forbidden media redirect |
 | `/show`, `/show/not-feed` | Multiple candidates/base/relative links; false feed substring |
 | `/redirect/show` | Redirect to the show page |
 | `/redirect/loop` | Same-URL redirect loop |
+| `/redirect/feed`, `/redirect/file`, `/redirect/userinfo` | Relative valid feed target, forbidden file scheme, or synthetic embedded credentials |
+| `/redirect/cookie`, `/feeds/no-cookie.xml` | Set a synthetic cookie then redirect from IPv4 to localhost; records only a `/credential-received` counter if cookie/authorization headers reach the destination |
+| `/media/redirect.mp3`, `/media/redirect-file.mp3` | Relative media redirect or forbidden file target |
 | `/media/ok.mp3` | Silent MP3; strong ETag; correct single byte-range handling |
 | `/media/ignore-range.mp3` | Ignores Range and returns full body |
 | `/media/changed.mp3` | Changed entity and different strong ETag; stale If-Range produces full body |

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0101",
+  "current_task": "UPD-0201",
   "status_values": [
     "todo",
     "ready",
@@ -77,7 +77,7 @@
       "id": "UPD-0101",
       "milestone": "M1",
       "title": "Fix collections and safe Windows web requests",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0002"
       ],
@@ -99,15 +99,17 @@
         "A006",
         "A007"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0101.md"
+      ],
+      "implementation_commit": "12be5abbe0bc3741a275b06a90e22b70bfa7253a",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0102",
       "milestone": "M1",
       "title": "Enforce safe deterministic Windows destinations",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0101"
       ],
@@ -130,15 +132,17 @@
         "A009",
         "A010"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0102.md"
+      ],
+      "implementation_commit": "ff908a8c67449aa8808471c4e1f738a60397284f",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0103",
       "milestone": "M1",
       "title": "Make file completion transactional",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0102"
       ],
@@ -161,15 +165,17 @@
         "A012",
         "A013"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0103.md"
+      ],
+      "implementation_commit": "eecb7b51b2d9975b31b1064bd8db33ea133c2b82",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0104",
       "milestone": "M1",
       "title": "Add stable identities and durable local history",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0103"
       ],
@@ -191,15 +197,17 @@
         "A015",
         "A016"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0104.md"
+      ],
+      "implementation_commit": "086aa2316f9d5cb01c6ec10a8bdf5a3d84b26da2",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0105",
       "milestone": "M1",
       "title": "Protect and migrate legacy archives",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0104"
       ],
@@ -221,15 +229,17 @@
         "A017",
         "A018"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0105.md"
+      ],
+      "implementation_commit": "a24b7781b9861d5a51af6ee7b7e7ee5c305c4e6f",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0106",
       "milestone": "M1",
       "title": "Make startup diagnostics private and reliable",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0105"
       ],
@@ -251,15 +261,17 @@
         "A020",
         "A021"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0106.md"
+      ],
+      "implementation_commit": "713fa11615dc3a0a9b0d69f7351ceccd1908794e",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0107",
       "milestone": "M1",
       "title": "Enforce preview and untrusted-input boundaries",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0106"
       ],
@@ -283,15 +295,17 @@
         "A023",
         "A024"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0107.md"
+      ],
+      "implementation_commit": "388054d439ac3ee7ee336297148c5dd58683f2fa",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/2"
     },
     {
       "id": "UPD-0201",
       "milestone": "M2",
       "title": "Implement bounded retry and timeout policy",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0107"
       ],

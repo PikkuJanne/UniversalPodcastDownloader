@@ -13,6 +13,7 @@ function New-UpdIntegrationContext {
         Token = $token
         RepositoryRoot = $RepositoryRoot
         Processes = New-Object 'System.Collections.Generic.List[object]'
+        Junctions = New-Object 'System.Collections.Generic.List[string]'
         BaseUrl = $null
     }
 }
@@ -87,14 +88,20 @@ function Start-UpdFixtureServer {
 function Invoke-UpdIntegrationWorker {
     param(
         [Parameter(Mandatory)]$Context,
-        [Parameter(Mandatory)][ValidateSet('Resolve', 'Download')][string]$Action,
+        [Parameter(Mandatory)][ValidateSet('Discover', 'Resolve', 'Download')][string]$Action,
         [Parameter(Mandatory)][string]$FeedPath,
-        [switch]$BasicParsing,
-        [string]$OutputName = 'output'
+        [ValidateSet('Latest', 'Custom', 'All')][string]$Mode = 'All',
+        [int]$CustomCount = 1,
+        [string]$OutputName = 'output',
+        [string]$BoundaryJunctionPath,
+        [string]$BoundaryJunctionTarget,
+        [ValidateSet('Preparing', 'AfterTransfer')][string]$BoundaryStage = 'Preparing',
+        [ValidateSet('None', 'BeforeFinalizeCrash', 'AfterFinalizeCrash', 'FinalRace', 'BeforeStateReplaceCrash', 'AfterStateReplaceCrash')][string]$TransactionHook = 'None',
+        [switch]$InterruptOnPartial
     )
 
-    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$') { throw 'Only named local feed fixtures are allowed.' }
-    if ($OutputName -notmatch '^[a-z0-9-]+$') { throw 'OutputName must be a simple test directory name.' }
+    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -ne '/show') { throw 'Only named local feed or show fixtures are allowed.' }
+    if ($OutputName -notmatch '^[a-z0-9-]+(?:[\\/][a-z0-9-]+)*$') { throw 'OutputName must contain only simple relative test directory names.' }
     $identifier = [guid]::NewGuid().ToString('N')
     $resultPath = Join-Path $Context.Root ($identifier + '-result.json')
     $configPath = Join-Path $Context.Root ($identifier + '-config.json')
@@ -104,7 +111,23 @@ function Invoke-UpdIntegrationWorker {
         FeedUrl = $Context.BaseUrl + $FeedPath
         OutputPath = Join-Path $Context.Root $OutputName
         ResultPath = $resultPath
-        BasicParsing = [bool]$BasicParsing
+        Mode = $Mode
+        CustomCount = $CustomCount
+        TransactionHook = $TransactionHook
+        HookMarkerPath = Join-Path $Context.Root ($identifier + '-hook.json')
+    }
+    if ($InterruptOnPartial) { $config.TransactionHook = 'DuringTransferCrash' }
+    if ($BoundaryJunctionPath -or $BoundaryJunctionTarget) {
+        $prefix = [IO.Path]::GetFullPath($Context.Root).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+        foreach ($candidate in @($BoundaryJunctionPath, $BoundaryJunctionTarget)) {
+            if (-not $candidate -or -not [IO.Path]::GetFullPath($candidate).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Boundary injection must use two paths within the owned test root.'
+            }
+        }
+        $config.BoundaryJunctionPath = $BoundaryJunctionPath
+        $config.BoundaryJunctionTarget = $BoundaryJunctionTarget
+        $config.BoundaryStage = $BoundaryStage
+        $Context.Junctions.Add([IO.Path]::GetFullPath($BoundaryJunctionPath))
     }
     $config | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
     $engineName = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
@@ -113,22 +136,35 @@ function Invoke-UpdIntegrationWorker {
         '-File', (Join-Path $Context.RepositoryRoot 'tests/support/Invoke-IntegrationWorker.ps1'),
         '-ConfigPath', $configPath
     )
-    if (-not $worker.Process.WaitForExit(30000)) {
+    $interrupted = $false
+    $observedPartial = $null
+    if (-not $worker.Process.HasExited -and -not $worker.Process.WaitForExit(30000)) {
         $worker.Process.Kill()
         $worker.Process.WaitForExit()
         throw 'Downloader integration child timed out after 30 seconds; only this owned child was stopped.'
     }
     $stdout = $worker.Output.Result
     $stderr = $worker.ErrorOutput.Result
-    if (-not (Test-Path -LiteralPath $resultPath)) {
-        throw "Integration child produced no result. Exit=$($worker.Process.ExitCode); stdout=$stdout; stderr=$stderr"
+    $hookMarker = if (Test-Path -LiteralPath $config.HookMarkerPath) { Get-Content -LiteralPath $config.HookMarkerPath -Raw | ConvertFrom-Json } else { $null }
+    if ($InterruptOnPartial -and $hookMarker -and $hookMarker.Hook -eq 'DuringTransferCrash') {
+        $interrupted = $true
+        $observedPartial = Get-Item -LiteralPath $hookMarker.Temporary
     }
+    if (-not (Test-Path -LiteralPath $resultPath)) {
+        if (-not $interrupted -and -not ($TransactionHook -like '*Crash' -and $hookMarker)) {
+            throw "Integration child produced no result. Exit=$($worker.Process.ExitCode); stdout=$stdout; stderr=$stderr"
+        }
+    }
+    $workerResult = if (Test-Path -LiteralPath $resultPath) { Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json } else { $null }
     [pscustomobject]@{
         ExitCode = $worker.Process.ExitCode
-        Result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+        Result = $workerResult
         Stdout = $stdout
         Stderr = $stderr
         OutputPath = $config.OutputPath
+        Interrupted = $interrupted
+        ObservedPartial = $observedPartial
+        HookMarker = $hookMarker
     }
 }
 
@@ -137,6 +173,25 @@ function Get-UpdFixtureState {
     # BasicParsing here belongs to harness control traffic, not the downloader.
     $response = Invoke-WebRequest -Uri ($Context.BaseUrl + '/__stats') -UseBasicParsing -TimeoutSec 10
     return ($response.Content | ConvertFrom-Json)
+}
+
+function New-UpdOwnedJunction {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Test harness creates a tracked junction between two canonical paths within its marked temporary root.')]
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Context,
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Target
+    )
+
+    $prefix = [IO.Path]::GetFullPath($Context.Root).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    foreach ($candidate in @($Path, $Target)) {
+        if (-not [IO.Path]::GetFullPath($candidate).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Test junction paths must remain inside the owned temporary root.'
+        }
+    }
+    $null = New-Item -ItemType Junction -Path $Path -Target $Target -ErrorAction Stop
+    $Context.Junctions.Add([IO.Path]::GetFullPath($Path))
 }
 
 function Remove-UpdIntegrationContext {
@@ -160,6 +215,23 @@ function Remove-UpdIntegrationContext {
     $marker = Join-Path $root '.upd-test-owner'
     if (-not (Test-Path -LiteralPath $marker) -or [IO.File]::ReadAllText($marker) -ne $Context.Token) {
         throw "Refusing cleanup without the matching integration ownership marker: $root"
+    }
+    # Remove only explicitly tracked junction entries, without following their
+    # targets. This happens before the recursive inventory/cleanup safety check.
+    foreach ($junction in $Context.Junctions) {
+        $canonical = [IO.Path]::GetFullPath($junction)
+        if (-not $canonical.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing junction cleanup outside the owned test root: $canonical"
+        }
+        if (Test-Path -LiteralPath $canonical) {
+            $entry = Get-Item -LiteralPath $canonical -Force
+            if (-not ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                # A planned injection may not run if the downloader exits early.
+                # Leave ordinary entries to the existing owned-root cleanup.
+                continue
+            }
+            [IO.Directory]::Delete($canonical, $false)
+        }
     }
     $entries = @(Get-Item -LiteralPath $root) + @(Get-ChildItem -LiteralPath $root -Force -Recurse)
     if ($entries | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
