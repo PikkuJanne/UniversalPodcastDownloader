@@ -123,7 +123,7 @@ The new cases check both initial and redirected request targets, disabled reques
 
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds, resume or future acceptance cases. Helper-server self-tests are a separate layer. See the historical evidence files; UPD-0107 evidence records its historical 612/0/0/0 local/CI snapshot. Current task evidence is [UPD-0201](evidence/UPD-0201.md), including the final 705-check inventory, local snapshot/supplemental commands and CI results.
+These checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0202](evidence/UPD-0202.md), with the settled 829-check inventory (642 units and 187 integrations), resume recovery/ownership cases, exact commands and local/CI results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
 
 ## Static analysis policy
 

@@ -57,7 +57,7 @@ Text decoding uses a BOM first, then an HTTP charset, then supported XML encodin
 
 The XML helper first reads the complete document with a streaming reader to check depth and node/attribute counts. It then loads the DOM through a second reader with the same settings. DTDs are rejected on encounter; external entity, DTD and schema references are not fetched. Errors use a safe local message rather than including private XML text.
 
-The metadata cap does not limit episode audio to 8 MiB. Media still streams into an owned temporary file and must pass the existing completion/framing/signature checks before final placement. Parser limits bound accepted input size and structure; they are not a promise of a fixed total run time or a full media decoder. UPD-0201 adds [bounded retries and header/idle timeouts](TRANSPORT_POLICY.md). Resume, pagination and richer RSS/Atom selection remain later work.
+The metadata cap does not limit episode audio to 8 MiB. Media still streams into an owned temporary file and must pass the existing completion/framing/signature checks before final placement. Parser limits bound accepted input size and structure; they are not a promise of a fixed total run time or a full media decoder. UPD-0201 adds [bounded retries and header/idle timeouts](TRANSPORT_POLICY.md); UPD-0202 adds [validator-aware resume](RESUME_POLICY.md). Pagination and richer RSS/Atom selection remain later work.
 
 ## Compatibility and evidence
 

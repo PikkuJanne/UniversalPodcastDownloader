@@ -128,6 +128,9 @@ function Invoke-PodcastMediaTransfer {
             # Retire ownership before rename, so a crash cannot leave an active
             # checkpoint referring to a partial already placed as final media.
             Remove-PodcastResumeState -Lock $session.Lock -State $session.State
+            # Once its sidecar is retired, a new file is again this attempt's
+            # cleanup responsibility. Previously resumed partials stay preserved.
+            if ($owned) { $session.Preserve = $false }
         }
         $null = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
         # Close and validate before atomic no-overwrite placement on the same volume.

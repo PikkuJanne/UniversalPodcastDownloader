@@ -19,7 +19,7 @@ The sidecar is separate from history schemas 1/2. Media and metadata are flushed
 
 ## Checks and limits
 
-Final Unit: **641/0/0/0 on each engine**. Focused native resume integrations: **34/0/0/153**. Analyzers: **60 files, zero parse errors/new findings**, unchanged 5/4 baseline warnings. Fixture helper checks: **41 passed / 0 failed**, separate from product acceptance. The settled inventory is 828 (631 product units, ten runner guards, 187 integrations), including two remaining parser characterizations. Full integration checks are still running at this implementation checkpoint.
+Final Unit: **641/0/0/0 on each engine**. Focused native resume integrations: **34/0/0/153**. Analyzers: **60 files, zero parse errors/new findings**, unchanged 5/4 baseline warnings. Fixture helper checks: **41 passed / 0 failed**, separate from product acceptance. The settled inventory is 829 (632 product units, ten runner guards, 187 integrations), including two remaining parser characterizations. Full integration checks are still running at this implementation checkpoint.
 
 Local Windows 10.0.26300.0; PowerShell 7.6.5 / 5.1.26100.9444; Pester 5.7.1; PSScriptAnalyzer 1.24.0; bundled Python 3.12.14. CI Python stays pinned to 3.14.7. Use process-only Python PATH and native module-path handling from DEVELOPMENT.md. Tests isolate logs and archives in marked owned temporary data.
 

@@ -5,6 +5,10 @@ BeforeAll {
     . (Join-Path $script:RepositoryRoot 'src/HistoryStore.ps1')
     . (Join-Path $script:RepositoryRoot 'src/NetworkPolicy.ps1')
     . (Join-Path $script:RepositoryRoot 'src/ResumeStore.ps1')
+    . (Join-Path $script:RepositoryRoot 'src/MediaValidation.ps1')
+    . (Join-Path $script:RepositoryRoot 'src/MediaRequest.ps1')
+    . (Join-Path $script:RepositoryRoot 'src/MediaTransfer.ps1')
+    . (Join-Path $script:RepositoryRoot 'src/HistoryWorkflow.ps1')
     Mock Get-PodcastHttpClient { throw 'Resume store units must not open a network client.' }
     Mock Invoke-WebRequest { throw 'Resume store units must not request the network.' }
 
@@ -272,5 +276,57 @@ Describe 'A027/A029: strict resume store and durable prefix evidence' -Tag 'Unit
         Test-Path -LiteralPath $script:SidecarPath | Should -BeFalse
         [IO.File]::ReadAllBytes($script:PartialPath) | Should -Be $script:Prefix
         [IO.File]::ReadAllText($unknown) | Should -BeExactly 'unclaimed media'
+    }
+
+    It 'preserves a previously resumed partial when a competing final file blocks placement after sidecar retirement' {
+        $script:CompleteMedia = [IO.File]::ReadAllBytes((Join-Path $script:RepositoryRoot 'tools/codex-handoff/fixtures/silence.mp3'))
+        $script:Prefix = [byte[]]$script:CompleteMedia[0..99]
+        [IO.File]::WriteAllBytes($script:PartialPath, $script:Prefix)
+        $uri = 'https://media.example.invalid/episode.mp3'
+        $script:State.request_fingerprint = Get-PodcastResumeUriFingerprint -Uri ([uri]$uri)
+        $script:State.final_uri_fingerprint = $script:State.request_fingerprint
+        $script:State.offset = [long]$script:Prefix.Length
+        $script:State.total_length = [long]$script:CompleteMedia.Length
+        $script:State.prefix_sha256 = Get-TestResumeDigest $script:Prefix
+        $null = Write-PodcastResumeState -Lock $script:Lock -State $script:State
+        $script:FinalPath = Join-Path $script:Root $script:State.relative_path
+        $script:PreparedResult = $null
+        $script:FinalCheckpoint = $null
+
+        Mock Invoke-PodcastMediaRequest {
+            & $OnResponse ([pscustomobject]@{
+                ResumeSupported = $true; FinalUriFingerprint = $script:State.final_uri_fingerprint
+                ETag = $script:State.etag; TotalLength = $script:State.total_length; ContentType = 'audio/mpeg'
+            })
+            $DestinationStream.Write($script:CompleteMedia, [int]$Resume.Offset, ($script:CompleteMedia.Length - [int]$Resume.Offset))
+            & $OnProgress $DestinationStream.Length
+            [pscustomobject]@{
+                Completed = $true; Bytes = $script:CompleteMedia.Length
+                ContentLength = $script:CompleteMedia.Length; ContentType = 'audio/mpeg'
+            }
+        }
+        $context = [pscustomobject]@{ Lock = $script:Lock; FeedId = $script:State.feed_id; EpisodeId = $script:State.episode_id }
+        $beforeFinalize = {
+            param($Result)
+            $script:PreparedResult = $Result
+            $script:FinalCheckpoint = Read-PodcastResumeState -Root $script:Root -EpisodeId $script:State.episode_id
+            [IO.File]::WriteAllText($script:FinalPath, 'competing final bytes')
+        }
+
+        { Invoke-PodcastMediaTransfer -Uri $uri -Root $script:Root -RelativePath $script:State.relative_path `
+                -ResumeContext $context -BeforeFinalize $beforeFinalize } | Should -Throw
+
+        $script:PreparedResult.Bytes | Should -Be $script:CompleteMedia.Length
+        $script:PreparedResult.Sha256 | Should -BeExactly (Get-TestResumeDigest $script:CompleteMedia)
+        $script:FinalCheckpoint.offset | Should -Be $script:CompleteMedia.Length
+        $script:FinalCheckpoint.partial_name | Should -BeExactly $script:State.partial_name
+        Test-Path -LiteralPath $script:SidecarPath | Should -BeFalse
+        [IO.File]::ReadAllText($script:FinalPath) | Should -BeExactly 'competing final bytes'
+        [Convert]::ToBase64String([IO.File]::ReadAllBytes($script:PartialPath)) | Should -BeExactly ([Convert]::ToBase64String($script:CompleteMedia))
+        @(Get-ChildItem -LiteralPath $script:Root -Filter '.upd-*.tmp' -File).Count | Should -Be 1
+        Should -Invoke Invoke-PodcastMediaRequest -Times 1 -Exactly -ParameterFilter {
+            $Resume.Offset -eq 100 -and $DestinationStream.Name -eq $script:PartialPath
+        }
+        Should -Invoke Get-PodcastHttpClient -Times 0 -Exactly
     }
 }
