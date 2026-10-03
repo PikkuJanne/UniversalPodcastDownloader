@@ -94,7 +94,7 @@ BeforeAll {
 
     function Assert-UpdResumeIncomplete {
         param([Parameter(Mandatory)]$Run)
-        $Run.ExitCode | Should -Be 1 -Because ($Run.Stdout + $Run.Stderr + $Run.Result.ErrorMessage)
+        $Run.ExitCode | Should -Be 2 -Because ($Run.Stdout + $Run.Stderr + $Run.Result.ErrorMessage)
         $Run.Result.Succeeded | Should -BeFalse
         $Run.Stdout | Should -Match 'Downloaded\s+: 0'
         @(Get-ChildItem -LiteralPath $Run.OutputPath -Recurse -File -Filter '*.mp3').Count | Should -Be 0

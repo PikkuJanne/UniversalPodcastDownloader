@@ -62,3 +62,9 @@ No PowerShell runtime was available in the preparation environment. No downloade
 
 - **S27 — IETF, feed paging and archives.** [RFC 5005 sections 3, 4.2 and 6](https://www.rfc-editor.org/rfc/rfc5005) define next/prev-archive relations, archived copies and the limits of coherent paging snapshots. This project's single-chain subset, bounds, conflict preservation and fetch-before-date-selection policy are explicit conservative choices in FEED_PAGINATION.md.
 - **S9 rechecked — IETF, Atom link and base semantics.** [RFC 4287 sections 3 and 4.2.7.2](https://www.rfc-editor.org/rfc/rfc4287) define inherited xml:base and exact IANA HTTP relation equivalence. Atom rel is a single token/IRI. [RSS namespaced extensions](https://www.rssboard.org/rss-specification#extendingRss) support channel-level Atom links without treating plain RSS website links as pagination.
+
+
+## UPD-0301 references checked 3 October 2026
+
+- **S28 — Microsoft, native PowerShell invocation.** [about_PowerShell_exe](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_exe?view=powershell-5.1) documents File argument handling after caller-shell interpretation, script exit behavior and process-only ExecutionPolicy. Native Ctrl+C is outside the catchable-exception result guarantee.
+- **S29 — Microsoft, CMD launcher mechanics.** [cmd](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd), [setlocal](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/setlocal), [if](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/if) and [exit](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/exit) support caller quoting, local delayed-expansion handling, ERRORLEVEL environment-shadow behavior and batch exit status. Safe direct forwarding and the script-owned guided pause are explicit project choices in CLI_RESULTS.md.

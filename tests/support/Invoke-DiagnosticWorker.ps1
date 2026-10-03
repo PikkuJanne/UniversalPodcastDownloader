@@ -4,6 +4,8 @@ param([Parameter(Mandatory)][string]$ConfigPath)
 # both environment locations prevents startup diagnostics reaching user data.
 $ErrorActionPreference = 'Stop'
 $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'WorkerRunProjection.ps1')
+$workerExit = 1
 $env:LOCALAPPDATA = Join-Path $config.Root 'local'
 $env:TEMP = Join-Path $config.Root 'temp'
 $env:TMP = $env:TEMP
@@ -43,7 +45,7 @@ if ($config.Action -eq 'LegacyPreview') {
 # result serializer can hide accidental raw URL/exception output on this path.
 if ($config.Action -eq 'RawFailure') {
     & $config.ProductScript @parameters
-    exit 0
+    exit $LASTEXITCODE
 }
 
 try {
@@ -68,8 +70,15 @@ try {
         }
         Close-PodcastDiagnostics
     }
-    else { $result.Output = @(& $config.ProductScript @parameters) }
-    $result.Succeeded = $true
+    else {
+        $projection = Get-UpdWorkerRunProjection -Output @(& $config.ProductScript @parameters -PassThru)
+        $result.Output = @(if ($projection.RunResult.PSObject.Properties['LegacyResult']) { $projection.RunResult.LegacyResult } else { $projection.RunResult.Plan })
+        $result.Succeeded = $projection.Succeeded
+        $result.ErrorMessage = $projection.ErrorMessage
+        $result.RunResult = $projection.RunResult
+        $workerExit = $projection.ExitCode
+    }
+    if ($config.Action -in @('ApiWrite', 'AppendFailure')) { $result.Succeeded = $true; $workerExit = 0 }
 }
 catch {
     $result.ErrorMessage = $_.Exception.Message
@@ -84,5 +93,4 @@ $result.RootEntries = @(if (Test-Path -LiteralPath $config.Root) {
     Get-ChildItem -LiteralPath $config.Root -Recurse -Force | ForEach-Object { $_.FullName.Substring($config.Root.Length) }
 })
 [IO.File]::WriteAllText($config.ResultPath, ($result | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
-if ($result.Succeeded) { exit 0 }
-exit 1
+exit $workerExit

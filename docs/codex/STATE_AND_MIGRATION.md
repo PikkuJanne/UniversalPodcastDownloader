@@ -26,7 +26,7 @@ The HTTP body's expected byte count, when meaningful for the delivered represent
 
 ## State and checkpoint files
 
-`src/HistoryStore.ps1` defines and validates the current schemas. Keep the existing show directory and media names. Migration stores additional full-history snapshots as `.upd/legacy-<32 lowercase hex characters>.json`; it never copies media into a checkpoint. These snapshots use the same strict schema reader and limits as live history. `src/ResumeStore.ps1` separately validates schema-1 resume sidecars and their owned byte checkpoints. Local subscription configuration remains future work.
+`src/HistoryStore.ps1` defines and validates the current schemas. Keep the existing show directory and media names. Migration stores additional full-history snapshots as `.upd/legacy-<32 lowercase hex characters>.json`; it never copies media into a checkpoint. These snapshots use the same strict schema reader and limits as live history. `src/ResumeStore.ps1` separately validates schema-1 resume sidecars and their owned byte checkpoints. Optional schema-1 saved-show configuration is separate from archive history and resume state; it does not adopt, rename or reset archive files. See [SAVED_SHOWS.md](SAVED_SHOWS.md) for its DPAPI/permission/export policy.
 
 Unknown newer schemas and corrupt primary, backup or selected checkpoint files fail clearly and remain untouched. History is parsed as data, never evaluated as PowerShell.
 
@@ -55,6 +55,16 @@ Acquire archive writer protection before modifying state/download ownership. Res
 Stream to the temporary path, close it and validate. Recheck the destination. Finalize using a no-overwrite operation. Then update state through a temporary state file plus same-volume replacement/backup strategy supported on the chosen Windows runtimes. Keep the previous good state until the new record is valid. Release handles in finally. Document filesystem/UNC constraints; a rename is not a universal guarantee against hardware power-loss corruption.
 
 Test crash gaps: before final rename; after rename before state commit; during state replacement; after cancellation; with concurrent writers; with changed/deleted completed files. Reconciliation must never overwrite a final file because history lagged. Both history and migration use the existing exclusive writer handles.
+
+## Writer conflicts and preflight (UPD-0302)
+
+The output-root selection lock is brief; the per-show writer lock stays held through transfer and history updates. Two runs for one show are excluded with a fixed message advising a retry after the writer finishes. Sharing conflicts and inaccessible locks have distinct guidance. Different shows under the same output root can transfer concurrently once root selection finishes; unrelated roots are independent. Ordinary OS handle release after process exit permits reopening a persistent lock file. Its contents, age and any stored PID are not authority: the downloader neither removes stale lock files nor kills a process based on them.
+
+Confirmed ordinary and legacy changes perform an owned write probe before destination/state writes. For a missing root, the probe uses its nearest existing ordinary ancestor, then the actual show is checked under its writer lock. CreateNew collisions remain unclaimed; only the successfully reserved DeleteOnClose probe is disposed. Preview and declined confirmation make no probes or archive writes. File creation does not establish separate directory-creation rights; actual directory failures retain fixed permission guidance. Access checks can race later permission changes.
+
+After validating response headers and before copying media bytes, compare known remaining response bytes with available destination capacity. A validated 206 needs only its remaining tail; RSS enclosure sizes are advisory. AvailableFreeSpace reflects the caller's quota on a ready local/mapped drive. Arbitrary UNC and failed queries are unknown, and an unknown response length cannot support a size comparison. Those observations produce fixed explanatory output and ordinary transfer validation continues. Observed zero bytes is not unknown. No extra HEAD/GET is added; accepted headers and initial/failed-attempt history may precede a size rejection. This snapshot cannot guarantee capacity throughout a transfer.
+
+Catchable cancellation preserves partials and attempts an actual-byte checkpoint before closing a resumable stream. Cleanup attempts every acquired run/media/legacy handle and preserves the primary failure; a failing Dispose cannot guarantee release. If the final checkpoint write fails, prior evidence and a longer partial stay for review and strict resume refuses their mismatch. A retained unknown-length or uncheckpointed partial receives no fabricated sidecar and remains unclaimed on a fresh restart. Never delete unknown partials to recover space. See [UPD-0302 evidence](evidence/UPD-0302.md) for the real process/ACL/transfer observations and limits.
 
 ## Resume policy (UPD-0202)
 

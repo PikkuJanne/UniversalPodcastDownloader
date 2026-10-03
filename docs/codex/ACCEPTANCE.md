@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A038 passed; A039-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0206 evidence](evidence/UPD-0206.md).
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A047 passed; A048-A060 remain NOT RUN. Saved-show/batch A046/A047 use real DPAPI/protected ACL/loopback/media/checkpoint evidence in [UPD-0304](evidence/UPD-0304.md). A044/A045 use actual Windows ConsoleHost/native API observations with catchable typed cancellation; physical keyboard Ctrl+C and hard-kill restoration remain unclaimed. See [progress/power evidence](evidence/UPD-0303.md) and [Windows observations](evidence/UPD-0303-WINDOWS.md). Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0302 evidence](evidence/UPD-0302.md), [UPD-0301 evidence](evidence/UPD-0301.md) and [actual launcher observations](evidence/UPD-0301-LAUNCHER.md).
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -42,15 +42,15 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A038 passed; A039-A060 rem
 | A036 | UPD-0205 | integration | passed | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
 | A037 | UPD-0206 | integration | passed | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |
 | A038 | UPD-0206 | integration | passed | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
-| A039 | UPD-0301 | integration | not_run | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
-| A040 | UPD-0301 | integration | not_run | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
-| A041 | UPD-0301 | manual | not_run | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |
-| A042 | UPD-0302 | integration | not_run | Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented. |
-| A043 | UPD-0302 | integration | not_run | Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed. |
-| A044 | UPD-0303 | manual | not_run | Progress never reports misleading 100% before success; episode/byte information honest; readable noninteractive summary. |
-| A045 | UPD-0303 | manual | not_run | Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented. |
-| A046 | UPD-0304 | integration | not_run | Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported. |
-| A047 | UPD-0304 | integration | not_run | Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show. |
+| A039 | UPD-0301 | integration | passed | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
+| A040 | UPD-0301 | integration | passed | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
+| A041 | UPD-0301 | manual | passed | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |
+| A042 | UPD-0302 | integration | passed | Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented. |
+| A043 | UPD-0302 | integration | passed | Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed. |
+| A044 | UPD-0303 | manual | passed | Progress never reports misleading 100% before success; episode/byte information honest; readable noninteractive summary. |
+| A045 | UPD-0303 | manual | passed | Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented. |
+| A046 | UPD-0304 | integration | passed | Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported. |
+| A047 | UPD-0304 | integration | passed | Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show. |
 | A048 | UPD-0401 | workflow | not_run | No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks. |
 | A049 | UPD-0402 | manual | not_run | Commands work, functions/parameters exist, capabilities match tests, no promised unreleased feature or machine-wide security bypass. |
 | A050 | UPD-0402 | manual | not_run | All scope is explicit; legacy unverified files not presented as verified; repair procedure avoids deleting originals. |

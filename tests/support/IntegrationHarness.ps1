@@ -179,6 +179,76 @@ function Invoke-UpdIntegrationWorker {
     }
 }
 
+function Invoke-UpdCliProcess {
+    param(
+        [Parameter(Mandatory)]$Context,
+        [string]$FeedPath = '/feeds/atom.xml',
+        [ValidateSet('Latest', 'Custom', 'All')][string]$Mode,
+        [int]$CustomCount,
+        [string]$OutputName = 'cli-output',
+        [switch]$NonInteractive,
+        [switch]$WithoutFeed,
+        [switch]$Preview
+    )
+
+    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -ne '/show') { throw 'CLI process checks require a named loopback feed fixture.' }
+    if ($OutputName -notmatch '^[a-z0-9-]+$') { throw 'CLI process output requires a simple owned relative directory name.' }
+    $output = Join-Path $Context.Root $OutputName
+    $arguments = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+        (Join-Path $Context.RepositoryRoot 'UniversalPodcastDownloader.ps1'), '-OutputPath', $output)
+    if (-not $WithoutFeed) { $arguments += @('-FeedUrl', ($Context.BaseUrl + $FeedPath)) }
+    if ($PSBoundParameters.ContainsKey('Mode')) { $arguments += @('-Mode', $Mode) }
+    if ($PSBoundParameters.ContainsKey('CustomCount')) { $arguments += @('-CustomCount', [string]$CustomCount) }
+    if ($NonInteractive) { $arguments += '-NonInteractive' }
+    if ($Preview) { $arguments += '-WhatIf' }
+    $engineName = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+    $process = Start-UpdOwnedProcess -Context $Context -FilePath (Join-Path $PSHOME $engineName) -ArgumentList $arguments
+    if (-not $process.Process.WaitForExit(30000)) {
+        $process.Process.Kill()
+        $process.Process.WaitForExit()
+        throw 'CLI process check timed out; only its owned child was stopped.'
+    }
+    [pscustomobject]@{
+        ExitCode = $process.Process.ExitCode
+        Stdout = $process.Output.Result
+        Stderr = $process.ErrorOutput.Result
+        OutputPath = $output
+    }
+}
+
+function Invoke-UpdCliResultWorker {
+    param(
+        [Parameter(Mandatory)]$Context,
+        [string]$FeedPath = '/feeds/single.xml',
+        [ValidateSet('Run', 'Cancel')][string]$Action = 'Run',
+        [ValidateSet('Latest', 'Custom', 'All')][string]$Mode,
+        [int]$CustomCount,
+        [ValidateRange(1, 2)][int]$Repeat = 1,
+        [switch]$Preview,
+        [switch]$WithoutFeed
+    )
+    if ($FeedPath -notmatch '^/feeds/[a-z0-9-]+\.xml$' -and $FeedPath -notmatch '^/resume/feed/[a-z0-9-]+$' -and $FeedPath -ne '/show') { throw 'Callable checks require a named loopback fixture.' }
+    $identifier = [guid]::NewGuid().ToString('N')
+    $resultPath = Join-Path $Context.Root ($identifier + '-result.json')
+    $configPath = Join-Path $Context.Root ($identifier + '-config.json')
+    $config = @{ Root = $Context.Root; ProductScript = Join-Path $Context.RepositoryRoot 'UniversalPodcastDownloader.ps1'
+        FeedUrl = $Context.BaseUrl + $FeedPath; OutputPath = Join-Path $Context.Root 'callable-output'
+        ResultPath = $resultPath; Action = $Action; Repeat = $Repeat; Preview = [bool]$Preview; WithoutFeed = [bool]$WithoutFeed }
+    foreach ($key in @('Mode', 'CustomCount')) { if ($PSBoundParameters.ContainsKey($key)) { $config[$key] = $PSBoundParameters[$key] } }
+    [IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+    $engineName = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+    $process = Start-UpdOwnedProcess -Context $Context -FilePath (Join-Path $PSHOME $engineName) -ArgumentList @(
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+        (Join-Path $Context.RepositoryRoot 'tests/support/Invoke-CliResultWorker.ps1'), '-ConfigPath', $configPath)
+    if (-not $process.Process.WaitForExit(30000)) {
+        $process.Process.Kill(); $process.Process.WaitForExit()
+        throw 'Callable process check timed out; only its owned child was stopped.'
+    }
+    if (-not [IO.File]::Exists($resultPath)) { throw ('Callable worker did not survive: ' + $process.ErrorOutput.Result) }
+    [pscustomobject]@{ ExitCode = $process.Process.ExitCode; Result = [IO.File]::ReadAllText($resultPath) | ConvertFrom-Json
+        Stdout = $process.Output.Result; Stderr = $process.ErrorOutput.Result; OutputPath = $config.OutputPath }
+}
+
 function Get-UpdFixtureState {
     param([Parameter(Mandatory)]$Context)
     # BasicParsing here belongs to harness control traffic, not the downloader.

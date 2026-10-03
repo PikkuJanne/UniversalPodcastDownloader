@@ -130,7 +130,9 @@ function Invoke-PodcastLegacyMigration {
         [Parameter(Mandatory)][object[]]$Episodes,
         [ValidateSet('Preview', 'Adopt', 'Redownload', 'Rollback')][string]$Action = 'Preview',
         [string]$EpisodeId, [string]$FileName, [string]$Sha256, [string]$Checkpoint,
-        $Policy
+        $Policy,
+        [scriptblock]$OnConfirmed,
+        [scriptblock]$OnProgress
     )
 
     if ($Sha256) { $Sha256 = $Sha256.ToLowerInvariant() }
@@ -155,11 +157,15 @@ function Invoke-PodcastLegacyMigration {
     })
     if (-not $PSCmdlet.ShouldProcess('Selected legacy archive', ($Action + ' selected legacy episode/history; preserve all media'))) { return $plan }
     if ($script:PodcastDiagnostics -and $script:PodcastDiagnostics.Preview) { $null = Initialize-PodcastDiagnostics }
+    if ($OnConfirmed) { $null = & $OnConfirmed }
 
     $archiveLock = $null; $historyLock = $null; $fileGuard = $null
+    $operationFailed = $false
     try {
+        $null = Invoke-PodcastDestinationPreflight -Root $Root
         $archiveLock = Enter-PodcastArchiveLock -Root $Root
         $historyLock = Enter-PodcastHistoryLock -Root $LegacyRoot
+        $null = Invoke-PodcastDestinationPreflight -Root $LegacyRoot
         $state = Get-PodcastLegacyState -Root $Root -LegacyRoot $LegacyRoot -FeedUrl $FeedUrl
         $plan = New-PodcastLegacyPlan -Root $LegacyRoot -Episodes $Episodes -State $state -MaxFileNameLength $fileBudget
         $choice = Get-PodcastLegacyChoice -Plan $plan -State $state -Episodes $Episodes -FileBudget $fileBudget `
@@ -210,12 +216,29 @@ function Invoke-PodcastLegacyMigration {
         if (-not $found) { throw 'Cannot allocate a separate redownload path; original files were preserved.' }
         $choice | Add-Member NoteProperty NewFileIdentityHash $identity
         Write-Verbose ('Migration rollback checkpoint: ' + $savedCheckpoint)
-        $transfer = Invoke-PodcastRecordedTransfer -Context $context -Planned $choice -Policy $Policy
+        $transfer = Invoke-PodcastRecordedTransfer -Context $context -Planned $choice -Policy $Policy -OnProgress $OnProgress
         return [pscustomobject]@{ Outcome = 'transfer_verified'; EpisodeId = $EpisodeId; File = $transfer.RelativePath; Checkpoint = $savedCheckpoint }
     }
+    catch { $operationFailed = $true; throw }
     finally {
-        if ($null -ne $fileGuard) { $fileGuard.Dispose() }
-        if ($null -ne $historyLock) { $historyLock.Stream.Dispose() }
-        if ($null -ne $archiveLock) { $archiveLock.Dispose() }
+        $historyStream = if ($null -ne $historyLock) { $historyLock.Stream } else { $null }
+        $cleanupFailed = $false
+        $cleanupCancellation = $null
+        foreach ($resource in @($fileGuard, $historyStream, $archiveLock)) {
+            if ($null -ne $resource) {
+                try { $resource.Dispose() }
+                catch {
+                    $cleanupFailed = $true
+                    if ($null -eq $cleanupCancellation -and (Test-PodcastCancellation -ErrorObject $_)) { $cleanupCancellation = $_ }
+                }
+            }
+        }
+        if ($cleanupFailed) {
+            if (-not $operationFailed) {
+                if ($null -ne $cleanupCancellation) { throw $cleanupCancellation }
+                throw 'Legacy action resources could not be closed safely; retained media and history require review.'
+            }
+            Write-PodcastDiagnostic -Level WARN -Message 'Legacy action cleanup failed; retained media, history and the primary failure are preserved.'
+        }
     }
 }

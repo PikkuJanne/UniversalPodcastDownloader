@@ -185,7 +185,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath $FeedPath
         $run.Result.Succeeded | Should -BeFalse
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match 'path|component|dot|absolute|root'
+        $run.Result.ErrorMessage | Should -Match 'path|component|dot|absolute|root|Private error details were omitted'
         @(Get-ChildItem -LiteralPath $context.Root -Recurse -Filter '*.log').Count | Should -Be 0
         @(Get-ChildItem -LiteralPath $context.Root -Recurse -Filter '*.mp3').Count | Should -Be 1
         (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
@@ -226,7 +226,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/single.xml' -OutputName $outputName
         $run.Result.Succeeded | Should -BeFalse
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match 'reparse|junction'
+        $run.Result.ErrorMessage | Should -Match 'Private error details were omitted'
         @(Get-ChildItem -LiteralPath $archive -Force).Count | Should -Be 1
         (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
         (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc | Should -Be $originalStamp
@@ -248,8 +248,9 @@ Describe 'Real downloader against synthetic loopback fixtures' {
             -BoundaryJunctionPath $paths.File -BoundaryJunctionTarget $archive -BoundaryStage $Stage
         $run.Result.Succeeded | Should -BeFalse
         $run.ExitCode | Should -Be 1
+        $run.Result.RunResult.Status | Should -Be 'fatal'
         $run.Result.BoundaryInjectionCount | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match 'reparse|junction'
+        $run.Result.ErrorMessage | Should -Match 'Private error details were omitted'
         @(Get-ChildItem -LiteralPath $archive -Force).Count | Should -Be 1
         (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
         @(Get-ChildItem -LiteralPath $paths.Folder -Filter '*.tmp' -Force).Count | Should -Be 0

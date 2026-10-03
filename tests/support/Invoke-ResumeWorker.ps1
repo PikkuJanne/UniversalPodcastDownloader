@@ -2,6 +2,8 @@ param([Parameter(Mandatory)][string]$ConfigPath)
 
 $ErrorActionPreference = 'Stop'
 $config = [IO.File]::ReadAllText($ConfigPath) | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'WorkerRunProjection.ps1')
+$workerExit = 1
 $maxAttempts = if ($null -ne $config.PSObject.Properties['MaxAttempts']) { [int]$config.MaxAttempts } else { 1 }
 $result = [ordered]@{ Succeeded = $false; ErrorMessage = $null }
 try {
@@ -25,11 +27,14 @@ try {
             }
         }
     }
-    & $config.ProductScript -Mode All -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath `
-        -MaxAttempts $maxAttempts -HeaderTimeoutSeconds 3 -IdleTimeoutSeconds 5 -RetryBudgetSeconds 10
-    $result.Succeeded = $true
+    $published = @(& $config.ProductScript -Mode All -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath `
+        -MaxAttempts $maxAttempts -HeaderTimeoutSeconds 3 -IdleTimeoutSeconds 5 -RetryBudgetSeconds 10 -PassThru)
+    $projection = Get-UpdWorkerRunProjection -Output $published
+    $result.Succeeded = $projection.Succeeded
+    $result.ErrorMessage = $projection.ErrorMessage
+    $result.RunResult = $projection.RunResult
+    $workerExit = $projection.ExitCode
 }
 catch { $result.ErrorMessage = $_.Exception.Message }
-[IO.File]::WriteAllText($config.ResultPath, ($result | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
-if ($result.Succeeded) { exit 0 }
-exit 1
+[IO.File]::WriteAllText($config.ResultPath, ($result | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+exit $workerExit

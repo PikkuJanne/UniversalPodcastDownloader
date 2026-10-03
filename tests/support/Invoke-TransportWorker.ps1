@@ -2,6 +2,8 @@ param([Parameter(Mandatory)][string]$ConfigPath)
 
 $ErrorActionPreference = 'Stop'
 $config = [IO.File]::ReadAllText($ConfigPath) | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'WorkerRunProjection.ps1')
+$workerExit = 1
 $result = [ordered]@{
     Succeeded = $false; ErrorMessage = $null; FailureKind = $null
     Bytes = 0; Content = $null; ElapsedSeconds = 0
@@ -18,10 +20,15 @@ try {
         $result.Content = $response.Content
     }
     elseif ($config.Kind -eq 'Media') {
-        & $config.ProductScript -Mode All -FeedUrl $config.Url -OutputPath $config.OutputPath @settings
+        $published = @(& $config.ProductScript -Mode All -FeedUrl $config.Url -OutputPath $config.OutputPath -PassThru @settings)
+        $projection = Get-UpdWorkerRunProjection -Output $published
+        $result.Succeeded = $projection.Succeeded
+        $result.ErrorMessage = $projection.ErrorMessage
+        $result.RunResult = $projection.RunResult
+        $workerExit = $projection.ExitCode
     }
     else { throw 'Unknown transport test action.' }
-    $result.Succeeded = $true
+    if ($config.Kind -eq 'Metadata') { $result.Succeeded = $true; $workerExit = 0 }
 }
 catch {
     $result.ErrorMessage = $_.Exception.Message
@@ -35,5 +42,4 @@ finally {
     $result.ElapsedSeconds = $watch.Elapsed.TotalSeconds
     [IO.File]::WriteAllText($config.ResultPath, ($result | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
 }
-if ($result.Succeeded) { exit 0 }
-exit 1
+exit $workerExit

@@ -612,6 +612,17 @@ class HelperTests(unittest.TestCase):
             if scenario == 'no-length':
                 self.assertNotIn('Content-Length', headers)
 
+    def test_empty_catalogue_advertises_a_missing_continuation(self):
+        status, _, body = self.request('/feeds/empty-pagination-gap.xml')
+        self.assertEqual(status, 200)
+        root = ET.fromstring(body)
+        channel = root.find('channel')
+        self.assertEqual(channel.findall('item'), [])
+        link = channel.find('{http://www.w3.org/2005/Atom}link')
+        self.assertEqual(link.get('rel'), 'next')
+        self.assertEqual(link.get('href'), self.server.base_url + '/pagination/missing.xml')
+        self.assertEqual(self.request('/pagination/missing.xml')[0], 404)
+
     def test_resume_adversarial_range_headers_and_fresh_responses_are_distinct(self):
         self.server.recovered.set()
         try:

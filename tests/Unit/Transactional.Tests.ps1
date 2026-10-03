@@ -49,8 +49,10 @@ Describe 'A011: failed transfer attempts cannot become completed episodes' -Tag 
             $temporaryNames.Add($DestinationStream.Name)
             [pscustomobject]@{ Completed = $true; Bytes = 0L; ContentLength = 0L; ContentType = 'audio/mpeg' }
         }
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All } |
-            Should -Throw '*Download incomplete: 1 episode(s) failed*'
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All
+        $result.ExitCode | Should -Be 2
+        $result.Failed | Should -Be 1
+        $result.Message | Should -BeExactly 'Run incomplete; failed, deferred, conflicting or unverified media, or unresolved feed pages remain.'
         Should -Invoke Invoke-PodcastMediaRequest -Times 1 -Exactly
         @($temporaryNames | Select-Object -Unique).Count | Should -Be 1
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.mp3').Count | Should -Be 0
@@ -87,8 +89,10 @@ Describe 'A011: failed transfer attempts cannot become completed episodes' -Tag 
             $DestinationStream.WriteByte(255)
             throw (New-PodcastTransportException -Kind IncompleteBody -Message 'The response body was incomplete.' -Retryable $true)
         }
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All -MaxAttempts 2 -BaseDelaySeconds 0 } |
-            Should -Throw '*Download incomplete: 1 episode(s) failed*'
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All -MaxAttempts 2 -BaseDelaySeconds 0
+        $result.ExitCode | Should -Be 2
+        $result.Failed | Should -Be 1
+        $result.Message | Should -BeExactly 'Run incomplete; failed, deferred, conflicting or unverified media, or unresolved feed pages remain.'
         Should -Invoke Invoke-PodcastMediaRequest -Times 2 -Exactly
         @($temporaryNames | Select-Object -Unique).Count | Should -Be 2
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.tmp' -Force).Count | Should -Be 0
@@ -98,8 +102,10 @@ Describe 'A011: failed transfer attempts cannot become completed episodes' -Tag 
 
     It 'A025 never retries an unclassified destination or validation failure' {
         Mock Invoke-PodcastMediaRequest { throw [IO.IOException]::new('Synthetic local failure') }
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All -MaxAttempts 3 -BaseDelaySeconds 0 } |
-            Should -Throw '*Download incomplete: 1 episode(s) failed*'
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All -MaxAttempts 3 -BaseDelaySeconds 0
+        $result.ExitCode | Should -Be 2
+        $result.Failed | Should -Be 1
+        $result.Message | Should -BeExactly 'Run incomplete; failed, deferred, conflicting or unverified media, or unresolved feed pages remain.'
         Should -Invoke Invoke-PodcastMediaRequest -Times 1 -Exactly
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Recurse -Filter '*.tmp' -Force).Count | Should -Be 0
     }

@@ -32,7 +32,7 @@ Describe 'Transactional completion against real loopback responses' {
         $run.Stdout | Should -Match 'Downloaded\s+: 0'
         $run.Stdout | Should -Match 'Failed\s+: 1'
         $run.Result.Succeeded | Should -BeFalse
-        $run.ExitCode | Should -Be 1
+        $run.ExitCode | Should -Be 2
         $run.Result.RemainingTemporaryCount | Should -Be 0
         @(Get-ChildItem -LiteralPath $run.OutputPath -Recurse -File -Filter '*.mp3').Count | Should -Be 0
         @(Get-ChildItem -LiteralPath $run.OutputPath -Recurse -File -Filter '.upd-*.tmp' -Force).Count | Should -Be 0
@@ -61,7 +61,7 @@ Describe 'Transactional completion against real loopback responses' {
     It 'A011 A012 rejects a truncated HTTP body and downloads complete bytes on a safe restart' {
         $first = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/transaction-recover.xml'
         $first.Result.Succeeded | Should -BeFalse
-        $first.ExitCode | Should -Be 1
+        $first.ExitCode | Should -Be 2
         $first.Stdout | Should -Match 'Downloaded\s+: 0'
         $first.Stdout | Should -Match 'Failed\s+: 1'
         $first.Result.RemainingTemporaryCount | Should -Be 0
@@ -142,7 +142,7 @@ Describe 'Transactional completion against real loopback responses' {
     It 'A013 preserves a competing final file appearing immediately before the no-overwrite move' {
         $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/transaction-crash.xml' -TransactionHook FinalRace
         $run.Result.Succeeded | Should -BeFalse
-        $run.ExitCode | Should -Be 1
+        $run.ExitCode | Should -Be 2
         $run.Stdout | Should -Match 'Downloaded\s+: 0'
         $run.Stdout | Should -Match 'Failed\s+: 1'
         $run.HookMarker.TemporaryExclusiveOpen | Should -BeTrue

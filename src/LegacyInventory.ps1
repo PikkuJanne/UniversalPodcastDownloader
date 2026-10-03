@@ -70,7 +70,10 @@ function Get-PodcastLegacyFileObservation {
         }
         else { $result.Reason = $sniff.Category }
     }
-    catch { $result.Reason = 'file_unreadable' }
+    catch {
+        if (Test-PodcastCancellation -ErrorObject $_) { throw }
+        $result.Reason = 'file_unreadable'
+    }
     finally { if ($null -ne $guard) { $guard.Dispose() } }
     return $result
 }
@@ -122,6 +125,7 @@ function New-PodcastLegacyPlan {
             $file = Get-PodcastLegacyFileObservation -Root $canonicalRoot -RelativePath $name
         }
         catch {
+            if (Test-PodcastCancellation -ErrorObject $_) { throw }
             $file = [pscustomobject]@{
                 RelativePath = $name; Bytes = $null; Sha256 = $null; Plausible = $false
                 MediaKind = $null; InspectedBytes = 0; Classification = 'conflict'

@@ -237,7 +237,8 @@ Describe 'Legacy archive migration through actual CLI processes' {
         $before = Get-UpdLegacySnapshot -Root $legacy.OutputPath
         $adopt = Invoke-UpdLegacyWorker -Context $context -Archive $legacy -Action Adopt -EpisodeId $legacy.EpisodeId -File $script:legacyName
         $adopt.Result.Succeeded | Should -BeFalse
-        ($adopt.Stdout + $adopt.Result.ErrorMessage) | Should -Match 'digest|changed|hash|review'
+        $adopt.Result.RunResult.Status | Should -Be 'fatal'
+        $adopt.Result.ErrorMessage | Should -Match 'Private error details were omitted'
         (Get-UpdLegacySnapshot -Root $legacy.OutputPath) -join "`n" | Should -Be ($before -join "`n")
         Assert-UpdLegacyNoMediaRequest -Context $context
     }
@@ -255,7 +256,9 @@ Describe 'Legacy archive migration through actual CLI processes' {
         $state.episodes[0].local_sha256 | Should -Be ((Get-FileHash -LiteralPath (Join-Path $legacy.Root $script:legacyName) -Algorithm SHA256).Hash)
         @($run.Result.Output)[-1].Checkpoint | Should -Match '^legacy-[a-f0-9]{32}\.json$'
         $again = Invoke-UpdLegacyWorker -Context $context -Archive $legacy -Normal
-        $again.Result.Succeeded | Should -BeTrue -Because ($again.Stdout + $again.Stderr + $again.Result.ErrorMessage)
+        $again.Result.Succeeded | Should -BeFalse
+        $again.ExitCode | Should -Be 2
+        $again.Result.RunResult.LegacyUnverified | Should -Be 1
         $again.Stdout | Should -Match 'Adopted\s+: 1'
         (Get-UpdLegacyState -Archive $legacy).episodes[0].status | Should -Be 'adopted'
         Assert-UpdLegacyOriginal -Archive $legacy
@@ -317,7 +320,10 @@ Describe 'Legacy archive migration through actual CLI processes' {
         foreach ($attempt in 1..2) {
             $run = Invoke-UpdLegacyWorker -Context $context -Archive $legacy -Normal
             $run.Result.Succeeded | Should -BeFalse -Because ('attempt ' + $attempt + ' still needs an owner decision')
-            ($run.Stdout + $run.Result.ErrorMessage) | Should -Match 'adopt|review|conflict'
+            $run.ExitCode | Should -Be 2
+            $run.Result.RunResult.Status | Should -Be 'incomplete'
+            $run.Result.RunResult.Conflicts | Should -Be 1
+            $run.Result.RunResult.Episodes[0].Outcome | Should -Be 'conflict'
             (Get-UpdLegacyState -Archive $legacy).episodes[0].status | Should -Not -Be 'transfer_verified'
             $afterRun = Get-UpdLegacySnapshot -Root $legacy.Root | Where-Object { $_ -notmatch '\|\.upd(?:\\|\|)|\.log\|' }
             $afterRun -join "`n" | Should -Be ($afterOwnerChange -join "`n")
@@ -333,7 +339,9 @@ Describe 'Legacy archive migration through actual CLI processes' {
         $adopt.Result.Succeeded | Should -BeTrue -Because ($adopt.Stdout + $adopt.Stderr + $adopt.Result.ErrorMessage)
         $null = Invoke-WebRequest -Uri ($context.BaseUrl + '/__recover') -Method Post -UseBasicParsing -TimeoutSec 10
         $run = Invoke-UpdLegacyWorker -Context $context -Archive $legacy -Normal
-        $run.Result.Succeeded | Should -BeTrue -Because ($run.Stdout + $run.Stderr + $run.Result.ErrorMessage)
+        $run.Result.Succeeded | Should -BeFalse
+        $run.ExitCode | Should -Be 2
+        $run.Result.RunResult.LegacyUnverified | Should -Be 1
         $run.Stdout | Should -Match 'Adopted\s+: 1'
         (Get-UpdLegacyState -Archive $legacy).episodes[0].status | Should -Be 'adopted'
         Assert-UpdLegacyOriginal -Archive $legacy

@@ -54,19 +54,41 @@ Usage
     .\UniversalPodcastDownloader.ps1 -OutputPath "D:\Podcasts"
 
 3. Command line (non-interactive)
-   - Use when you already know the RSS URL and desired mode:
-    #All episodes for a known feed
-    .\UniversalPodcastDownloader.ps1 
-        -FeedUrl "https://example.com/feed.xml" 
-        -Mode All 
-        -OutputPath "D:\Podcasts"
+   - Supply `-NonInteractive` and an explicit feed URL. Without a mode/count, this selects the latest episode. A positive `-CustomCount` alone selects Custom; an explicit Latest/All mode combined with a count fails before discovery.
 
-    #10 newest episodes
-    .\UniversalPodcastDownloader.ps1 
-        -FeedUrl "https://example.com/feed.xml" 
-        -Mode Custom 
-        -CustomCount 10 
-        -OutputPath "D:\Podcasts"
+```powershell
+# Accessible catalogue
+.\UniversalPodcastDownloader.ps1 -NonInteractive -FeedUrl "https://example.com/feed.xml" -Mode All -OutputPath "D:\Podcasts"
+# Ten newest episodes
+.\UniversalPodcastDownloader.ps1 -NonInteractive -FeedUrl "https://example.com/feed.xml" -CustomCount 10 -OutputPath "D:\Podcasts"
+```
+
+The script and batch launcher return 0 for success, 1 for fatal setup/input errors, 2 for incomplete work, and 130 for catchable cancellation. Unresolved feed pages, failed/deferred transfers, conflicts and ordinary runs encountering unverified adopted media remain incomplete. Preview creates no archive/media/diagnostic files; an unresolved catalogue still returns 2. Parameterized batch launches do not pause. An argument-free launch retains the guided feed/count prompts and a final Enter prompt.
+
+For an in-process result, dot-source the script and call `Invoke-PodcastRun`; the API returns one `Podcast.RunResult` without exiting the host. `Invoke-PodcastCommand -Options @{ ... }` also routes saved-show operations. `-PassThru` on the entry script emits its result before the script sets `$LASTEXITCODE`. Legacy review/action output is carried in `LegacyResult` and contains sensitive local inventory. This inventory can also appear when ordinary `-WhatIf` encounters an archive requiring review. See [CLI, results and launcher policy](docs/codex/CLI_RESULTS.md) for the schema, quoting and cancellation limits.
+
+**Optional saved shows and sequential batch**
+
+Save a feed under a short name, then reuse it without supplying the URL again. Saving changes settings only; it does not fetch the feed or download media. The ordinary one-off and argument-free workflows do not read or create saved settings.
+
+```powershell
+# Replace the example URL and output path with your own values.
+.\UniversalPodcastDownloader.ps1 -SaveShow news -FeedUrl 'https://example.invalid/feed.xml' -OutputPath 'D:\Podcasts' -CustomCount 5
+.\UniversalPodcastDownloader.ps1 -ListShows
+.\UniversalPodcastDownloader.ps1 -ShowName news -NonInteractive
+.\UniversalPodcastDownloader.ps1 -Batch -NonInteractive
+.\UniversalPodcastDownloader.ps1 -Batch -WhatIf
+.\UniversalPodcastDownloader.ps1 -RemoveShow news -WhatIf
+.\UniversalPodcastDownloader.ps1 -ExportShows 'D:\Share\shows-summary.json'
+```
+
+Names start with a letter or digit and contain at most 64 letters, digits, underscores or hyphens; they are unique ignoring case. The configuration supports at most 100 shows. `-Batch` runs them one at a time in saved order; `-Batch -ShowName news` selects one. In a PowerShell session, an array selects several in the supplied order: `& .\UniversalPodcastDownloader.ps1 -Batch -ShowName @('news', 'other')`. Native Windows PowerShell `-File` and the `.bat` wrapper cannot pass a multi-element array; use all shows, one name, or the in-process API.
+
+Feed URLs are protected with Windows DPAPI for the current user. The default file is `%LOCALAPPDATA%\UniversalPodcastDownloader\saved-shows\shows.json`; `-ConfigPath` selects another absolute file in a dedicated private directory. Created configuration directories/files have protected current-user-only access. Existing unsafe permissions or malformed/newer configuration stop the operation and preserve it. Another process running as the same user can decrypt DPAPI data; this does not protect against that user, malware running as that user, or an administrator. Input history and transcripts can retain the URL supplied to save.
+
+List and export show only names, selection modes/counts and whether a feed is configured. They omit URLs, encrypted payloads and output paths; names can still reveal subscriptions. An export creates a new file in an existing directory and never overwrites; it is a sanitized summary, not an importable credential backup. Re-save URLs under a different Windows account/profile. Removal changes settings and preserves all media/history.
+
+Batch continues after an individual show fails and prints combined show and episode counts. Exit 2 means any selected show was fatal or incomplete; configuration/selection setup failure returns 1, catchable cancellation stops remaining shows with 130, and a clean batch returns 0. Preview plans every selected show without writing settings, locks, logs or archive data, requesting enclosure media or activating keep-awake. See [saved-show storage, overrides and batch policy](docs/codex/SAVED_SHOWS.md).
 
 **Output layout**  
 - Default root:
@@ -90,6 +112,10 @@ Usage
   - Checks read at most 64 KiB for supported MPEG Layer III, WAV, FLAC, Ogg audio packet or MP4 audio indications. Generic containers without bounded audio evidence fail; an M4A brand remains a modest compatibility indication. These checks do not decode the whole file, prove audio-only content/playability or establish publisher authenticity.
   - Downloads with a strong ETag, known length and matching durable checkpoint can resume automatically. The downloader verifies the stored identity, local bytes and returned range before appending. Uncertain responses start fresh while preserving the old partial. Corrupt checkpoints or uncheckpointed crash tails stop for review; unknown partials are never reused or cleaned. See [safe resume policy](docs/codex/RESUME_POLICY.md).
 
+Interactive console runs show episode and streamed-byte progress. Known totals come from validated response headers; unknown totals show received bytes. Receiving and validation stay below 100% until the episode is verified and recorded. Noninteractive and redirected runs retain fixed notices and a readable summary without animated progress.
+
+Add `-KeepAwake` to request temporary Windows sleep prevention during confirmed work. It is off by default and released on normal completion, exceptions and catchable cancellation. It does not keep the display on or change a power plan; explicit Sleep and lid actions can still apply. Forced termination cannot guarantee cleanup. See [progress and temporary keep-awake policy](docs/codex/PROGRESS_AND_POWER.md).
+
 **Local history and recovery**
 
 - Each established show stores versioned history in `.upd/state.json` and its previous valid generation in `.upd/state.json.bak`. Records contain relative destinations, identity fingerprints, outcomes, measured bytes, SHA-256 and bounded transfer evidence. Request URLs stay exact in memory and are not stored in history.
@@ -111,7 +137,8 @@ $legacy = @{
     OutputPath = 'D:\Podcasts'
     LegacyPath = 'D:\Podcasts\Original show'
 }
-$preview = & .\UniversalPodcastDownloader.ps1 @legacy
+$previewRun = & .\UniversalPodcastDownloader.ps1 @legacy -PassThru
+$preview = $previewRun.LegacyResult
 $preview.Episodes | Select-Object EpisodeId, Title, Classification, Candidates, SuggestedPath | Format-List
 $preview.Files | Select-Object RelativePath, Bytes, Sha256, Plausible, Classification, Reason, RecordedStatus | Format-List
 ```
@@ -139,21 +166,21 @@ $adopt = @{
     LegacyFile = $fileName
     LegacySha256 = $chosen[0].Sha256
 }
-& .\UniversalPodcastDownloader.ps1 @legacy @adopt -WhatIf
-$result = & .\UniversalPodcastDownloader.ps1 @legacy @adopt
-$result
+& .\UniversalPodcastDownloader.ps1 @legacy @adopt -WhatIf -PassThru
+$result = & .\UniversalPodcastDownloader.ps1 @legacy @adopt -PassThru
+$result.LegacyResult
 ```
 
-Adoption keeps the original path and bytes. Its status is `adopted`, with `owner-approved-local-signature` evidence and `local-signature-only; transfer-completeness-unverified` confidence. A digest and recognizable signature do not prove that the publisher supplied a complete or correct episode. Later runs count unchanged adopted files separately from verified transfer skips. Missing or changed adopted files require another review; they do not trigger an automatic replacement.
+Adoption keeps the original path and bytes. Its status is `adopted`, with `owner-approved-local-signature` evidence and `local-signature-only; transfer-completeness-unverified` confidence. A digest and recognizable signature do not prove that the publisher supplied a complete or correct episode. A successful explicit adoption or rollback can return 0 because the requested metadata action completed; it does not count adopted media as downloaded. Later ordinary runs count unchanged adopted files separately from verified transfer skips and return 2 for that unverified media. Missing or changed adopted files require another review; they do not trigger an automatic replacement.
 
 ### Download one separate replacement
 
 Use this action when you choose to obtain a new transfer for the reviewed episode. It allocates a separate filename, preserves every original and records the observed transfer for the selected episode.
 
 ```powershell
-& .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId -WhatIf
-$result = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId
-$result
+& .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId -WhatIf -PassThru
+$result = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId -PassThru
+$result.LegacyResult
 ```
 
 The new file receives `transfer_verified` evidence from the observed transfer and bounded signature check. This does not establish cryptographic completeness or publisher authenticity.
@@ -163,11 +190,11 @@ The new file receives `transfer_verified` evidence from the observed transfer an
 Each changing legacy action returns a `Checkpoint` basename and prints it before its final mutation. Keep that value. The `.upd/legacy-<id>.json` checkpoint contains the archive's full prior history metadata. Rollback restores all records from that snapshot in a new generation, so it can also remove metadata decisions made after the checkpoint. Review its proposed `Operation.RestoreRecords` before applying it.
 
 ```powershell
-$checkpoint = $result.Checkpoint
-$rollbackPreview = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint -WhatIf
-$rollbackPreview.Operation.RestoreRecords | Format-List
-$rollback = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint
-$rollback
+$checkpoint = $result.LegacyResult.Checkpoint
+$rollbackPreview = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint -WhatIf -PassThru
+$rollbackPreview.LegacyResult.Operation.RestoreRecords | Format-List
+$rollback = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint -PassThru
+$rollback.LegacyResult
 ```
 
 Rollback never deletes, renames or restores media bytes. Original files and separate downloads survive; files whose records were removed return to review. Schema 2 and the feed association remain, including when rolling back the first adoption to an empty history. Rollback itself saves another checkpoint. A corrupt checkpoint or one from a different feed is refused; copying `.bak` over live state is not an automatic recovery procedure.
@@ -202,7 +229,7 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
 **Batch wrapper (included)**  
 - UniversalPodcastDownloader.bat (double-click launcher):
   - Double-click = open the TUI.
-  - If you want drag-and-drop support later, you can extend the wrapper to pass %* through to the script.
+  - Parameterized launches forward the original arguments to the colocated script and return its exit code without pausing. Use named script parameters; a dragged file path alone is not a feed URL.
 
 **Technical details**
 - Feed resolution:
@@ -235,6 +262,12 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
   - HTTP Content-Length is checked against bytes received when the platform exposes it. Original media bytes are kept; unexpected HTTP content encodings are rejected.
 
 **Troubleshooting**
+- Writer lock in use:
+  - Wait for the current writer for that archive to finish, then retry. Different shows can transfer concurrently after brief output-root selection. Persistent lock files are normal; do not delete them or kill a process based on their contents.
+- Destination or space error:
+  - Check output-folder write permissions or free space, then retry or choose another output folder. Confirmed runs probe write access and compare known response bytes with available space before copying media. Unknown response length or capacity is reported explicitly; a preflight check cannot guarantee space throughout a transfer.
+- Cancelled transfer:
+  - Keep the partial and its history/sidecar. A catchable cancellation attempts to close every held handle and checkpoints eligible actual bytes. Cleanup or checkpoint failure and unknown-length partials can require review; never infer resume ownership from a filename alone. See [state and recovery policy](docs/codex/STATE_AND_MIGRATION.md).
 - Script window closes immediately:
   - Run UniversalPodcastDownloader.bat from an existing cmd window to see errors.
   - Check PowerShell’s ExecutionPolicy and any corporate restrictions.

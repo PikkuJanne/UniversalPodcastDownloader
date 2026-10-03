@@ -80,7 +80,8 @@ BeforeAll {
 
     function Assert-UpdTransportFailure {
         param([Parameter(Mandatory)]$Run, [Parameter(Mandatory)][string]$Kind)
-        $Run.ExitCode | Should -Be 1 -Because ($Run.Stdout + $Run.Stderr + $Run.Result.ErrorMessage)
+        $expectedExitCode = if ($Kind -eq 'Metadata') { 1 } else { 2 }
+        $Run.ExitCode | Should -Be $expectedExitCode -Because ($Run.Stdout + $Run.Stderr + $Run.Result.ErrorMessage)
         $Run.Result.Succeeded | Should -BeFalse
         if ($Kind -eq 'Metadata') {
             $Run.Result.Bytes | Should -Be 0
@@ -160,6 +161,12 @@ Describe 'A025/A026: bounded transport against real loopback responses' -Tag 'In
     ) {
         $run = Invoke-UpdTransportWorker -Context $context -Kind $Kind -Scenario ('defer-' + $Form) -Settings @{ RetryBudgetSeconds = 0.25 }
         Assert-UpdTransportFailure -Run $run -Kind $Kind
+        if ($Kind -eq 'Media') {
+            $run.Result.RunResult.Status | Should -Be 'incomplete'
+            $run.Result.RunResult.Deferred | Should -Be 1
+            $run.Result.RunResult.Failed | Should -Be 0
+            $run.Result.RunResult.Episodes[0].Outcome | Should -Be 'deferred'
+        }
         (Get-UpdFixtureState -Context $context).($run.Route) | Should -Be 1
         $run.Result.ElapsedSeconds | Should -BeLessThan 4
     }
@@ -190,6 +197,10 @@ Describe 'A025/A026: bounded transport against real loopback responses' -Tag 'In
     ) {
         $run = Invoke-UpdTransportWorker -Context $context -Kind $Kind -Scenario 'redirect-defer' -Settings @{ RetryBudgetSeconds = 0.25 }
         Assert-UpdTransportFailure -Run $run -Kind $Kind
+        if ($Kind -eq 'Media') {
+            $run.Result.RunResult.Deferred | Should -Be 1
+            $run.Result.RunResult.Episodes[0].Outcome | Should -Be 'deferred'
+        }
         $stats = Get-UpdFixtureState -Context $context
         $stats.($run.Route) | Should -Be 1
         $targetRoute = '/transport/' + $Kind.ToLowerInvariant() + '/redirect-target'

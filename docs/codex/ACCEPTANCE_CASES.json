@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A038 passed through UPD-0206; A039-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A047 passed through UPD-0304; A048-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -432,8 +432,8 @@
       "when": "Invoke entry point.",
       "expected": "Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0301.md"
     },
     {
       "id": "A040",
@@ -443,8 +443,8 @@
       "when": "Run script and launcher.",
       "expected": "Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0301.md"
     },
     {
       "id": "A041",
@@ -454,8 +454,8 @@
       "when": "Launch, including forwarded arguments.",
       "expected": "Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0301-LAUNCHER.md"
     },
     {
       "id": "A042",
@@ -464,9 +464,9 @@
       "given": "Two processes target same show plus another independent show.",
       "when": "Start together, then cancel first.",
       "expected": "Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Integration/RunSafety.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0302.md"
     },
     {
       "id": "A043",
@@ -475,9 +475,9 @@
       "given": "Insufficient disk or write permission and cancellation mid-stream.",
       "when": "Preflight/start/stop.",
       "expected": "Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Integration/RunSafety.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0302.md"
     },
     {
       "id": "A044",
@@ -487,8 +487,8 @@
       "when": "Download.",
       "expected": "Progress never reports misleading 100% before success; episode/byte information honest; readable noninteractive summary.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0303-WINDOWS.md"
     },
     {
       "id": "A045",
@@ -498,8 +498,8 @@
       "when": "Run/stop.",
       "expected": "Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0303-WINDOWS.md"
     },
     {
       "id": "A046",
@@ -509,8 +509,8 @@
       "when": "Load saved-show configuration.",
       "expected": "Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0304.md"
     },
     {
       "id": "A047",
@@ -520,8 +520,8 @@
       "when": "Run batch and preview batch.",
       "expected": "Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0304.md"
     },
     {
       "id": "A048",

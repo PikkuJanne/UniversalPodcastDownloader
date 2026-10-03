@@ -20,10 +20,11 @@ BeforeAll {
     function Assert-UpdPaginationIncomplete {
         param([Parameter(Mandatory)]$Run, [Parameter(Mandatory)][int]$Downloads)
         $Run.Result.Succeeded | Should -BeFalse
-        $Run.ExitCode | Should -Be 1
+        $Run.ExitCode | Should -Be 2
         $Run.Stdout | Should -Match ('Downloaded\s+: ' + $Downloads)
         $Run.Stdout | Should -Match 'Feed catalogue incomplete:'
-        $Run.Result.ErrorMessage | Should -Match 'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved\.'
+        $Run.Result.ErrorMessage | Should -Be 'Run incomplete; failed, deferred, conflicting or unverified media, or unresolved feed pages remain.'
+        $Run.Result.RunResult.CatalogueComplete | Should -BeFalse
         $Run.Stdout | Should -Not -Match 'Run completed|\[OK\]'
     }
 }
@@ -56,7 +57,8 @@ Describe 'A037/A038 explicit feed pagination at real pipeline boundaries' {
 
     It 'previews a cyclic catalogue with a visible warning and no media requests or persistent writes' {
         $preview = Invoke-UpdIntegrationWorker -Context $context -Action Preview -FeedPath '/feeds/page-1.xml'
-        $preview.Result.Succeeded | Should -BeTrue -Because ($preview.Stdout + $preview.Stderr + $preview.Result.ErrorMessage)
+        $preview.Result.Succeeded | Should -BeFalse
+        $preview.ExitCode | Should -Be 2
         $preview.Stdout | Should -Match 'Feed catalogue incomplete:'
         Test-Path -LiteralPath $preview.OutputPath | Should -BeFalse
         @(Get-ChildItem -LiteralPath $context.Root -Recurse -Force -File -Filter '*.log').Count | Should -Be 0

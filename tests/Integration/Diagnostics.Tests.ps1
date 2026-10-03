@@ -181,7 +181,7 @@ Describe 'A019/A021: startup diagnostics in isolated real processes' -Tag 'Integ
         (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -BeNullOrEmpty
     }
 
-    It 'A020 keeps real verbose and engine-formatted error output free of URL secrets' {
+    It 'A020 keeps real verbose and safe script result/error output free of URL secrets' {
         $secretPath = '/missing/FAKE_PATH_TOKEN?token=FAKE_QUERY_TOKEN&signature=FAKE_SIGNATURE#FAKE_FRAGMENT'
         $run = Receive-UpdDiagnosticWorker (Start-UpdDiagnosticWorker -Context $context -Action RawFailure -FeedPath $secretPath)
         $run.ExitCode | Should -Not -Be 0
