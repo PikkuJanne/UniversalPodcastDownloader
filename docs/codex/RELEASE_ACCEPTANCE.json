@@ -11,7 +11,44 @@
     "testedRuntimeFingerprint": "709367285219c0ac0f4f1b8be2d346d6b91d5d6885b3b3afc27372352f745ca1",
     "sourceBinding": "exact",
     "equivalenceEvidence": null,
-    "engines": []
+    "engines": [
+      {
+        "name": "PS51",
+        "version": "5.1.26100.9444",
+        "suite": "All",
+        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "total": 1791,
+        "passed": 1791,
+        "failed": 0,
+        "skipped": 0,
+        "inconclusive": 0,
+        "notRun": 0,
+        "analysis": {
+          "files": 116,
+          "parseErrors": 0,
+          "newFindings": 0,
+          "baselineWarnings": 0
+        }
+      },
+      {
+        "name": "PS7",
+        "version": "7.6.5",
+        "suite": "All",
+        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "total": 1791,
+        "passed": 1791,
+        "failed": 0,
+        "skipped": 0,
+        "inconclusive": 0,
+        "notRun": 0,
+        "analysis": {
+          "files": 116,
+          "parseErrors": 0,
+          "newFindings": 0,
+          "baselineWarnings": 0
+        }
+      }
+    ]
   },
   "cases": [
     {
@@ -122,6 +159,17 @@
             "PS7"
           ],
           "sourceCommit": "057e8a2860f3b3f4a062e8cdc31eeb221e5c982b"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -131,7 +179,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual import is guarded against prompt/network/file/progress activity and caller preference changes; later runtime-only copied imports test real import/isolated caller state too."
@@ -186,6 +234,17 @@
             "PS7"
           ],
           "sourceCommit": "12be5abbe0bc3741a275b06a90e22b70bfa7253a"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -195,7 +254,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Zero/one/many selection, array shapes, positive counts and every Latest/Custom/All combination have direct units plus actual loopback entry-point behavior."
@@ -218,6 +277,17 @@
             "PS7"
           ],
           "sourceCommit": "12be5abbe0bc3741a275b06a90e22b70bfa7253a"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -227,7 +297,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Real noninteractive Windows request paths no longer require legacy DOM/security confirmation; later centralized bounded HttpClient metadata/media adapters retain the same no-DOM contract."
@@ -250,6 +320,17 @@
             "PS7"
           ],
           "sourceCommit": "ff908a8c67449aa8808471c4e1f738a60397284f"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -259,7 +340,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Pure naming regressions retain full identifiers and deterministic Windows-safe components, Unicode boundaries and clear path-budget refusal; real near-limit entry paths are exercised."
@@ -282,6 +363,17 @@
             "PS7"
           ],
           "sourceCommit": "ff908a8c67449aa8808471c4e1f738a60397284f"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -291,7 +383,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Real junction/dangling-junction and late boundary injection plus hostile metadata verify output containment, reparse refusal and preserved existing bytes."
@@ -314,6 +406,17 @@
             "PS7"
           ],
           "sourceCommit": "ff908a8c67449aa8808471c4e1f738a60397284f"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -323,7 +426,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Identity/case-insensitive collision planning and real competing placements preserve separate files/original hashes without accidental overwrite."
@@ -346,6 +449,17 @@
             "PS7"
           ],
           "sourceCommit": "eecb7b51b2d9975b31b1064bd8db33ea133c2b82"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -355,7 +469,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual killed/disconnected owned workers leave no false completed final; reruns preserve abandoned evidence and obtain original bytes. Later durable resume tests add exact checkpoint/range recovery."
@@ -378,6 +492,17 @@
             "PS7"
           ],
           "sourceCommit": "eecb7b51b2d9975b31b1064bd8db33ea133c2b82"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -387,7 +512,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual invalid/truncated/empty/text bodies fail; valid lengthless and generic media can complete; measured framing/signatures and advisory enclosure sizes are asserted."
@@ -410,6 +535,17 @@
             "PS7"
           ],
           "sourceCommit": "eecb7b51b2d9975b31b1064bd8db33ea133c2b82"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -419,7 +555,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Same-directory temporary placement, real competing final bytes and exclusive reopening prove no-overwrite finalization and exercised stream cleanup."
@@ -442,6 +578,17 @@
             "PS7"
           ],
           "sourceCommit": "086aa2316f9d5cb01c6ec10a8bdf5a3d84b26da2"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -451,7 +598,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "RSS GUID/Atom ID/exact URL identity, explicit feed aliases and retained recorded paths survive title/date/signature changes where durable evidence permits."
@@ -474,6 +621,17 @@
             "PS7"
           ],
           "sourceCommit": "086aa2316f9d5cb01c6ec10a8bdf5a3d84b26da2"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -483,7 +641,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Strict history, held locks, actual child-process crashes around replacement/placement and conservative prepared evidence preserve valid prior state and corrupt evidence."
@@ -506,6 +664,17 @@
             "PS7"
           ],
           "sourceCommit": "086aa2316f9d5cb01c6ec10a8bdf5a3d84b26da2"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -515,7 +684,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Real repeat runs check recorded size/hash; missing files recover safely, while same-size edits/changed/unknown media remain preserved conflicts."
@@ -538,6 +707,28 @@
             "PS7"
           ],
           "sourceCommit": "a24b7781b9861d5a51af6ee7b7e7ee5c305c4e6f"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -547,7 +738,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Owned copied/synthetic legacy inventory, preview/adoption/separate redownload/metadata rollback assert unchanged original names, bytes and hashes with explicit evidence classifications."
@@ -570,6 +761,28 @@
             "PS7"
           ],
           "sourceCommit": "a24b7781b9861d5a51af6ee7b7e7ee5c305c4e6f"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -579,7 +792,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Explicit reviewed file/digest adoption remains transfer-unverified through reruns/remote changes; no blanket download, deletion or implicit confidence upgrade occurs."
@@ -602,6 +815,17 @@
             "PS7"
           ],
           "sourceCommit": "713fa11615dc3a0a9b0d69f7351ceccd1908794e"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -611,7 +835,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual early discovery failure initializes unique local startup diagnostics or safe fallback/stderr without replacing the primary error."
@@ -634,6 +858,17 @@
             "PS7"
           ],
           "sourceCommit": "713fa11615dc3a0a9b0d69f7351ceccd1908794e"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -643,7 +878,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Synthetic secret-bearing URLs/headers/errors are checked across routine output/log/export projections; fixed allowlists exclude private runtime/state objects."
@@ -666,6 +901,17 @@
             "PS7"
           ],
           "sourceCommit": "713fa11615dc3a0a9b0d69f7351ceccd1908794e"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -675,7 +921,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual Unicode/concurrent-run/unwritable-sink processes verify UTF-8, unique run IDs, fixed fallback and original-error precedence."
@@ -698,6 +944,28 @@
             "PS7"
           ],
           "sourceCommit": "388054d439ac3ee7ee336297148c5dd58683f2fa"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -707,7 +975,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual WhatIf and real ShouldProcess No via a test PSHost perform metadata reads only, preserving trees and making zero planned media/config/log/state/lock/power mutations."
@@ -730,6 +998,17 @@
             "PS7"
           ],
           "sourceCommit": "388054d439ac3ee7ee336297148c5dd58683f2fa"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -739,7 +1018,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "HTTP(S)/redirect/handler policy units plus loopback cross-host behavior retain TLS verification and prohibit unsafe targets/cookies/default credential propagation."
@@ -762,6 +1041,17 @@
             "PS7"
           ],
           "sourceCommit": "388054d439ac3ee7ee336297148c5dd58683f2fa"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -771,7 +1061,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual bounded RSS/Atom/DTD/oversize/malformed parsing rejects expansion and entity HTTP fetches; an exclusively held sentinel plus explicit Prohibit/null resolvers supports no file resolution."
@@ -794,6 +1084,17 @@
             "PS7"
           ],
           "sourceCommit": "22632b891c455f82a9bba9b9a7b8d48f9f3de5c6"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -803,7 +1104,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Injected clocks/waits and real loopback transient/permanent/Retry-After/truncation responses establish bounded attempts, no early retries and deferred over-budget work."
@@ -826,6 +1127,17 @@
             "PS7"
           ],
           "sourceCommit": "22632b891c455f82a9bba9b9a7b8d48f9f3de5c6"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -835,7 +1147,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual delayed-header/idle-body/continuously progressing streams and unit cancellation probes verify distinct header/idle budgets without an inappropriate short total-body timeout."
@@ -858,6 +1170,17 @@
             "PS7"
           ],
           "sourceCommit": "f32238923367419f29f0151220ce417a008a77d9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -867,7 +1190,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual killed/caught transfer recovery validates partial bytes/hash, strong ETag, exact Range/If-Range/206 totals and complete original final bytes."
@@ -890,6 +1213,17 @@
             "PS7"
           ],
           "sourceCommit": "f32238923367419f29f0151220ce417a008a77d9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -899,7 +1233,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual ignored/inconsistent ranges and weak/missing/changed representation evidence never blindly append; bounded fresh attempts preserve old partial/sidecar evidence with safe diagnostics."
@@ -922,6 +1256,17 @@
             "PS7"
           ],
           "sourceCommit": "f32238923367419f29f0151220ce417a008a77d9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -931,7 +1276,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual 416/corrupt/cross-episode sidecar/partial cases preserve unknown evidence and reject false completion/concatenation/deletion."
@@ -954,6 +1299,17 @@
             "PS7"
           ],
           "sourceCommit": "cddb61d8aba35061996c6e3e068775a0968ec4c7"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -963,7 +1319,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual direct/show-page TUI and CLI resolver processes share candidates and reuse fetched metadata once; only selected direct candidates are fetched."
@@ -986,6 +1342,17 @@
             "PS7"
           ],
           "sourceCommit": "cddb61d8aba35061996c6e3e068775a0968ec4c7"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -995,7 +1362,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Synthetic pure discovery units cover redirected/base-relative URLs, entities, whitespace/order, inert markup, deduplication and ambiguity policies."
@@ -1018,6 +1385,17 @@
             "PS7"
           ],
           "sourceCommit": "cddb61d8aba35061996c6e3e068775a0968ec4c7"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1027,7 +1405,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Root-aware RSS/Atom/HTML/empty/malformed classification and useful distinct private diagnostics have direct units and actual resolution support."
@@ -1050,6 +1428,17 @@
             "PS7"
           ],
           "sourceCommit": "b5fe1b194c66fb5d869134afaccc0dac95636c09"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1059,7 +1448,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Pure invariant Gregorian UTC/date-order tests across en-US/de-DE/fi-FI plus actual midnight/history boundaries prove deterministic ordering and naming without locale mutation."
@@ -1082,6 +1471,17 @@
             "PS7"
           ],
           "sourceCommit": "b5fe1b194c66fb5d869134afaccc0dac95636c09"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1091,7 +1491,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Desired Atom published-before-updated selection and ID regressions replaced the old characterization; actual Latest/history cases preserve identity/paths."
@@ -1114,6 +1514,17 @@
             "PS7"
           ],
           "sourceCommit": "e8b7e5d8562ed12d85e0413bea400f727aaff788"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_unit_mocked",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1123,7 +1534,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Desired supported-audio selection, extensionless/canonical naming and bounded structured container units replace first-video characterization and preserve original bytes/history ownership."
@@ -1146,6 +1557,17 @@
             "PS7"
           ],
           "sourceCommit": "e8b7e5d8562ed12d85e0413bea400f727aaff788"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1155,7 +1577,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual loopback generic MIME/HTML/video/ambiguous container transfers assert accepted original bytes or conservative failure and no falsely accepted history."
@@ -1178,6 +1600,17 @@
             "PS7"
           ],
           "sourceCommit": "5d1bd9fdaabe4d1de0a46e151656d09a6450703c"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1187,7 +1620,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual two-page All, duplicates, cycle, ambiguity and configured ceilings fetch bounded supported chains once, preserve bytes and report incomplete scope."
@@ -1210,6 +1643,17 @@
             "PS7"
           ],
           "sourceCommit": "5d1bd9fdaabe4d1de0a46e151656d09a6450703c"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1219,7 +1663,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual Latest/Custom fetch later pages before UTC selection; unavailable/malformed/HTML continuation gaps remain incomplete; preview makes metadata-only requests."
@@ -1242,6 +1686,28 @@
             "PS7"
           ],
           "sourceCommit": "8b963f1c01b5bede34afeb0a2c275fd176837786"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1251,7 +1717,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual script processes infer CustomCount, reject conflicts/invalid/noninteractive missing inputs before prompting, and preserve binding-aware WhatIf/Confirm semantics."
@@ -1274,6 +1740,28 @@
             "PS7"
           ],
           "sourceCommit": "8b963f1c01b5bede34afeb0a2c275fd176837786"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1283,7 +1771,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual script/import/launcher result boundaries preserve 0/2/1 and catchable typed130, private outcomes, honest incomplete summaries and host survival; synthetic launcher child130 proves forwarding separately."
@@ -1317,6 +1805,17 @@
             "PS7"
           ],
           "sourceCommit": null
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [
@@ -1351,6 +1850,17 @@
             "PS7"
           ],
           "sourceCommit": "a0eedde417f80a0ad3470afb6f232bb146d4a6fa"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1360,7 +1870,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual owned competing/same-show/independent-show processes and persistent lock handles verify exclusion, safe recovery, no second media request and original state/hash preservation."
@@ -1383,6 +1893,17 @@
             "PS7"
           ],
           "sourceCommit": "a0eedde417f80a0ad3470afb6f232bb146d4a6fa"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1392,7 +1913,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Real owned ACL denial/restoration, actual streamed bytes/closed guards/cancelled checkpoints and validated-size capacity probes preserve originals and produce useful safe errors."
@@ -1504,6 +2025,17 @@
             "PS7"
           ],
           "sourceCommit": "0dd7a556af161885ee33a022f046bb995af37467"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1513,7 +2045,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual Windows DPAPI CurrentUser, secure ACLs, strict malformed/schema/config preservation and sanitized projections are exercised in real owned dispatcher/entry processes."
@@ -1536,6 +2068,17 @@
             "PS7"
           ],
           "sourceCommit": "0dd7a556af161885ee33a022f046bb995af37467"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 15,
+          "kind": "product_loopback_integration",
+          "scope": "The fresh exact-source All run executes the corresponding committed case regressions on both engines. The original case record supplies the specific behavior and injected-boundary limits; full totals alone do not substitute for that proof.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1545,7 +2088,7 @@
       "ownerScopeChange": null,
       "currentSourceBinding": {
         "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "basis": "current_product_rerun"
       },
       "proven": [
         "Actual sequential run/request order, failure isolation, repeated hashes, combined counts/exit, untouched preview and retained partial/cancelled next-show state are asserted."
@@ -1622,6 +2165,17 @@
             "PS7"
           ],
           "sourceCommit": "66fb8b426b3a47b4ebc1f24c4b11be7c4ff3f29a"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1665,6 +2219,17 @@
             "PS7"
           ],
           "sourceCommit": "66fb8b426b3a47b4ebc1f24c4b11be7c4ff3f29a"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1697,6 +2262,17 @@
             "PS7"
           ],
           "sourceCommit": "6bcb7c64bdfbc64d6489dad622e70443b1a3464f"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 41,
+          "kind": "workflow",
+          "scope": "Four new clean-clone builds passed an independent exact-byte Git36/original-MIT/37-ZIP/manifest/checksum audit before execution; both repeats of each engine match all three files.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1740,6 +2316,28 @@
             "PS7"
           ],
           "sourceCommit": "6bcb7c64bdfbc64d6489dad622e70443b1a3464f"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Fresh real ZIP extractions outside checkouts exercise literal README commands, safe copied-original legacy recovery, callable All/repeat/preview, genuine shipped batch launch and actual process exits. Fourteen actual observations succeeded, with original hashes and removed owned contexts; this supplies no physical Explorer/Ctrl+C observation.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 39,
+          "kind": "manual_source_review",
+          "scope": "Reviewed actual exported inventory, original MIT, README/help and bounded runtime dependency/compatibility claims against the four independently verified source-bound ZIPs; no new physical UI or publication approval.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
         }
       ],
       "requiredUnrun": [],
@@ -1878,14 +2476,36 @@
       "id": "A057",
       "task": "UPD-0501",
       "type": "manual",
-      "status": "not_run",
+      "status": "passed",
       "canonicalStatusAtAudit": "not_run",
-      "evidence": [],
-      "requiredUnrun": [
-        "Root's exact clean-clone full both-engine and fresh extracted candidate/copied-legacy outcomes and completed final reconciliation."
+      "evidence": [
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 78,
+          "kind": "manual_source_review",
+          "scope": "Completed all60-case protocol/evidence reconciliation, fresh clean-clone both-engine All1791 and116-file analyses, four exact-source candidate audits and14 actual extracted-package/copied-original observations. Required manual and later owner cases remain explicit; the real archive and default saved settings were outside test inputs.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 50,
+          "kind": "product_loopback_integration",
+          "scope": "Actual source-bound extracted ZIP/copy observations preserve three original hashes, downloader trees and default configuration; all14 owned contexts were removed.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        }
       ],
+      "requiredUnrun": [],
       "limits": [
-        "A057 can pass completed protocol/reconciliation with explicit remaining cases while global readiness stays NOT_READY; do not relabel pending results as passed."
+        "This is the completed acceptance review required by UPD-0501; it deliberately reports NOT_READY while A041/A045/A059 remain unresolved.",
+        "Synthetic loopback/copied-original and process observations are not physical Explorer/Ctrl+C, live publisher, physical accessibility or publication evidence."
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
@@ -1893,21 +2513,32 @@
         "basis": "current_manual_review"
       },
       "proven": [
-        "Complete per-case reconciliation is in preparation; fresh clean-clone full both-engine runs, actual candidate/extraction/copied-legacy observations are pending root's exact outcomes."
+        "Completed all60-case protocol/evidence reconciliation, fresh clean-clone both-engine All1791 and116-file analyses, four exact-source candidate audits and14 actual extracted-package/copied-original observations. Required manual and later owner cases remain explicit; the real archive and default saved settings were outside test inputs."
       ]
     },
     {
       "id": "A058",
       "task": "UPD-0501",
       "type": "workflow",
-      "status": "not_run",
+      "status": "passed",
       "canonicalStatusAtAudit": "not_run",
-      "evidence": [],
-      "requiredUnrun": [
-        "Settled offline gate implementation and actual fail-closed positive/negative probe evidence."
+      "evidence": [
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 79,
+          "kind": "workflow",
+          "scope": "The frozen development-only offline policy has actual both-engine71 focused negative/positive probes and independent retained-input CLI probes. Pending/failed/skipped/inconclusive/helper-only/wrong-layer/physical-marker/stale-source/nonscalar inputs refuse readiness; valid synthetic inputs mean only ready_for_owner_review.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "7cdd085b2866d911e8e70e34a4fcf0ac1b40cca2"
+        }
       ],
+      "requiredUnrun": [],
       "limits": [
-        "A green helper/test count alone must never elevate a product/manual case or publish anything."
+        "Policy tests are workflow evidence, not new downloader acceptance or authentication of reviewed observations/source equivalence.",
+        "Initial probe failures and the malformed scalar defect are retained separately from final successful frozen-file checks; no publication authority or owner deferral is inferred."
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
@@ -1915,7 +2546,7 @@
         "basis": "current_manual_review"
       },
       "proven": [
-        "Fail-closed offline readiness tooling/probes are in preparation; absent, failed, skipped, mismatched/manual/helper-only evidence must hold the gate."
+        "The frozen development-only offline policy has actual both-engine71 focused negative/positive probes and independent retained-input CLI probes. Pending/failed/skipped/inconclusive/helper-only/wrong-layer/physical-marker/stale-source/nonscalar inputs refuse readiness; valid synthetic inputs mean only ready_for_owner_review."
       ]
     },
     {
@@ -1924,7 +2555,16 @@
       "type": "workflow",
       "status": "not_run",
       "canonicalStatusAtAudit": "not_run",
-      "evidence": [],
+      "evidence": [
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 80,
+          "kind": "workflow",
+          "scope": "The later UPD-0502 handoff has not run and its all-mandatory-gates-met precondition is unmet while A041/A045 remain outstanding; this is concrete reconciliation of an unrun case, not pass evidence.",
+          "engines": [],
+          "sourceCommit": null
+        }
+      ],
       "requiredUnrun": [
         "UPD-0502 final owner-review handoff after required evidence/gates are resolved."
       ],
@@ -1946,7 +2586,16 @@
       "type": "workflow",
       "status": "owner_gate",
       "canonicalStatusAtAudit": "not_run",
-      "evidence": [],
+      "evidence": [
+        {
+          "path": "docs/codex/evidence/UPD-0501.md",
+          "line": 81,
+          "kind": "workflow",
+          "scope": "No exact publication action has been authorized/performed; owner authority and resulting remote identifiers require separate action-specific evidence.",
+          "engines": [],
+          "sourceCommit": null
+        }
+      ],
       "requiredUnrun": [],
       "limits": [
         "No merge/tag/release/settings/deployment action may be inferred; an eventual exact authorized action needs separate evidence."
