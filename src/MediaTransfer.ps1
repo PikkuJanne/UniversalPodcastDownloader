@@ -12,7 +12,9 @@ function Invoke-PodcastMediaTransfer {
         [scriptblock]$ResolveFinalPath,
         [scriptblock]$BeforeFinalize,
         $Policy,
-        $ResumeContext
+        $ResumeContext,
+        [scriptblock]$OnProgress,
+        [ValidateRange(1, 10)][int]$Attempt = 1
     )
 
     $destination = Assert-PodcastDestination -Root $Root -RelativePath $RelativePath
@@ -25,6 +27,9 @@ function Invoke-PodcastMediaTransfer {
     $resume = $null
     $session = [pscustomobject]@{ State = $null; Lock = $null; Stream = $null; PartialName = ''; Preserve = $false }
     $requestFingerprint = ''
+    # The request's callback parameter is also named OnProgress. Use a distinct
+    # name here so PowerShell's dynamic scope cannot call that callback itself.
+    $presentationCallback = $OnProgress
     try {
         if ($null -ne $ResumeContext) {
             Assert-PodcastResumeLock -Lock $ResumeContext.Lock
@@ -59,6 +64,7 @@ function Invoke-PodcastMediaTransfer {
             else { $temporary = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative }
             $session.Stream = $destinationStream
             $session.PartialName = $temporaryRelative
+            $progressState = [pscustomobject]@{ Bytes = [long]$destinationStream.Length; TotalBytes = $null }
             $requestArguments = @{ Uri = $Uri; DestinationStream = $destinationStream; Policy = $Policy }
             $requestArguments.OnResponse = {
                 param($Info)
@@ -67,6 +73,12 @@ function Invoke-PodcastMediaTransfer {
                 $space = Assert-PodcastTransferSpace -Root $Root -RequiredBytes $Info.ResponseLength
                 if ($space.SpaceCheck -ne 'sufficient') { Write-Host ('[*] ' + $space.Message) }
                 Write-PodcastDiagnostic -Message $space.Message
+                $progressState.Bytes = [long]$Info.Offset
+                $progressState.TotalBytes = $Info.TotalLength
+                if ($presentationCallback) {
+                    $null = & $presentationCallback ([pscustomobject]@{ Stage = 'response'; Bytes = $progressState.Bytes;
+                        TotalBytes = $progressState.TotalBytes; Attempt = $Attempt })
+                }
                 if ($null -eq $ResumeContext -or -not $Info.ResumeSupported) { return }
                 # Preserve the reserved file even if checkpoint replacement
                 # fails: its durable ownership outcome may be uncertain.
@@ -83,10 +95,17 @@ function Invoke-PodcastMediaTransfer {
             }
             if ($null -ne $ResumeContext) {
                 $requestArguments.Resume = $resume
-                $requestArguments.OnProgress = {
-                    param([long]$Bytes)
+            }
+            $requestArguments.OnProgress = {
+                param([long]$Bytes)
+                if ($null -ne $ResumeContext) {
                     if ($Bytes -ne $session.Stream.Length) { throw 'Resume progress does not match the owned stream.' }
                     Update-PodcastResumeCheckpoint -Session $session
+                }
+                $progressState.Bytes = $Bytes
+                if ($presentationCallback) {
+                    $null = & $presentationCallback ([pscustomobject]@{ Stage = 'bytes'; Bytes = $Bytes;
+                        TotalBytes = $progressState.TotalBytes; Attempt = $Attempt })
                 }
             }
             $requestFailed = $false
@@ -134,6 +153,10 @@ function Invoke-PodcastMediaTransfer {
             $owned = $false
         }
 
+        if ($presentationCallback) {
+            $null = & $presentationCallback ([pscustomobject]@{ Stage = 'verifying'; Bytes = [long]$transfer.Bytes;
+                TotalBytes = $progressState.TotalBytes; Attempt = $Attempt })
+        }
         $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
         $validation = Test-PodcastMediaFile -LiteralPath $temporary -TransferCompleted:$transfer.Completed `
             -HttpContentLength $transfer.ContentLength -ContentType $transfer.ContentType -EnclosureLength $EnclosureLength `

@@ -40,6 +40,12 @@ FEATURES
         - Up to 3 attempts per episode with short delay between tries.
         - Skips episodes only after checking recorded size and SHA-256 on disk.
         - Summarizes downloaded / skipped / failed at the end.
+    - Interactive episode and byte progress:
+        - Unknown body lengths show received bytes without a fabricated total.
+        - 100% follows verified transfer/history success; redirected output stays quiet.
+    - Optional -KeepAwake temporarily requests Windows system wakefulness:
+        - Disabled by default; active only after confirmation and released in finally.
+        - Does not keep the display on or change the Windows power plan.
     - Explicit feed pagination:
         - Follows feed-level Atom next/prev-archive links before date selection.
         - MaxFeedPages defaults to 20 (1-100); entry/metadata limits also apply.
@@ -118,6 +124,8 @@ USAGE
         - Exit codes: 0 success, 1 fatal input/setup, 2 incomplete, 130 catchable cancellation.
         - Dot-source, then call Invoke-PodcastRun for a structured result without host exit.
         - -PassThru emits the entry script result; parameterized batch launches never pause.
+        - Add -KeepAwake to request temporary Windows wakefulness for confirmed work.
+          It is off by default; explicit sleep/lid actions can still take effect.
 
 NOTES
     - Episodes are sorted by UTC publication instant newest first; tied/undated entries keep source order.
@@ -179,6 +187,8 @@ param(
 
     [switch]$NonInteractive,
 
+    [switch]$KeepAwake,
+
     [switch]$PassThru,
 
     [string]$LegacyPath,
@@ -211,6 +221,8 @@ param(
 . (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
 . (Join-Path $PSScriptRoot 'src/Diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'src/RunResult.ps1')
+. (Join-Path $PSScriptRoot 'src/Progress.ps1')
+. (Join-Path $PSScriptRoot 'src/KeepAwake.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryStore.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryIdentity.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
@@ -489,6 +501,8 @@ function Invoke-PodcastRun {
 
         [switch]$NonInteractive,
 
+        [switch]$KeepAwake,
+
         [string]$LegacyPath,
 
         [ValidateSet('Preview','Adopt','Redownload','Rollback')]
@@ -514,10 +528,8 @@ function Invoke-PodcastRun {
     )
 
 
-    # --- Global config ---
+    # Per-invocation preferences do not replace the caller's progress policy.
     $ErrorActionPreference = 'Stop'
-    $prevProgress = $global:ProgressPreference
-    $global:ProgressPreference = 'Continue'
     if ($NonInteractive) { $ConfirmPreference = 'None' }
     $episodeResults = @()
     $destinationPlan = @()
@@ -531,6 +543,28 @@ function Invoke-PodcastRun {
 
     $historyLock = $null
     $archiveLock = $null
+    $runResources = [pscustomobject]@{ Power = $null; Progress = $null; Result = $null }
+    $onConfirmed = {
+        if ($KeepAwake -and $null -eq $runResources.Power) {
+            $runResources.Power = Start-PodcastKeepAwake -Enabled
+            Write-Host ('[*] ' + $runResources.Power.Message)
+            Write-PodcastDiagnostic -Message $runResources.Power.Message
+        }
+        if ($legacyRequested -and $LegacyAction -eq 'Redownload') {
+            $runResources.Progress = New-PodcastProgressContext -TotalEpisodes 1 -NonInteractive:$NonInteractive
+            Start-PodcastEpisodeProgress -Context $runResources.Progress -Index 1
+        }
+    }
+    $onTransferProgress = {
+        param($ProgressEvent)
+        if ($ProgressEvent.Stage -eq 'response') {
+            Start-PodcastTransferProgress -Context $runResources.Progress -Offset $ProgressEvent.Bytes `
+                -TotalBytes $ProgressEvent.TotalBytes -Attempt $ProgressEvent.Attempt
+        }
+        else {
+            Update-PodcastTransferProgress -Context $runResources.Progress -Bytes $ProgressEvent.Bytes -Stage $ProgressEvent.Stage
+        }
+    }
     $legacyRequested = $PSBoundParameters.ContainsKey('LegacyPath')
     $diagnosticPreview = $WhatIfPreference -or ($legacyRequested -and $LegacyAction -eq 'Preview')
     $diagnosticConfirmation = $ConfirmPreference -in @('Low', 'Medium')
@@ -657,15 +691,20 @@ function Invoke-PodcastRun {
         if ($legacyRequested) {
             $legacyResult = Invoke-PodcastLegacyMigration -Root $baseOutputPath -LegacyRoot $LegacyPath -FeedUrl $resolved.Url `
                 -Episodes $allEpisodes -Action $LegacyAction -EpisodeId $LegacyEpisodeId -FileName $LegacyFile `
-                -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint -Policy $script:PodcastTransportPolicy
+                -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint -Policy $script:PodcastTransportPolicy `
+                -OnConfirmed $onConfirmed -OnProgress $onTransferProgress
             $legacyPreview = $WhatIfPreference -or $LegacyAction -eq 'Preview' -or $null -eq $legacyResult.Outcome
             if ($legacyResult.Outcome -eq 'transfer_verified') {
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $legacyResult.EpisodeId -Outcome downloaded `
                     -Message 'Explicit legacy redownload completed; original media preserved.'
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome downloaded
             }
-            return New-PodcastRunResult -Mode $Mode -Preview:$legacyPreview -EpisodeResults $episodeResults `
+            $legacyRunResult = New-PodcastRunResult -Mode $Mode -Preview:$legacyPreview -EpisodeResults $episodeResults `
                 -Planned $(if ($legacyPreview) { @($legacyResult.Episodes).Count } else { 1 }) `
                 -Catalogue $resolved.Catalogue -LegacyResult $legacyResult -Message 'Explicit legacy review or action completed.'
+            $runResources.Result = $legacyRunResult
+            Complete-PodcastRunProgress -Context $runResources.Progress -Verified:$legacyRunResult.Complete
+            return $legacyRunResult
         }
 
         # Reserve room for both identifiers, separators and an episode's date/extension.
@@ -711,6 +750,7 @@ function Invoke-PodcastRun {
                 -Catalogue $resolved.Catalogue -Plan $publicPlan -Message 'Archive plan completed without changes.'
         }
         if ($diagnosticConfirmation) { $null = Initialize-PodcastDiagnostics }
+        $null = & $onConfirmed
         $null = Invoke-PodcastDestinationPreflight -Root $baseOutputPath
         if (-not (Test-Path -LiteralPath $baseOutputPath)) {
             Write-Host '[*] Creating selected base output directory.'
@@ -780,6 +820,7 @@ function Invoke-PodcastRun {
         Write-Log ("Feed items with valid URLs: {0}" -f $episodeCount)
 
         $total = $destinationPlan.Count
+        $runResources.Progress = New-PodcastProgressContext -TotalEpisodes $total -NonInteractive:$NonInteractive
         Write-Host "[*] Episodes to download: $total"
         Write-Log ("Episodes to download (after mode/filter): {0}" -f $total)
 
@@ -792,6 +833,7 @@ function Invoke-PodcastRun {
         foreach ($planned in $destinationPlan) {
             $index++
             $ep = $planned.Episode
+            Start-PodcastEpisodeProgress -Context $runResources.Progress -Index $index
 
             $fileName = $planned.FileName
             $relativeDestination = [IO.Path]::Combine($safeFeedTitle, $fileName)
@@ -799,23 +841,21 @@ function Invoke-PodcastRun {
 
             $historyAction = Resolve-PodcastHistoryItem -Context $historyContext -Planned $planned
             if ($historyAction -eq 'verified_skip') {
-                Write-Progress -Activity "Podcast downloads" -Status "Skipping (verified history): episode $index" `
-                    -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
                 Write-Host "[-] Skipping (verified history): episode $index"
                 $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome verified_skip `
                     -Bytes $planned.StateRecord.bytes -Verification 'local-size-sha256' -Message 'Recorded media verified on disk.'
                 Write-Log ("Verified history and on-disk SHA-256: {0}" -f $planned.EpisodeId)
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome verified_skip
                 continue
             }
             if ($historyAction -eq 'adopted_skip') {
-                Write-Progress -Activity "Podcast downloads" -Status "Skipping (owner-adopted local file): episode $index" `
-                    -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
                 Write-Host "[-] Skipping (owner-adopted local file): episode $index"
                 $adopted += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome legacy_unverified `
                     -Message 'Owner-adopted local media is unchanged; transfer completeness remains unverified.'
                 Write-Log ("Owner-adopted local file is unchanged: {0}; transfer completeness remains unverified." -f $planned.EpisodeId)
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome legacy_unverified
                 continue
             }
             if ($historyAction -eq 'conflict') {
@@ -824,12 +864,9 @@ function Invoke-PodcastRun {
                 $failed += [PSCustomObject]@{ EpisodeId = $planned.EpisodeId; Error = $message }
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome conflict -Message $message
                 Write-Log $message 'ERROR'
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome conflict
                 continue
             }
-
-            $pct = [int](($index/$total)*100)
-            Write-Progress -Activity "Podcast downloads" -Status "Preparing: episode $index" -PercentComplete $pct `
-                -CurrentOperation "Episode $index of $total"
 
             Write-Host "[+] Downloading episode $index of $total"
             Write-Verbose ("    URL: " + (Get-PodcastSafeUrl -Url $ep.Url))
@@ -844,7 +881,8 @@ function Invoke-PodcastRun {
             $lastError = $null
 
             try {
-                $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned -Policy $script:PodcastTransportPolicy
+                $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned `
+                    -Policy $script:PodcastTransportPolicy -OnProgress $onTransferProgress
                 $success = $true
                 $attempt = $transferResult.Attempts
             } catch {
@@ -876,6 +914,7 @@ function Invoke-PodcastRun {
                     Write-Warning $validationWarning
                     Write-Log $validationWarning 'WARN'
                 }
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome downloaded
             } else {
                 $retainedEvidence = @($historyContext.State.episodes | Where-Object {
                     $_.episode_id -ceq $planned.EpisodeId -and $null -ne $_.local_sha256 -and $null -ne $_.bytes
@@ -891,10 +930,9 @@ function Invoke-PodcastRun {
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome $outcome -Attempts $attempt -Message $errMsg
                 Write-Log ("Giving up after {0} attempts: {1}" -f $attempt, $planned.EpisodeId) 'ERROR'
                 Write-Log ("Last error: {0}" -f $errMsg) 'ERROR'
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome $outcome
             }
         }
-
-        Write-Progress -Activity "Podcast downloads" -Completed
 
         Write-Host ""
         Write-Host "Summary" -ForegroundColor Cyan
@@ -917,6 +955,8 @@ function Invoke-PodcastRun {
         }
 
         $runResult = New-PodcastRunResult -Mode $Mode -Planned $total -EpisodeResults $episodeResults -Catalogue $resolved.Catalogue
+        $runResources.Result = $runResult
+        Complete-PodcastRunProgress -Context $runResources.Progress -Verified:$runResult.Complete
         if ($runResult.Complete) {
             $runResult.Message = 'Run completed.'
             Write-Log 'Run completed.' 'INFO'
@@ -948,11 +988,35 @@ function Invoke-PodcastRun {
         $catalogue = if ($null -ne $resolved) { $resolved.Catalogue } else { $null }
         $catalogueGap = $primaryError.Exception.Data['PodcastCatalogue']
         if ($null -ne $catalogueGap) { $catalogue = $catalogueGap }
-        return New-PodcastRunResult -Mode $Mode -Preview:$diagnosticPreview -Planned $destinationPlan.Count `
+        $failureRunResult = New-PodcastRunResult -Mode $Mode -Preview:$diagnosticPreview -Planned $destinationPlan.Count `
             -EpisodeResults $episodeResults -Catalogue $catalogue -Fatal:($null -eq $catalogueGap -and -not $cancelled) `
             -Cancelled:$cancelled -Message $safeFailure
+        $runResources.Result = $failureRunResult
+        return $failureRunResult
     }
     finally {
+        try { Close-PodcastProgress -Context $runResources.Progress }
+        catch {
+            if ((Test-PodcastCancellation -ErrorObject $_) -and $null -ne $runResources.Result -and
+                $runResources.Result.ExitCode -eq 0 -and -not $runResources.Result.Preview) {
+                # All owned display IDs have been attempted. Keep committed
+                # episode evidence and continue power/lock cleanup, but expose
+                # a new catchable cancellation after otherwise successful work.
+                $runResources.Result.ExitCode = 130
+                $runResources.Result.Status = 'cancelled'
+                $runResources.Result.Complete = $false
+                $runResources.Result.Message = 'Run cancelled while clearing progress; completed media was preserved.'
+                Write-PodcastDiagnosticFallback -Message $runResources.Result.Message
+            }
+            else { Write-PodcastDiagnosticFallback -Message 'Progress display cleanup failed; the operation result is preserved.' }
+        }
+        try {
+            $powerCleanup = Stop-PodcastKeepAwake -Context $runResources.Power
+            if ($null -ne $runResources.Power -and -not $powerCleanup.Restored) {
+                Write-PodcastDiagnosticFallback -Message $powerCleanup.Message
+            }
+        }
+        catch { Write-PodcastDiagnosticFallback -Message 'Temporary keep-awake cleanup failed; the operation result is preserved.' }
         try { if ($null -ne $historyLock) { $historyLock.Stream.Dispose() } }
         catch { Write-PodcastDiagnosticFallback -Message 'History lock cleanup failed; the operation result is preserved.' }
         try { if ($null -ne $archiveLock) { $archiveLock.Dispose() } }
@@ -963,7 +1027,6 @@ function Invoke-PodcastRun {
             catch { Write-PodcastDiagnosticFallback -Message 'Diagnostic export is unavailable; the original operation result is preserved.' }
         }
         Close-PodcastDiagnostics
-        $global:ProgressPreference = $prevProgress
     }
 }
 

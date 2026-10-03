@@ -130,7 +130,9 @@ function Invoke-PodcastLegacyMigration {
         [Parameter(Mandatory)][object[]]$Episodes,
         [ValidateSet('Preview', 'Adopt', 'Redownload', 'Rollback')][string]$Action = 'Preview',
         [string]$EpisodeId, [string]$FileName, [string]$Sha256, [string]$Checkpoint,
-        $Policy
+        $Policy,
+        [scriptblock]$OnConfirmed,
+        [scriptblock]$OnProgress
     )
 
     if ($Sha256) { $Sha256 = $Sha256.ToLowerInvariant() }
@@ -155,6 +157,7 @@ function Invoke-PodcastLegacyMigration {
     })
     if (-not $PSCmdlet.ShouldProcess('Selected legacy archive', ($Action + ' selected legacy episode/history; preserve all media'))) { return $plan }
     if ($script:PodcastDiagnostics -and $script:PodcastDiagnostics.Preview) { $null = Initialize-PodcastDiagnostics }
+    if ($OnConfirmed) { $null = & $OnConfirmed }
 
     $archiveLock = $null; $historyLock = $null; $fileGuard = $null
     $operationFailed = $false
@@ -213,7 +216,7 @@ function Invoke-PodcastLegacyMigration {
         if (-not $found) { throw 'Cannot allocate a separate redownload path; original files were preserved.' }
         $choice | Add-Member NoteProperty NewFileIdentityHash $identity
         Write-Verbose ('Migration rollback checkpoint: ' + $savedCheckpoint)
-        $transfer = Invoke-PodcastRecordedTransfer -Context $context -Planned $choice -Policy $Policy
+        $transfer = Invoke-PodcastRecordedTransfer -Context $context -Planned $choice -Policy $Policy -OnProgress $OnProgress
         return [pscustomobject]@{ Outcome = 'transfer_verified'; EpisodeId = $EpisodeId; File = $transfer.RelativePath; Checkpoint = $savedCheckpoint }
     }
     catch { $operationFailed = $true; throw }

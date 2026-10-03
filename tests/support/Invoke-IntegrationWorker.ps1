@@ -196,21 +196,26 @@ try {
             $result.PromptCount = $discoveryPromptState.Count
         }
         'Download' {
+            $boundaryBreakpoint = $null
             if ($config.BoundaryJunctionPath -and $config.BoundaryStage -eq 'Preparing') {
                 $boundaryInjectionState = @{ Count = 0 }
-                function Write-Progress {
-                    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidOverwritingBuiltInCmdlets', '', Justification = 'This bounded integration hook inserts an owned junction after planning, exercising the real media write boundary with real loopback HTTP.')]
-                    [CmdletBinding()]
-                    param([string]$Activity, [string]$Status, [int]$PercentComplete, [string]$CurrentOperation, [switch]$Completed)
-
-                    if ($boundaryInjectionState.Count -eq 0 -and $Status -like 'Preparing:*') {
+                # The media boundary must be exercised even when redirected
+                # output correctly suppresses presentation. Only this owned
+                # worker's next recorded transfer triggers the junction.
+                $boundaryAction = {
+                    if ($boundaryInjectionState.Count -eq 0) {
                         $null = New-Item -ItemType Junction -Path $config.BoundaryJunctionPath -Target $config.BoundaryJunctionTarget -ErrorAction Stop
                         $boundaryInjectionState.Count++
                     }
-                    Microsoft.PowerShell.Utility\Write-Progress @PSBoundParameters
-                }
+                }.GetNewClosure()
+                $boundaryBreakpoint = Set-PSBreakpoint -Command Invoke-PodcastRecordedTransfer -Action $boundaryAction
             }
-            $published = @(& $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose -PassThru @modeParameters @paginationParameters)
+            try {
+                $published = @(& $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose -PassThru @modeParameters @paginationParameters)
+            }
+            finally {
+                if ($null -ne $boundaryBreakpoint) { $null = Remove-PSBreakpoint -Breakpoint $boundaryBreakpoint }
+            }
         }
         default { throw 'Unknown integration worker action.' }
     }

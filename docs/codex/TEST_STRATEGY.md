@@ -55,6 +55,12 @@ After restoring a fixture ACL, require exact owner/group, resource-manager contr
 
 For each case record task ID, case ID, source commit, actual command, engine version, date, result and sanitized evidence path. Capture failed/skipped/not-run explicitly. Summaries should be compact enough for future threads; store huge generated logs as ignored local output, not repository history. Re-run impacted cases after architecture changes; prior evidence is not automatically applicable to a changed release.
 
+## UPD-0303 progress and temporary keep-awake evidence
+
+New A044/A045 units exercise response totals/offsets/retries, indeterminate bytes, throttling, caller preferences, owned progress IDs, cleanup cancellation and lazy native leases. Owned loopback workers forward actual media/history/native power operations while recording presentation; they assert no 100 before accepted completion history, strict resume hashes, fresh retry offsets, invalid-media and history-save failures, cancellation and catalogue gaps. Existing late junction injection now uses an owned command breakpoint before transfer because quiet runs intentionally emit no progress.
+
+Manual Windows observations use actual unredirected ConsoleHost sessions in both engines with no forced interactive detector. Known length, unknown length, invalid media, catchable cancellation and NonInteractive runs forward the native renderer and retain observed host/output flags and progress records. Requested leases activate and restore exact prior flags on their own native threads; default-off cases make no request. Separate actual Win32 smoke checks verify another caller thread's request survives lease cleanup. Redirected output is covered by the loopback checks. These prove the exercised console/API paths, not physical keyboard Ctrl+C, physical automatic sleep/lid behavior or restoration after hard kill. See [UPD-0303 evidence](evidence/UPD-0303.md).
+
 ## Release gate
 
 All mandatory A001–A059 cases must be satisfied or explicitly documented as an owner-approved scope change. A060 applies only when a publication action is authorized and performed; until then mark `owner_gate`/not applicable to implementation readiness, not failed. Optional signing and live website deployment are owner-gated, not hidden implementation claims. `ready_for_owner_review` is different from `released`.

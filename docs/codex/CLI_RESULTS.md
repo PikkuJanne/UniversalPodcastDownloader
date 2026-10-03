@@ -15,6 +15,10 @@ pwsh -NoProfile -File .\UniversalPodcastDownloader.ps1 -FeedUrl 'https://example
 
 These are syntax examples using a reserved test domain. `-WhatIf` may retrieve bounded metadata and read local evidence, but never requests planned enclosure media or writes archive/log/export/lock/history/checkpoint files. An incomplete preview retains `Preview=true` and an incomplete result; it does not claim downloaded media.
 
+`-KeepAwake` optionally requests temporary Windows system sleep prevention after work is confirmed. It is off by default, uses a dedicated native thread, and restores that thread's previous execution-state flags during catchable cleanup. Preview never activates it. Unsupported platforms and native failures produce a fixed advisory and permit ordinary download checks. Explicit Sleep and lid actions remain possible; forced termination cannot guarantee restoration.
+
+Animated progress is limited to an interactive ConsoleHost with unredirected output, `-NonInteractive` absent and the caller's progress preference set to Continue. Validated response totals drive percentages; unknown totals show received bytes. An episode reaches 100% only after verified media and completion history, and the run reaches 100% only when all selected work is verified without catalogue gaps. See [progress and power policy](PROGRESS_AND_POWER.md).
+
 ## Callable API and script boundary
 
 Dot-sourcing the root script loads import-safe helpers, including `Invoke-PodcastRun`. Calling that function returns a `Podcast.RunResult` object and never exits its caller's host. The executable script emits the result only with `-PassThru`, then exits with its `ExitCode`. Native `-PassThru` output is PowerShell's textual formatting alongside console messages; it is not a JSON protocol. In-process callers can use the returned object directly.

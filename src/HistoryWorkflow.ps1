@@ -111,16 +111,18 @@ function Resolve-PodcastHistoryItem {
 
 function Invoke-PodcastRecordedTransfer {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy)
+    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy, [scriptblock]$OnProgress)
 
     if ($null -eq $Policy) { $Policy = New-PodcastTransportPolicy }
     $transferContext = $Context
     $transferPlan = $Planned
+    $transferProgress = $OnProgress
     Invoke-PodcastTransportOperation -Policy $Policy -Operation {
         param($Attempt, $AttemptPolicy)
         # Each retry verifies an owned checkpoint or reserves a fresh temporary file.
         # Untyped filesystem, validation and history errors are never retried.
-        $result = Invoke-PodcastRecordedTransferAttempt -Context $transferContext -Planned $transferPlan -Policy $AttemptPolicy
+        $result = Invoke-PodcastRecordedTransferAttempt -Context $transferContext -Planned $transferPlan `
+            -Policy $AttemptPolicy -OnProgress $transferProgress -Attempt $Attempt
         $result | Add-Member NoteProperty Attempts $Attempt -Force
         return $result
     }
@@ -128,7 +130,8 @@ function Invoke-PodcastRecordedTransfer {
 
 function Invoke-PodcastRecordedTransferAttempt {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy)
+    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)]$Planned, $Policy,
+        [scriptblock]$OnProgress, [ValidateRange(1, 10)][int]$Attempt = 1)
 
     $beforeFinalize = {
         param($Evidence)
@@ -165,7 +168,8 @@ function Invoke-PodcastRecordedTransferAttempt {
     $result = Invoke-PodcastMediaTransfer -Uri $Planned.Episode.Url -Root $Context.Lock.Root `
         -RelativePath $Planned.FileName -EnclosureLength $Planned.Episode.EnclosureLength -BeforeFinalize $beforeFinalize -Policy $Policy `
         -EnclosureContentType $mediaType -ResolveFinalPath $resolveFinalPath `
-        -ResumeContext ([pscustomobject]@{ Lock = $Context.Lock; FeedId = $Context.State.feed_id; EpisodeId = $Planned.EpisodeId })
+        -ResumeContext ([pscustomobject]@{ Lock = $Context.Lock; FeedId = $Context.State.feed_id; EpisodeId = $Planned.EpisodeId }) `
+        -OnProgress $OnProgress -Attempt $Attempt
     $completed = @($Context.State.episodes | Where-Object { $_.episode_id -ceq $Planned.EpisodeId })[0].PSObject.Copy()
     $completed.status = 'transfer_verified'
     Save-PodcastEpisodeRecord -Context $Context -Record $completed

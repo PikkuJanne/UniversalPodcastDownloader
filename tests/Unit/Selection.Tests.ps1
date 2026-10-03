@@ -58,6 +58,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         $fixtureMedia = $script:FixtureMedia
         Mock Write-Host {}
         Mock Write-Progress {}
+        Mock Test-PodcastProgressInteractive { $true }
         Mock Start-Sleep {}
         $feedResponse = [pscustomobject]@{ Content = '' }
         Mock Invoke-PodcastMetadataRequest { $feedResponse }
@@ -102,13 +103,18 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         $log | Should -Match "Episodes to download \(after mode/filter\): $ExpectedCount"
         $log | Should -Match "Summary: Downloaded=$ExpectedCount, Skipped=0, Failed=0"
         Should -Invoke Invoke-PodcastMediaRequest -Times $ExpectedCount -Exactly -ParameterFilter { $DestinationStream }
-        Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { -not $Completed }
+        Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { -not $Completed -and $Status -like 'Preparing:*' }
         for ($i = 1; $i -le $ExpectedCount; $i++) {
             $operation = "Episode $i of $ExpectedCount"
-            $percent = [int](($i / $ExpectedCount) * 100)
+            # Preparing has processed only preceding episodes. The current
+            # episode cannot contribute until transfer and history succeed.
+            $percent = [int][Math]::Floor((($i - 1) / $ExpectedCount) * 100)
             Should -Invoke Write-Progress -Times 1 -Exactly -ParameterFilter {
-                -not $Completed -and $CurrentOperation -eq $operation -and $PercentComplete -eq $percent
+                -not $Completed -and $Status -like 'Preparing:*' -and $CurrentOperation -eq $operation -and $PercentComplete -eq $percent
             }
+        }
+        Should -Invoke Write-Progress -Times 1 -Exactly -ParameterFilter {
+            -not $Completed -and $Status -like 'All selected episodes verified.*' -and $PercentComplete -eq 100
         }
 
         $result = Invoke-PodcastRun @arguments
@@ -116,7 +122,7 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         $result.VerifiedSkipped | Should -Be $ExpectedCount
 
         Should -Invoke Invoke-PodcastMediaRequest -Times $ExpectedCount -Exactly
-        Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { $Status -like 'Skipping (verified history):*' }
+        Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { $Status -like 'Verified history:*' }
         Should -Invoke Write-Progress -Times 0 -Exactly -ParameterFilter { -not $Completed -and ($PercentComplete -lt 0 -or $PercentComplete -gt 100) }
     }
 

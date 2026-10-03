@@ -89,6 +89,10 @@ For an in-process result, dot-source the script and call `Invoke-PodcastRun`; th
   - Checks read at most 64 KiB for supported MPEG Layer III, WAV, FLAC, Ogg audio packet or MP4 audio indications. Generic containers without bounded audio evidence fail; an M4A brand remains a modest compatibility indication. These checks do not decode the whole file, prove audio-only content/playability or establish publisher authenticity.
   - Downloads with a strong ETag, known length and matching durable checkpoint can resume automatically. The downloader verifies the stored identity, local bytes and returned range before appending. Uncertain responses start fresh while preserving the old partial. Corrupt checkpoints or uncheckpointed crash tails stop for review; unknown partials are never reused or cleaned. See [safe resume policy](docs/codex/RESUME_POLICY.md).
 
+Interactive console runs show episode and streamed-byte progress. Known totals come from validated response headers; unknown totals show received bytes. Receiving and validation stay below 100% until the episode is verified and recorded. Noninteractive and redirected runs retain fixed notices and a readable summary without animated progress.
+
+Add `-KeepAwake` to request temporary Windows sleep prevention during confirmed work. It is off by default and released on normal completion, exceptions and catchable cancellation. It does not keep the display on or change a power plan; explicit Sleep and lid actions can still apply. Forced termination cannot guarantee cleanup. See [progress and temporary keep-awake policy](docs/codex/PROGRESS_AND_POWER.md).
+
 **Local history and recovery**
 
 - Each established show stores versioned history in `.upd/state.json` and its previous valid generation in `.upd/state.json.bak`. Records contain relative destinations, identity fingerprints, outcomes, measured bytes, SHA-256 and bounded transfer evidence. Request URLs stay exact in memory and are not stored in history.
