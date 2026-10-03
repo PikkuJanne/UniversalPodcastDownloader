@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## Historical suite coverage and current checks
 
-The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The historical UPD-0401 inventory is **1,709 checks per engine**, detailed in its section below; UPD-0402 adds eight integration checks for a current total of **1,717**; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. UPD-0401 had **1,709**, UPD-0402 added eight integration checks for **1,717**, and UPD-0403 adds27 packaging-tooling units/four actual ZIP integrations for current **1,748**. Adding a test does not make an earlier run cover it. Current counts and exact-source coverage are in the UPD-0403 section below. The following table is the historical UPD-0201 breakdown.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -282,7 +282,7 @@ Historical UPD-0304 inventory **1682 =1359 units (1349 product/ten runner guards
 
 135 new units and13 product integrations cover strict schema/DPAPI/protected ACL/atomic update/no-evaluation/safe export, real named repetition, complete WhatIf tree preservation, sequential failure isolation and counts, subset/conflicts and typed real-byte cancellation with strict checkpoints/closed guards/unstarted shows. Eleven owned worker cases import the actual dispatcher; two use the actual product -File parameter/exit boundary. All tests use explicit marked owned configuration/output paths; no real archive/subscriptions. [UPD-0304 evidence](evidence/UPD-0304.md) preserves baseline/fixture/runtime failures, exact commands/versions and limitations. Pinned development tools and CI40-minute deadlines remain unchanged; fixture helper checks remain historical and separate.
 
-## UPD-0401 architecture and compatibility checks
+## UPD-0401 architecture and compatibility checks (historical snapshot)
 
 Use fresh processes and the same native/Python process-only wrappers:
 
@@ -317,12 +317,12 @@ pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1
 pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
 ```
 
-Current inventory **1709 =1383 units (1373 product/ten runner guards)+326 integrations**. Full local All passed1709/0/0/0 each, PS7 2574.54s/native 1436.05s, child/outer0. Whole analysis108 files reports parse/new/known-baseline0 on both. Final focused diagnostic/run12 passed12/0/0/1371 of1383 in6.20/6.37s; source/context8 passed8/0/0/1371 of1379 in3.48/3.87s; affected150 passed150/0/0/1229 of1379 in12.31/14.47s; retry4 passed4/0/0/1379 of1383 in3.97/3.91s; frozen copied-runtime3 passed3/0/0/323 of326 in24.15/15.83s. Historical discovery inventories preceded four later retry checks; they are not current full coverage. Exact final-head CI is independently recorded in PR/handoff.
+UPD-0401 inventory **1709 =1383 units (1373 product/ten runner guards)+326 integrations**. Full local All passed1709/0/0/0 each, PS7 2574.54s/native 1436.05s, child/outer0. Whole analysis108 files reports parse/new/known-baseline0 on both. Final focused diagnostic/run12 passed12/0/0/1371 of1383 in6.20/6.37s; source/context8 passed8/0/0/1371 of1379 in3.48/3.87s; affected150 passed150/0/0/1229 of1379 in12.31/14.47s; retry4 passed4/0/0/1379 of1383 in3.97/3.91s; frozen copied-runtime3 passed3/0/0/323 of326 in24.15/15.83s. Historical discovery inventories preceded four later retry checks; they are not current full coverage. Exact final-head CI is independently recorded in PR/handoff.
 
 24 new units/three integrations cover caller state, explicit/fresh policy, response reuse, diagnostics close/export, retry observations/exceptions, copied runtime/import/real media/repeat/preview and resource reopening. Runtime worker PATH/module lookup excludes development dependencies; parent Python is fixture tooling only. Tree snapshots compare names/lengths/hashes, not timestamps or a future release ZIP. Retained35 scoped runtime suppressions remain justified; colliding Write-Log/empty catch causes are fixed and the baseline is empty. [UPD-0401 evidence](evidence/UPD-0401.md) records every baseline/mixed-wiring/harness correction, exact versions/commands and limitations. No fixture helper changed/reran; prior helper results remain historical. Help/manual examples and package/release gates remain not_run.
 
 
-## UPD-0402 documentation verification
+## UPD-0402 documentation verification (historical snapshot)
 
 Use the same fresh-process/Python PATH/native module wrappers. No app runtime dependency was added:
 
@@ -334,6 +334,27 @@ pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1
 pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
 ```
 
-Current1717=1383 Unit (1373 product/ten runner guards)+334 Integration. Both engines passed Unit1383/0/0/0, docs8/0/0/326, affected CLI/runtime32/0/0/302 and legacy25/0/0/309; final whole analysis110 files parse/new/known0. These are1448 distinct local assertions;269 integrations are filtered out, not passes. Current full All is final-head CI in M4 draft PR #5/final handoff; UPD-0401 full local1709 is historical. Exact versions/durations/failed harness snapshots are in [UPD-0402 evidence](evidence/UPD-0402.md).
+UPD-0402 inventory1717=1383 Unit (1373 product/ten runner guards)+334 Integration. Both engines passed Unit1383/0/0/0, docs8/0/0/326, affected CLI/runtime32/0/0/302 and legacy25/0/0/309; final whole analysis110 files parse/new/known0. These are1448 distinct local assertions;269 integrations are filtered out, not passes. Full All for that snapshot is its final-head CI in M4 draft PR #5/final handoff; UPD-0401 full local1709 is historical. Exact versions/durations/failed harness snapshots are in [UPD-0402 evidence](evidence/UPD-0402.md).
 
 Eight new cases run literal11 README fences/four Get-Help examples, all public help parameters, script0/1/2 and genuine argument-free batch input from fresh runtime-only copies with Unicode/spaces and isolated owned profile/config/output. Native5.1 splits multiline examples into Code/Remarks; reconstruction must match authored AST command text. Actual hashes/history prove original preservation and adoption versus transfer verification. Preview/package/default-config boundaries are asserted. Manual A049/A050 are separately reviewed for meaning/rendering; no physical owner double-click/accessibility/keyboard cancellation check or release ZIP is claimed. No fixture helper selftest changed/reran.
+
+## UPD-0403 local packaging and actual ZIP verification
+
+Build from a clean committed source; Git is a build-tool requirement. No Git, Python, Pester or analyzer is required by the extracted application. Version and exact36-file allowlist are checked in `tools/release-package.json`. Never copy a private archive/configuration into a build. The builder exports immutable regular Git blobs, generates a37-entry ZIP and identical internal/sidecar manifest, validates every entry and produces SHA256SUMS covering ZIP/sidecar. Each output parent receives a new version/full-commit child directory; occupied candidates fail without overwrite. Source/output reparse/root/ancestor guards and marked staging cleanup remain active.
+
+```powershell
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Build-Release.ps1 -OutputDirectory ./artifacts/reproduce-one
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Build-Release.ps1 -OutputDirectory ./artifacts/reproduce-two
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Unit -Filter '*A051/A052*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Integration -Filter '*A051/A052*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Integration -Filter '*A04[89]*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
+```
+
+Run tests with the process-only Python PATH/native module wrappers above, and repeat with native5.1. Build itself needs no Python. New candidate0.1.0-rc.1 is unpublished; tags/releases were inspected empty before selection. Inventory uses ordinal sorting and exact source commit/tree/URL; ZIP timestamps/attributes are fixed. Actual clean-checkpoint four builds have equal repeat bytes per engine and equal manifests across engines, while cross-engine compression bytes differ. Do not infer publisher authentication or universal byte reproducibility from checksums. [RELEASE](../../RELEASE.md) explains unsigned/process-only launch policy, source verification and application-code rollback versus retained archive/schema state.
+
+Current **1748=1410 Unit (1373 existing product+ten runner guards+27 packaging-tooling guards)+338 Integration**. Both local engines passed packaging Unit27/0/0/1383 and actual ZIP Integration4/0/0/334. Affected docs/runtime11/0/0/323 passed at the earlier334-integration snapshot before new ZIP cases were discovered. These cover42 distinct current assertions per engine,1706 not selected locally. Whole final analyzers114 files parse/new/baseline0/0/0 each. No current full local Unit/Integration/All pass is claimed; final exact-source full All CI is independently verified in PR/handoff. Existing helper selftests are historical and unchanged. Exact timings/commands/failed harness snapshots and clean source/checksum identifiers are in [UPD-0403 evidence](evidence/UPD-0403.md).
+
+The new units use tiny owned synthetic Git repositories for binary/source/dirty/inventory/revision/path/junction/collision/tamper guards. Four actual ZIP cases use a clean committed copy of real runtime source and ignored private poison, build twice, validate hashes/import closure/MIT/artwork, and freshly extract into Unicode/spaces paths outside checkout. Isolated app workers lack developer tools, render help, run genuine native batch preview/fatal paths, transfer original loopback bytes, verify repeat/preview preservation and closed handles. Separate canonical clean-checkpoint builds and two actual extraction observations per engine support manual A052 source/license review; automated observations do not change its manual classification.
+
+Native Windows host startup can create standard profile/TEMP dirs and mutate exactly `USERPROFILE/AppData/Local/Microsoft/Windows/PowerShell/StartupProfileData-NonInteractive`. Worker host-only observations and cache before/after sizes/hashes are recorded. The fixture prepares only owned standard parents and separates that exact host cache file; all other directories/files, including downloader output/configuration/logs/TEMP, remain in preservation comparisons. This asserts application-controlled preview preservation rather than a host-wide zero-write promise. No runtime behavior, launcher or helper changed.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A050 passed through UPD-0402; A051-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and downloader acceptance. A001-A052 passed through UPD-0403; A053-A060 not_run. Packaging A051 uses actual committed ZIP builds, A052 retains manual source/license/extraction review. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -564,8 +564,8 @@
       "when": "Build ZIP twice with declared tooling.",
       "expected": "Deterministic file inventory and version; checksums validate; includes imported modules/license/help; excludes logs, media, secrets, test fixtures and handoff history.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0403.md"
     },
     {
       "id": "A052",
@@ -575,8 +575,8 @@
       "when": "Run supported smoke scenarios.",
       "expected": "No hidden checkout dependency; source version traceable; original MIT license retained.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0403.md"
     },
     {
       "id": "A053",

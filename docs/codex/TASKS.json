@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0403",
+  "current_task": "UPD-0404",
   "status_values": [
     "todo",
     "ready",
@@ -677,7 +677,7 @@
       "id": "UPD-0403",
       "milestone": "M4",
       "title": "Build traceable release ZIPs and checksums",
-      "status": "in_progress",
+      "status": "done",
       "dependencies": [
         "UPD-0402"
       ],
@@ -698,15 +698,17 @@
         "A051",
         "A052"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0403.md"
+      ],
+      "implementation_commit": "6bcb7c64bdfbc64d6489dad622e70443b1a3464f",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0404",
       "milestone": "M4",
       "title": "Prepare secure GitHub release workflow",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0403"
       ],
