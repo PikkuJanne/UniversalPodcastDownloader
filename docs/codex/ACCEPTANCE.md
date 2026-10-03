@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A047 passed; A048-A060 remain NOT RUN. Saved-show/batch A046/A047 use real DPAPI/protected ACL/loopback/media/checkpoint evidence in [UPD-0304](evidence/UPD-0304.md). A044/A045 use actual Windows ConsoleHost/native API observations with catchable typed cancellation; physical keyboard Ctrl+C and hard-kill restoration remain unclaimed. See [progress/power evidence](evidence/UPD-0303.md) and [Windows observations](evidence/UPD-0303-WINDOWS.md). Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0302 evidence](evidence/UPD-0302.md), [UPD-0301 evidence](evidence/UPD-0301.md) and [actual launcher observations](evidence/UPD-0301-LAUNCHER.md).
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A048 passed; A049-A060 remain NOT RUN. A048 uses the final structural review, full local1709 checks per engine and zero-warning108-file analysis in [UPD-0401](evidence/UPD-0401.md); final exact-head CI is independently recorded in M4 draft PR #5/final handoff. Saved-show/batch A046/A047 use real DPAPI/protected ACL/loopback/media/checkpoint evidence in [UPD-0304](evidence/UPD-0304.md). A044/A045 use actual Windows ConsoleHost/native API observations with catchable typed cancellation; physical keyboard Ctrl+C and hard-kill restoration remain unclaimed. See [progress/power evidence](evidence/UPD-0303.md) and [Windows observations](evidence/UPD-0303-WINDOWS.md). Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0302 evidence](evidence/UPD-0302.md), [UPD-0301 evidence](evidence/UPD-0301.md) and [actual launcher observations](evidence/UPD-0301-LAUNCHER.md).
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -51,7 +51,7 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A047 passed; A048-A060 rem
 | A045 | UPD-0303 | manual | passed | Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented. |
 | A046 | UPD-0304 | integration | passed | Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported. |
 | A047 | UPD-0304 | integration | passed | Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show. |
-| A048 | UPD-0401 | workflow | not_run | No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks. |
+| A048 | UPD-0401 | workflow | passed | No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks. |
 | A049 | UPD-0402 | manual | not_run | Commands work, functions/parameters exist, capabilities match tests, no promised unreleased feature or machine-wide security bypass. |
 | A050 | UPD-0402 | manual | not_run | All scope is explicit; legacy unverified files not presented as verified; repair procedure avoids deleting originals. |
 | A051 | UPD-0403 | workflow | not_run | Deterministic file inventory and version; checksums validate; includes imported modules/license/help; excludes logs, media, secrets, test fixtures and handoff history. |

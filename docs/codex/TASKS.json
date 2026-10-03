@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0401",
+  "current_task": "UPD-0402",
   "status_values": [
     "todo",
     "ready",
@@ -615,7 +615,7 @@
       "id": "UPD-0401",
       "milestone": "M4",
       "title": "Complete maintainability and compatibility audit",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0304"
       ],
@@ -636,15 +636,17 @@
       "acceptance_ids": [
         "A048"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0401.md"
+      ],
+      "implementation_commit": "8abe0505995dc0c38cc111155f4e0080dc6d39b9",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0402",
       "milestone": "M4",
       "title": "Write verified help and user documentation",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0401"
       ],

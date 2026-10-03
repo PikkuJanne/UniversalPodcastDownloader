@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## Historical suite coverage and current checks
 
-The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0304 inventory is **1,682 checks per engine**, detailed in its section below; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0401 inventory is **1,709 checks per engine**, detailed in its section below; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -90,7 +90,7 @@ Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008,
 
 Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 169 not_run. Run `-Suite Integration` for all 40 loopback cases. Transaction tests kill only their owned worker process after an actual stream write or immediately before/after File.Move. Process-local debugger breakpoints also insert a competing final file and verify the temporary stream has closed; product code has no test hook. Reruns preserve abandoned partials and begin a fresh request. Signature validation is bounded and is not full decoding.
 
-UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0304 section; historical counts belong to their recorded task snapshots.
+UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0401 section; historical counts belong to their recorded task snapshots.
 
 UPD-0105 legacy units use `-Suite Unit -Filter '*A01[78]*'` (71 checks); focused integration uses `-Suite Integration -Filter '*A01[78]*'` (25 checks, including the updated A009/A017 historical-folder guard and A016/A017 unknown-destination guard). CLI tests hash every copied original before/after operations, assert unchanged preview trees, require exact reviewed adoption digests, distinguish adoption from observed transfers, preserve remote-changed originals, choose one redownload from a multi-episode feed, and restore only metadata from explicit checkpoints. Ordinary WhatIf now performs no filesystem writes; early invalid feeds/identities leave the output root absent. Schema-1 behavior stays supported alongside explicit schema-2 migration.
 
@@ -123,24 +123,24 @@ The new cases check both initial and redirected request targets, disabled reques
 
 This task's local Python is the bundled **3.12.14** runtime. The ambient Windows `python` alias did not resolve a usable runtime; prefix the bundled Python directory to the calling process PATH for local integrations. CI remains pinned to Python **3.14.7**. No Python install or global PATH change is required. Exact local path and commands appear in the evidence.
 
-These earlier checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical evidence preserves earlier snapshots. Current task evidence is [UPD-0206](evidence/UPD-0206.md), with 1,272 checks (1,012 units and 260 integrations), bounded pagination/partial-catalogue results, intermediate failures, exact commands and results. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
+These earlier checks do not validate the whole application, launcher UX, catchable cancellation, private feeds or future acceptance cases. Helper-server self-tests are a separate layer. Historical [UPD-0206 evidence](evidence/UPD-0206.md) preserves its 1,272 checks (1,012 units and 260 integrations), bounded pagination/partial-catalogue results, intermediate failures, exact commands and results. Current [UPD-0401 evidence](evidence/UPD-0401.md) records the full 1,709-check local audit on both engines. [Resume policy](RESUME_POLICY.md) documents the tested recovery scope and conservative limits.
 
 ## Static analysis policy
 
 `Analyze.ps1` parses the runtime, runner and test PowerShell files in the selected engine, then runs PSScriptAnalyzer's warning/error rules. [tools/PSScriptAnalyzerSettings.psd1](../../tools/PSScriptAnalyzerSettings.psd1) excludes `PSAvoidUsingWriteHost` intentionally because the existing TUI and developer summaries use host output. Other default rules remain enabled.
 
-[tools/lint-baseline.json](../../tools/lint-baseline.json) retains **2 surviving warning allowances** from the reviewed baseline source `2ac82614493be7196c9ebee116f23fec07368b50`. Each allowance matches the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count. The runner permits no new finding or parse error; moving a warning into unrelated source or increasing its count fails. Reduce/remove entries as later tasks fix their causes.
+[tools/lint-baseline.json](../../tools/lint-baseline.json) now has **no warning allowances**: UPD-0401 fixed the two remaining causes below. The retained source identifier `2ac82614493be7196c9ebee116f23fec07368b50` records the original reviewed baseline. The runner permits no new finding or parse error. Any future explicitly reviewed allowance must match the exact repository-relative file, rule, message, surrounding source text and maximum occurrence count; moving a warning into unrelated source or increasing its count fails.
 
-| Rule | Baseline count | Source context |
+| Historical rule | Former baseline count | Fixed source context |
 | --- | ---: | --- |
 | `PSAvoidOverwritingBuiltInCmdlets` | 1 | Existing `Write-Log` function |
 | `PSAvoidUsingEmptyCatchBlock` | 1 | Feed-title extraction |
 
-The current baseline emits 2 warnings on PS7 and 1 on native PS5.1, whose analyzer built-in command profile does not emit the `Write-Log` override warning. These remain acknowledged legacy warnings. Earlier tasks removed obsolete naming/size/BOM allowances; UPD-0203 reduced the baseline to 3/2 and UPD-0204 to 2/1. Pure helpers use narrow, documented suppressions for retained names. Final UPD-0205 analysis covers 69 PowerShell files with zero parse errors and zero new findings on both engines.
+The historical baseline emitted 2 warnings on PS7 and 1 on native PS5.1, whose analyzer built-in command profile did not emit the `Write-Log` override warning. Earlier tasks removed obsolete naming/size/BOM allowances; UPD-0203 reduced the baseline to 3/2 and UPD-0204 to 2/1. Historical UPD-0205 analysis covered 69 PowerShell files with zero parse errors/new findings on both. Current UPD-0401 analysis covers 108 files with zero parse errors, new findings and baseline warnings on both engines. Its 35 retained scoped runtime suppressions have authored justifications for in-memory operations, caller-confirmed resource ownership, stable helper/collection APIs and lookup-only legacy SHA1.
 
 ## CI and verified sources
 
-[test.yml](../../.github/workflows/test.yml) runs Windows PowerShell 5.1 and PowerShell 7 on `windows-2022`, with a 15-minute job limit and two-job maximum. It triggers for pull requests, pushes to `main` and manual dispatch. It uses only `contents: read`, disables checkout credential persistence and has no artifact/release/publication step. Test/analysis counts and runtime inventory appear in the job summary. Workflow configuration alone is not evidence of a completed CI run; consult the task evidence and actual GitHub checks.
+[test.yml](../../.github/workflows/test.yml) runs Windows PowerShell 5.1 and PowerShell 7 on `windows-2022`, with a 40-minute job limit and two-job maximum. It triggers for pull requests, pushes to `main` and manual dispatch. It uses only `contents: read`, disables checkout credential persistence and has no artifact/release/publication step. Test/analysis counts and runtime inventory appear in the job summary. Workflow configuration alone is not evidence of a completed CI run; consult the task evidence and actual GitHub checks.
 
 Action references were verified against the official release tags and source on 2026-10-02:
 
@@ -278,6 +278,45 @@ pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Fil
 pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
 ```
 
-Current inventory **1682 =1359 units (1349 product/ten runner guards)+323 integrations**. Frozen new148 focus passed148/0/0/1534 each, PS7 211.88s/native103.51s; whole analysis102 files parse/new0 baseline2/1; child/outer0. Earlier affected prior entry58 focus passed58/0/0/263 of321 each222.05/120.88s, before two added entry cases. Earlier full Unit1351 passed each297.29/177.53s before the last eight guards/preference/catch corrections; not full current coverage. Final exact-head full All CI is independently recorded in PR/handoff. No local current fullAll/fullIntegration pass is inferred.
+Historical UPD-0304 inventory **1682 =1359 units (1349 product/ten runner guards)+323 integrations**. Frozen new148 focus passed148/0/0/1534 each, PS7 211.88s/native103.51s; whole analysis102 files parse/new0 baseline2/1; child/outer0. Earlier affected prior entry58 focus passed58/0/0/263 of321 each222.05/120.88s, before two added entry cases. Earlier full Unit1351 passed each297.29/177.53s before the last eight guards/preference/catch corrections; not full current coverage. Final exact-head full All CI is independently recorded in PR/handoff. No local current fullAll/fullIntegration pass is inferred.
 
 135 new units and13 product integrations cover strict schema/DPAPI/protected ACL/atomic update/no-evaluation/safe export, real named repetition, complete WhatIf tree preservation, sequential failure isolation and counts, subset/conflicts and typed real-byte cancellation with strict checkpoints/closed guards/unstarted shows. Eleven owned worker cases import the actual dispatcher; two use the actual product -File parameter/exit boundary. All tests use explicit marked owned configuration/output paths; no real archive/subscriptions. [UPD-0304 evidence](evidence/UPD-0304.md) preserves baseline/fixture/runtime failures, exact commands/versions and limitations. Pinned development tools and CI40-minute deadlines remain unchanged; fixture helper checks remain historical and separate.
+
+## UPD-0401 architecture and compatibility checks
+
+Use fresh processes and the same native/Python process-only wrappers:
+
+The local Python PATH wrapper used for UPD-0401 is below. Run it from the actual checkout in a PowerShell7 process. For native5.1, run the earlier native module-path wrapper inside this PATH try/finally instead of the PS7 calls. Each Test/Analyze invocation starts a fresh child; only this parent process's PATH changes. The path is the observed bundled runtime on this machine, not an application prerequisite.
+
+```powershell
+$updFixturePythonDir = 'C:\Users\jtvuo\.cache\codex-runtimes\codex-primary-runtime\dependencies\python'
+$updPreviousPath = $env:PATH
+$updPs7 = Join-Path $PSHOME 'pwsh.exe'
+try {
+    $env:PATH = $updFixturePythonDir + ';' + $updPreviousPath
+    & $updPs7 -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite All
+    $updTestExit = $LASTEXITCODE
+    & $updPs7 -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
+    $updAnalysisExit = $LASTEXITCODE
+    if ($updTestExit -ne 0 -or $updAnalysisExit -ne 0) {
+        throw "Checks failed: test=$updTestExit; analysis=$updAnalysisExit"
+    }
+}
+finally {
+    $env:PATH = $updPreviousPath
+}
+```
+
+```powershell
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite All
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Unit -Filter '*A048 [dp]*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Unit -Filter '*A048 transport context*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Unit -Filter '*A048 shared retry*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Unit -Filter '*A03[1278]*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Integration -Filter '*A048*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
+```
+
+Current inventory **1709 =1383 units (1373 product/ten runner guards)+326 integrations**. Full local All passed1709/0/0/0 each, PS7 2574.54s/native 1436.05s, child/outer0. Whole analysis108 files reports parse/new/known-baseline0 on both. Final focused diagnostic/run12 passed12/0/0/1371 of1383 in6.20/6.37s; source/context8 passed8/0/0/1371 of1379 in3.48/3.87s; affected150 passed150/0/0/1229 of1379 in12.31/14.47s; retry4 passed4/0/0/1379 of1383 in3.97/3.91s; frozen copied-runtime3 passed3/0/0/323 of326 in24.15/15.83s. Historical discovery inventories preceded four later retry checks; they are not current full coverage. Exact final-head CI is independently recorded in PR/handoff.
+
+24 new units/three integrations cover caller state, explicit/fresh policy, response reuse, diagnostics close/export, retry observations/exceptions, copied runtime/import/real media/repeat/preview and resource reopening. Runtime worker PATH/module lookup excludes development dependencies; parent Python is fixture tooling only. Tree snapshots compare names/lengths/hashes, not timestamps or a future release ZIP. Retained35 scoped runtime suppressions remain justified; colliding Write-Log/empty catch causes are fixed and the baseline is empty. [UPD-0401 evidence](evidence/UPD-0401.md) records every baseline/mixed-wiring/harness correction, exact versions/commands and limitations. No fixture helper changed/reran; prior helper results remain historical. Help/manual examples and package/release gates remain not_run.
