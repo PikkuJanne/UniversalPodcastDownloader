@@ -1,6 +1,6 @@
 # Current implementation status
 
-Updated 2026-10-03 (Europe/Berlin). **UPD-0402 complete; UPD-0403 ready and unstarted.**
+Updated 2026-10-03 (Europe/Berlin). **UPD-0402 complete; UPD-0403 in progress.** Local packaging implementation and marked synthetic checks are being prepared on the existing M4 branch. A051/A052 remain not_run until the clean committed candidate and fresh extraction are verified.
 
 - UPD-0001/0002, UPD-0101 through0107, UPD-0201 through0206, UPD-0301 through0304 and UPD-0401/0402 done. Historical evidence is preserved.
 - A001-A050 passed; A051-A060 not_run. Manual A049/A050 retain their classifications and documented observation limits.

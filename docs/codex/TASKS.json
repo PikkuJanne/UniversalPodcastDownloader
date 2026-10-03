@@ -677,7 +677,7 @@
       "id": "UPD-0403",
       "milestone": "M4",
       "title": "Build traceable release ZIPs and checksums",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0402"
       ],
