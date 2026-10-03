@@ -1,183 +1,209 @@
 ﻿<#
-UniversalPodcastDownloader.ps1
-Minimal Win11 podcast downloader for personal offline archiving
+.SYNOPSIS
+Downloads supported podcast audio from RSS or Atom feeds on Windows.
 
-Author: Janne Vuorela
-Target OS: Windows 11
-Dependencies: PowerShell 5.1+ or PowerShell 7+, Internet access
+.DESCRIPTION
+Run without arguments for guided feed discovery and episode selection, or supply
+an explicit feed/show-page URL. Latest selects one episode; Custom selects a
+positive count; All selects the accessible entries in the bounded feed catalogue.
+Ordering uses UTC publication dates, with source order for ties and undated items.
+Feed pagination gaps remain incomplete even when the requested count is reached.
+All does not guarantee a publisher's complete historical archive.
 
-SYNOPSIS
-    One-preset, no-frills podcast downloader intended for my own workflow:
-    archiving favorite shows from any RSS/Atom feed into a clean folder structure,
-    with a log file per run for later inspection.
+Original audio bytes are retained. Recognized media uses MP3, M4A, Ogg, WAVE or
+FLAC extensions. Stable identities and recorded paths support repeat runs;
+verified skips require matching recorded size and SHA-256. Unknown originals and
+partials are preserved. Owned resume checkpoints require matching local bytes
+and HTTP representation evidence. Legacy adoption remains transfer-unverified.
 
-WHAT THIS IS (AND ISN’T)
-    - Personal, purpose-built tool for my specific use case.
-      It trades advanced features for predictability, robustness, and a simple TUI.
-    - Text-UI when launched via the .bat wrapper (double-click).
-      Also supports direct PowerShell use with parameters.
-    - Universal RSS/Atom client:
-        - Can use a direct feed URL (ends in .xml, /feed, etc.)
-        - Or a normal “show page” URL and TRY to auto-detect the RSS feed.
-    - Focused on reliable downloads and traceability via log files,
-      not on fancy post-processing, tagging, or re-encoding.
+Saved-show operations are opt-in. Ordinary startup and one-off runs do not read
+configuration. Use one saved selector, except Batch may also use ShowName.
+Saving stores settings without retrieving the feed. Feed URLs use Windows DPAPI
+CurrentUser and protected current-user-only configuration permissions. ExportShows
+is a restricted summary, not a credential backup. Same-user/admin compromise,
+process memory, shell history and transcripts are outside that protection.
 
-FEATURES
-    - Guided TUI workflow:
-        - Explains how to find the RSS feed.
-        - Lets you paste either:
-            - RSS feed URL, or
-            - Show page URL for auto-detection.
-        - Asks how many newest episodes to download:
-            - Enter  = latest only
-            - Number = N newest episodes
-            - all    = accessible entries in the bounded feed catalogue
-    - Per-podcast subfolders based on feed title:
-        - Root:   <OutputPath> (default: %USERPROFILE%\Downloads\Podcasts)
-        - Folder: <SafeFeedTitle>-<feed identity hash>
-        - Files:  YYYY-MM-DD - Episode title-<episode identity hash>.mp3
-    - Robust download loop:
-        - Up to 3 attempts per episode with short delay between tries.
-        - Skips episodes only after checking recorded size and SHA-256 on disk.
-        - Summarizes downloaded / skipped / failed at the end.
-    - Interactive episode and byte progress:
-        - Unknown body lengths show received bytes without a fabricated total.
-        - 100% follows verified transfer/history success; redirected output stays quiet.
-    - Optional -KeepAwake temporarily requests Windows system wakefulness:
-        - Disabled by default; active only after confirmation and released in finally.
-        - Does not keep the display on or change the Windows power plan.
-    - Optional saved shows and sequential batch:
-        - SaveShow stores current-user-protected feed and selection settings.
-        - ListShows, ShowName, RemoveShow and ExportShows are explicit operations.
-        - Batch runs at most 100 saved shows sequentially with combined results.
-        - WhatIf plans every selected show without persistent writes or media requests.
-        - See docs/codex/SAVED_SHOWS.md for protection, export and override limits.
-    - Explicit feed pagination:
-        - Follows feed-level Atom next/prev-archive links before date selection.
-        - MaxFeedPages defaults to 20 (1-100); entry/metadata limits also apply.
-        - Gaps, limits and cycles report incomplete after accessible downloads.
-        - A complete historical catalogue is not guaranteed.
-    - Private per-run UTF-8 diagnostics:
-        - Startup: LOCALAPPDATA\UniversalPodcastDownloader\Logs (TEMP fallback).
-        - Confirmed downloads also keep a log in the podcast folder.
-        - Named: download-<UTC timestamp>-<unique run ID>.log
-        - Request displays contain only host and opaque per-run ID.
-        - Logs use counts, episode identities and safe error categories.
-        - Optional -DiagnosticExportPath saves a restricted JSON summary.
-        - WhatIf and legacy Preview create no diagnostic files.
-        - See docs/codex/DIAGNOSTICS.md for privacy and retention details.
+WhatIf may retrieve bounded metadata and read local evidence, but makes no planned
+enclosure request or downloader write. It creates no configuration, media, locks,
+logs or exports and makes no keep-awake request. Preview is not completed media.
 
-MY INTENDED USAGE
-    - I double-click UniversalPodcastDownloader.bat.
-    - I paste either:
-        - The podcast’s RSS feed URL, or
-        - The public show page URL and let the script auto-detect RSS.
-    - I tell it how many newest episodes I want (often “all” once per show).
-    - I leave it running, in the morning I check:
-        - The per-show folder for MP3s, and
-        - The .log file if something failed mid-run.
+The executable returns 0 for success/preview, 1 for fatal input/setup, 2 for
+incomplete work and 130 for cancellation caught by the application. Batch returns
+2 for isolated child fatal/incomplete results and continues; setup/structural
+failure returns 1. Forced termination cannot guarantee a result or cleanup.
+Dot-source this file to load Invoke-PodcastRun and Invoke-PodcastCommand without
+starting work; callable APIs return objects without exiting their caller.
 
-SETUP
-    1) Place these files together in a folder of your choice:
-         - UniversalPodcastDownloader.ps1
-         - UniversalPodcastDownloader.bat   (wrapper to allow double-click)
-         - src/                            (bundled PowerShell helper files)
-    2) Optional: pin the .bat to Start or Taskbar for quick access.
-    3) Ensure the machine has:
-         - Working Internet connection.
-         - Permission to write to the default output:
-             %USERPROFILE%\Downloads\Podcasts
-           or whichever OutputPath you configure.
-    4) No external binaries required. Relies on the built-in .NET HTTP client
-       and the built-in XML parser in PowerShell.
+.PARAMETER Mode
+Latest, All or Custom. Noninteractive one-off input defaults to Latest. Custom
+requires CustomCount. Explicit Latest/All with a count is invalid. Named/batch
+Latest/All overrides discard a stored Custom count; Custom can reuse a count only
+from a saved Custom row. Guided input asks for a selection when none is supplied.
 
-USAGE
-    A) Double-click for TUI (default usage)
-        - Double-click UniversalPodcastDownloader.bat.
-        - Follow prompts:
-            1) Paste RSS feed URL or show page URL.
-            2) Confirm or adjust detected feed.
-            3) Choose how many newest episodes to download:
-                 - Enter  = latest only
-                 - Number = N newest
-                 - all    = bounded accessible feed catalogue
-        - Output:
-            - Audio files under:
-                %USERPROFILE%\Downloads\Podcasts\<FeedTitle>\
-            - Log file:
-                download-<UTC timestamp>-<unique run ID>.log
+.PARAMETER CustomCount
+Positive episode count. Supplied alone it selects Custom, including named/batch
+overrides. Selection follows bounded catalogue retrieval and UTC ordering.
 
-    B) Direct PowerShell (interactive TUI still available)
-        - Run without parameters for the same guided TUI:
-            .\UniversalPodcastDownloader.ps1
-        - You can override defaults:
-            .\UniversalPodcastDownloader.ps1 -OutputPath "D:\Podcasts"
+.PARAMETER OutputPath
+Absolute ordinary Windows drive/UNC archive root. Defaults to
+%USERPROFILE%\Downloads\Podcasts. Per-show folders and new media names include
+identity suffixes. Named/batch overrides affect only the current invocation.
 
-    C) Direct PowerShell (non-interactive)
-        - Add -NonInteractive with an explicit -FeedUrl to suppress input prompts:
-            .\UniversalPodcastDownloader.ps1 
-                -NonInteractive
-                -FeedUrl "https://example.com/feed.xml" 
-                -Mode All 
-                -OutputPath "D:\Podcasts"
-        - Or: download the 10 newest episodes:
-            .\UniversalPodcastDownloader.ps1 
-                -FeedUrl "https://example.com/feed.xml" 
-                -Mode Custom 
-                -CustomCount 10
+.PARAMETER FeedUrl
+Absolute HTTP(S) RSS/Atom feed or show-page URL. No URL user information is
+accepted. Multiple discovered feeds require a direct feed URL in NonInteractive
+mode. Required for one-off NonInteractive, SaveShow and all legacy operations;
+other saved operations obtain the protected URL from configuration.
 
-        - CustomCount alone implies Custom; explicit Latest/All plus a count fails.
-        - Exit codes: 0 success, 1 fatal input/setup, 2 incomplete, 130 catchable cancellation.
-        - Dot-source, then call Invoke-PodcastRun for a structured result without host exit.
-        - -PassThru emits the entry script result; parameterized batch launches never pause.
-        - Add -KeepAwake to request temporary Windows wakefulness for confirmed work.
-          It is off by default; explicit sleep/lid actions can still take effect.
+.PARAMETER NonInteractive
+Suppresses input and confirmation prompts. Requires FeedUrl for one-off runs;
+named/batch operations resolve saved URLs. Cannot combine with enabled Confirm.
+Batch children always run noninteractively.
 
-NOTES
-    - Episodes are sorted by UTC publication instant newest first; tied/undated entries keep source order.
-    - New folder and file names include deterministic SHA-256 identity suffixes.
-    - Windows names are sanitized and shortened to fit the selected output root.
-    - Unsafe archive paths fail before archive writes; startup diagnostics use a separate safe location.
-    - Recorded transfer skips check local size and SHA-256. Adopted files stay distinct.
-    - Use -LegacyPath for a read-only inventory and explicit adoption/redownload choices.
-    - Original supported audio bytes are retained; completed byte evidence selects
-      canonical MP3/M4A/Ogg/WAVE/FLAC extensions for new media destinations.
+.PARAMETER KeepAwake
+Opt-in temporary Windows system-sleep request after confirmed work. Does not keep
+the display on or change the power plan. Catchable cleanup attempts to restore
+prior native thread flags; explicit sleep/lid actions and hard kills remain limits.
 
-LIMITATIONS
-    - Resume requires an owned checkpoint and matching representation evidence;
-      unknown partials remain preserved for review.
-    - No built-in scheduler, this is a manual “run when needed” tool.
-    - Assumes feeds expose downloadable audio URLs, video-only or exotic feeds may fail.
-    - Uses one fixed naming pattern and folder structure.
-    - No content-based deduplication across different feeds or folder names.
+.PARAMETER PassThru
+Emits the command result before script exit: Podcast.RunResult,
+Podcast.ConfigResult or Podcast.BatchResult. Native output is PowerShell text,
+not a JSON protocol. Ordinary results omit raw URLs and paths; LegacyResult can
+contain sensitive local filenames/titles/identities and should stay local.
 
-TROUBLESHOOTING
-    - Script window closes immediately on double-click:
-        - Run the .bat from an existing cmd window to see errors.
-        - Check ExecutionPolicy or corporate restrictions on PowerShell scripts.
-    - “Feed parsed, but no downloadable enclosure URLs were found”:
-        - The feed may not expose direct audio URLs, or uses a non-standard format.
-        - Try locating the real RSS URL from the hosting provider (Podbean, etc.).
-    - “No episodes found in the feed” or XML errors:
-        - Double-check the URL is a valid RSS/Atom feed, not just a random web page.
-        - Some providers require HTTPS and modern TLS, ensure the system is up to date.
-    - Only part of the episodes downloaded:
-        - Check the .log file in the podcast folder for:
-            - Per-episode errors
-            - Timeouts or connectivity issues
-            - HTTP status codes from the host
+.PARAMETER SaveShow
+Saves or replaces a named row using explicit FeedUrl and selection/output options,
+without network retrieval. Names are 1-64 ASCII letters/digits/underscores/hyphens and
+start with a letter/digit; names are unique ignoring case. At most 100 rows.
 
-LICENSE / WARRANTY
-    - Personal tool, provided as-is, without warranty. Use at your own risk.
-#>
+.PARAMETER ListShows
+Lists Name, Mode, CustomCount and FeedConfigured without exposing URLs or paths.
 
-<#
-UniversalPodcastDownloader.ps1
-Minimal Win11 podcast downloader for personal offline archiving
+.PARAMETER RemoveShow
+Removes one saved row. Archive media, history, checkpoints and logs are preserved.
 
-Author: Janne Vuorela
-Target OS: Windows 11
-Dependencies: PowerShell 5.1+ or PowerShell 7+, Internet access, optional .bat wrapper
+.PARAMETER ExportShows
+Creates a new protected summary file in an existing ordinary parent directory.
+Omits URL, ciphertext and output path; refuses overwrite. It cannot restore
+credentials/configuration. A failed export may leave its owned partial file.
+
+.PARAMETER ShowName
+Runs one saved show, or selects an ordered Batch subset. Several names require
+an in-process PowerShell array; the native Windows PowerShell -File boundary and
+batch launcher cannot pass a multi-element array. Rejects duplicate/unknown names.
+
+.PARAMETER Batch
+Runs at most 100 selected saved shows sequentially, in stored order or explicit
+ShowName array order. Children finish cleanup attempts before the next starts.
+Catchable cancellation stops with retained counts and unstarted names; an empty
+configuration succeeds with no selected shows.
+
+.PARAMETER ConfigPath
+Absolute protected saved-show configuration path. Requires a saved operation.
+Defaults to %LOCALAPPDATA%\UniversalPodcastDownloader\saved-shows\shows.json.
+Use a dedicated private parent; malformed data/unsafe permissions are preserved
+and refused, with no automatic reset, import, backup restore or ACL repair.
+
+.PARAMETER LegacyPath
+Existing immediate show directory under OutputPath, supplied as its folder name
+or absolute path. Requires explicit FeedUrl. Reviews the current accessible feed
+snapshot independently of Latest/Custom selection; unsafe/reparse paths fail.
+
+.PARAMETER LegacyAction
+Preview (default) reads inventory without writes. Adopt records explicit local
+signature/digest evidence as transfer-unverified. Redownload retrieves only the
+selected episode into a new filename. Rollback restores checkpoint metadata in a
+new generation. Actions preserve all original media; rollback does not restore,
+rename or delete media. Changing actions save a metadata checkpoint first.
+
+.PARAMETER LegacyEpisodeId
+Full current episode identity selected from LegacyResult for Adopt or Redownload.
+
+.PARAMETER LegacyFile
+Exact reviewed file basename for Adopt; never a wildcard or guessed partial.
+
+.PARAMETER LegacySha256
+Reviewed local SHA-256 for Adopt. The action rechecks it under writer protection.
+
+.PARAMETER LegacyCheckpoint
+Metadata checkpoint basename for Rollback, belonging to the same feed/aliases.
+Rollback is not a bypass around corrupt current history or its backup.
+
+.PARAMETER DiagnosticExportPath
+Optional new restricted diagnostic JSON file in an existing safe parent.
+Best effort and no overwrite; omitted for WhatIf/legacy Preview/declined work.
+Contains bounded event metadata, not URLs, message text or archive inventory.
+
+.PARAMETER MaxFeedPages
+Catalogue page limit, 1-100; default 20. Follows supported feed-level pagination
+before episode selection. Other metadata/entry bounds also apply.
+
+.PARAMETER MaxAttempts
+Initial attempt plus retries per metadata retrieval/episode transfer, 1-10;
+default 3. The same per-run policy follows metadata and media requests.
+
+.PARAMETER HeaderTimeoutSeconds
+Connection/header timeout per redirect hop, 0.001-86400 seconds; default 30.
+
+.PARAMETER IdleTimeoutSeconds
+Timeout per pending body read, 0.001-86400 seconds; default 30. A healthy transfer
+can continue beyond the retry budget while it keeps producing bytes.
+
+.PARAMETER RetryBudgetSeconds
+Elapsed window for starting another attempt or delayed redirect, 0-86400 seconds;
+default 120. Zero permits the initial attempt and prevents retries. It is not a
+total download deadline.
+
+.PARAMETER BaseDelaySeconds
+Initial exponential retry delay, 0-3600 seconds; default 1.
+
+.PARAMETER MaxDelaySeconds
+Maximum locally chosen retry delay, 0-3600 seconds; default 30. A valid server
+Retry-After can require a longer wait; waits beyond the budget are deferred.
+
+.PARAMETER WhatIf
+Plans the requested operation with bounded metadata/local reads, without planned
+media retrieval or persistent downloader writes. Explicit WhatIf overrides
+inherited preview state for saved named/batch operations.
+
+.PARAMETER Confirm
+Requests confirmation before changes. Do not enable it with NonInteractive.
+Declined work is preview; it does not count as downloaded media.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+& .\UniversalPodcastDownloader.ps1 -FeedUrl $feed -OutputPath $archive -NonInteractive -WhatIf
+
+Preview the latest episode using an explicit example archive root. Metadata
+requests are possible; the downloader creates no files.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+& .\UniversalPodcastDownloader.ps1 -FeedUrl $feed -OutputPath $archive -CustomCount 5 -NonInteractive -PassThru
+
+Download up to five newest accessible episodes and emit the structured result.
+Repeat runs preserve originals and verify recorded files before skipping.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+$config = Join-Path $root 'Private settings\shows.json'
+& .\UniversalPodcastDownloader.ps1 -SaveShow demo -FeedUrl $feed -OutputPath $archive -Mode Latest -ConfigPath $config -NonInteractive
+& .\UniversalPodcastDownloader.ps1 -ListShows -ConfigPath $config -NonInteractive
+
+Save and list settings in a dedicated protected example directory. These commands
+do not retrieve the feed. Reusing demo explicitly replaces that row.
+
+.NOTES
+Requires Windows PowerShell 5.1 or PowerShell 7 on Windows and the complete
+colocated src directory. No application runtime packages are installed.
+See README.md for launcher usage, verified compatibility and safe recovery.
+See docs/codex/CLI_RESULTS.md and SAVED_SHOWS.md for result/override contracts.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -490,6 +516,118 @@ function Select-PodcastEpisode {
     # Preserve an array for zero/one/many results when assigned by the caller.
     return ,$selected
 }
+
+<#
+.SYNOPSIS
+Runs one podcast download or explicit legacy operation and returns its result.
+
+.DESCRIPTION
+Import this function by dot-sourcing UniversalPodcastDownloader.ps1. It returns
+one Podcast.RunResult without exiting the host. It does not select saved shows;
+Invoke-PodcastCommand dispatches saved operations. Latest/Custom/All use the
+bounded accessible catalogue, not a guaranteed complete historical archive.
+
+Original media is preserved. Verified skips require recorded size and SHA-256;
+legacy adoption remains transfer-unverified. WhatIf permits bounded metadata and
+local reads without planned media retrieval, writes, logs, locks or keep-awake.
+
+ExitCode is 0 for success/preview, 1 for fatal, 2 for incomplete and 130 for caught
+cancellation. Ordinary result fields omit raw URLs/paths; LegacyResult contains
+sensitive local inventory. Forced termination cannot guarantee cleanup/results.
+
+.PARAMETER Mode
+Latest selects one, Custom selects CustomCount and All selects bounded accessible
+entries. Defaults to Latest for NonInteractive; guided input may ask for selection.
+
+.PARAMETER CustomCount
+Positive count. Alone selects Custom; conflicts with explicit Latest/All.
+
+.PARAMETER OutputPath
+Absolute ordinary Windows drive/UNC archive root. Defaults to
+%USERPROFILE%\Downloads\Podcasts. Existing recorded names remain authoritative.
+
+.PARAMETER FeedUrl
+Absolute HTTP(S) feed/show-page URL without user information. Required with
+NonInteractive or LegacyPath. Multiple HTML feeds require a direct URL in
+NonInteractive mode.
+
+.PARAMETER NonInteractive
+Suppresses input and confirmation prompts. Requires explicit FeedUrl and cannot
+combine with enabled Confirm.
+
+.PARAMETER KeepAwake
+Requests temporary Windows system wakefulness only after confirmed work.
+Off by default; no display/power-plan change. Catchable cleanup restores native
+thread flags when possible; hard kill/explicit sleep/lid behavior is unclaimed.
+
+.PARAMETER LegacyPath
+Existing immediate show directory under OutputPath; requires explicit FeedUrl.
+Legacy review uses the current accessible feed snapshot, independent of selection.
+
+.PARAMETER LegacyAction
+Preview (default) is read-only. Adopt records explicit local evidence as
+transfer-unverified. Redownload downloads only the selected episode to a new name.
+Rollback restores selected checkpoint metadata, never media bytes.
+
+.PARAMETER LegacyEpisodeId
+Full current episode identity from reviewed inventory for Adopt/Redownload.
+
+.PARAMETER LegacyFile
+Exact reviewed file basename for Adopt.
+
+.PARAMETER LegacySha256
+Reviewed SHA-256 for Adopt, rechecked under writer protection.
+
+.PARAMETER LegacyCheckpoint
+Same-feed metadata checkpoint basename for Rollback. Corrupt current history or
+backup still fails closed; preserve metadata and originals for inspection.
+
+.PARAMETER DiagnosticExportPath
+Optional new restricted JSON summary in an existing safe parent. Best effort;
+no overwrite or export during WhatIf/legacy Preview/declined work.
+
+.PARAMETER MaxFeedPages
+Supported catalogue page limit, 1-100; default 20. Gaps/limits remain incomplete.
+
+.PARAMETER MaxAttempts
+Initial attempt plus retries per metadata retrieval/episode transfer, 1-10;
+default 3. One explicit policy follows all requests in this run.
+
+.PARAMETER HeaderTimeoutSeconds
+Connection/header timeout per redirect hop, 0.001-86400 seconds; default 30.
+
+.PARAMETER IdleTimeoutSeconds
+Timeout per pending body read, 0.001-86400 seconds; default 30.
+
+.PARAMETER RetryBudgetSeconds
+Elapsed retry/delayed-redirect start window, 0-86400 seconds; default 120.
+Zero permits only the initial attempt. Not a total transfer deadline.
+
+.PARAMETER BaseDelaySeconds
+Initial exponential retry delay, 0-3600 seconds; default 1.
+
+.PARAMETER MaxDelaySeconds
+Local retry-delay cap, 0-3600 seconds; default 30. Does not shorten Retry-After;
+a required wait beyond the remaining budget is deferred.
+
+.PARAMETER WhatIf
+Plans with bounded metadata/local reads and no persistent downloader writes,
+planned enclosure request or native keep-awake activation.
+
+.PARAMETER Confirm
+Asks before changes. Cannot be enabled with NonInteractive.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+. .\UniversalPodcastDownloader.ps1
+$result = Invoke-PodcastRun -FeedUrl $feed -OutputPath $archive -NonInteractive -WhatIf
+$result.ExitCode
+
+Load the callable API and inspect an in-process preview result. No work starts
+when the file is dot-sourced.
+#>
 
 function Invoke-PodcastRun {
     [CmdletBinding(SupportsShouldProcess)]

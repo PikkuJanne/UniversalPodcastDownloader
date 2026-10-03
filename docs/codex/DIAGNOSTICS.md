@@ -59,4 +59,4 @@ Startup copies, show logs and exported JSON remain until the owner deletes them.
 
 Archive state, backups and migration checkpoints have a separate purpose: they support identity binding, verification and explicit metadata recovery. Keep them with the archive. The downloader does not delete or expire them, originals or unknown partial files. Deleting history can remove evidence required for verified skips; deleting checkpoints removes those rollback options. Diagnostic cleanup must not be treated as archive cleanup.
 
-No raw sensitive-debug mode is introduced. Network/XML boundaries and [CLI/launcher results](CLI_RESULTS.md) are implemented; future saved-subscription storage retains its separate privacy task.
+No raw sensitive-debug mode is introduced. Network/XML boundaries and [CLI/launcher results](CLI_RESULTS.md) are implemented. Optional [saved-show storage](SAVED_SHOWS.md) protects exact URLs with Windows DPAPI CurrentUser and strict owner/DACL checks; its safe summary export is separate from diagnostic export and is not a credential backup.
