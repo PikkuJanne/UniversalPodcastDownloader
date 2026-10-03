@@ -709,7 +709,7 @@
       "id": "UPD-0404",
       "milestone": "M4",
       "title": "Prepare secure GitHub release workflow",
-      "status": "ready",
+      "status": "in_progress",
       "dependencies": [
         "UPD-0403"
       ],
