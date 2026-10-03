@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## Historical suite coverage and current checks
 
-The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. UPD-0401 had **1,709**, UPD-0402 had **1,717**, UPD-0403 had **1,748**, and UPD-0404 adds43 workflow/candidate-tooling checks for current **1,791**. Adding a test does not make an earlier run cover it. Current counts and source coverage are in the UPD-0404 section below. The following table is historical UPD-0201 coverage.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. UPD-0401 had **1,709**, UPD-0402 had **1,717**, UPD-0403 had **1,748**, and UPD-0404 added43 workflow/candidate-tooling checks for **1,791**. UPD-0501 adds71 readiness-policy checks for **1,862**. Adding a test does not make an earlier run cover it. Current counts and source coverage are in the UPD-0501 section below. The following table is historical UPD-0201 coverage.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -381,3 +381,21 @@ pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.
 Repeat in native Windows PowerShell5.1. Both engines pass docs8/0/0/330 of338 and whole116-file analysis parse/new/baseline0/0/0. Inventory remains1791=1453 Unit+338 Integration: eight distinct selected Pester assertions,1783 not selected locally; no new/current full local All pass. Separate one-off metadata/null-placeholder/21-relative-link/three-PowerShell-fence checks and real console recipe observations are helper/manual evidence, not additional Pester tests or release acceptance. No screenshot PNG is supplied. Exact commands, versions, timings, historical long-path refusals and actual final CI/source/package identities are in [UPD-0405 evidence](evidence/UPD-0405.md) and PR/handoff.
 
 [Capture instructions](../website/SCREENSHOT_CAPTURE.md) use only an already available fixture Python, an owned loopback server and actual nested console entry point with WhatIf. Normal downloader use needs none of those development dependencies. The portable product/metadata/integration content stays outside the unchanged36-file application package. Publication and clean-clone readiness remain separate gates; no site/framework/deployment is introduced.
+
+## UPD-0501 clean-clone acceptance and readiness policy
+
+The active Windows clean clone used verified immutable6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9 source, fresh hash-checked Pester5.7.1/PSSA1.24.0 installs and both supported fresh engines. Run Install-DevTools.ps1, Test.ps1 -Suite All and Analyze.ps1 from that clone through the wrappers above. Ordinary default TEMP lets Test.ps1 create its short owned runner root; do not artificially lengthen TEMP under a checkout. Full baseline inventory1791=1453 Unit+338 Integration and116 analyzed files retain that exact source. The actual checkout's focused modules were independently byte-compared with all22/53 freshly verified clone files.
+
+Build two candidates per engine into new owned parents outside the clone using Prepare-ReleaseCandidate.ps1 -SourceCommit <full checked-out HEAD>. Independently verify Git36/original MIT/ZIP37/manifests/checksums before executing extracted code. Four clean-clone builds and14 actual-ZIP observations exercise portable launch/import, All/repeat/preview, literal11 README examples, synthetic copied legacy recovery, genuine argument-free batch input and actual process0/1/2. Original before/after sizes and hashes are recorded, with host cache writes separate from app preview boundaries. These helper/actual-product observations are not14 new Pester tests or physical Explorer/Ctrl+C observations.
+
+M5 inventory **1862=1524 Unit+338 Integration** adds71 development readiness-policy checks, not downloader tests. Use fresh PS7/native processes:
+
+```powershell
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Unit -Filter '*A058*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test-ReleaseReadiness.ps1 -ExpectedSourceCommit 6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9
+```
+
+The last command evaluates the committed review matrix's clean-clone candidate source, and **exit2/not_ready is expected**. A041 Explorer double-click, A045 physical Ctrl+C and later A059 are unresolved; A060 requires separate owner action authority. Exit0 means ready_for_owner_review only; exit1 means invalid/unreadable inputs. Gate code is offline, read-only, excluded from the36-file runtime package and never imported by the downloader. It validates actual evidence layers/source binding/both applicable engines/unrun conditions and strict scalar/count metadata, rather than trusting a label/count/helper/server/bundle pass. Reviewed metadata cannot authenticate observations or infer publication consent.
+
+New focused gate/analyzer results and diagnostic history are in [UPD-0501 evidence](evidence/UPD-0501.md). The old clean-clone All1791 does not cover71 new tests. Require full final M5-source All1862 and118-file analysis in exact-head CI before handoff; final results are independently recorded in PR/handoff; local focused71 leaves1453 Unit+338 Integration=1791 not selected in the new checkout. Explicit unchanged29-runtime/36-payload Git bytes support inherited product coverage, not relabeling an old run. A final-source gate uses an explicitly reviewed-equivalent input retaining the original tested revision, with actual equivalence proof; record that copy/source/result separately from the immutable6a matrix.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and downloader acceptance. A001-A056 passed through UPD-0405; A057-A060 not_run. A055 uses reviewed portable content and accurate real-UI capture instructions, with no screenshot asset or physical display review claimed. Candidate preparation and website content do not establish final public-release readiness. Helper checks do not substitute for downloader acceptance.",
+  "meaning": "Workflow and downloader acceptance. UPD-0501 reconciles recorded evidence with literal preconditions: A041 Explorer double-click and A045 physical Ctrl+C remain not_run despite passing component observations. A057/A058 record acceptance review and refusal of incomplete readiness; A059/A060 remain later/owner-gated. A055 is content and accurate capture-instructions review, without screenshot or physical display approval. Helper checks and green CI never substitute for downloader acceptance; no publication authority is inferred.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -454,8 +454,8 @@
       "when": "Launch, including forwarded arguments.",
       "expected": "Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible.",
       "fixture": null,
-      "status": "passed",
-      "evidence": "docs/codex/evidence/UPD-0301-LAUNCHER.md"
+      "status": "not_run",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A042",
@@ -498,8 +498,8 @@
       "when": "Run/stop.",
       "expected": "Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented.",
       "fixture": null,
-      "status": "passed",
-      "evidence": "docs/codex/evidence/UPD-0303-WINDOWS.md"
+      "status": "not_run",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A046",
@@ -630,8 +630,8 @@
       "when": "Run end-to-end acceptance under both engines and release ZIP.",
       "expected": "All mandatory cases have concrete evidence; user archive untouched; unrun/manual cases remain clearly outstanding.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A058",
@@ -640,9 +640,9 @@
       "given": "Mandatory cases pending, skipped, failed, or docs-only checks green.",
       "when": "Evaluate release readiness.",
       "expected": "Gate fails; bundle/server validation never substitutes for downloader acceptance.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Unit/ReleaseReadiness.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A059",

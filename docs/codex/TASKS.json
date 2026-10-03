@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0501",
+  "current_task": "UPD-0502",
   "status_values": [
     "todo",
     "ready",
@@ -771,7 +771,7 @@
       "id": "UPD-0501",
       "milestone": "M5",
       "title": "Run release-candidate acceptance from a clean clone",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0405"
       ],
@@ -814,15 +814,19 @@
         "A057",
         "A058"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0501.md",
+        "docs/codex/RELEASE_ACCEPTANCE.json",
+        "docs/codex/RELEASE_READINESS.md"
+      ],
+      "implementation_commit": "7cdd085b2866d911e8e70e34a4fcf0ac1b40cca2",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/6"
     },
     {
       "id": "UPD-0502",
       "milestone": "M5",
       "title": "Owner-review handoff and publication gate",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0501"
       ],
