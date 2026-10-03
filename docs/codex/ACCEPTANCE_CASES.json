@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and downloader acceptance. A001-A054 passed through UPD-0404; A055-A060 not_run. A053/A054 use reviewed candidate-only workflow, mutation/actual-package gates and local draft material; final public-release readiness remains outstanding. Helper checks do not substitute for downloader acceptance.",
+  "meaning": "Workflow and downloader acceptance. A001-A056 passed through UPD-0405; A057-A060 not_run. A055 uses reviewed portable content and accurate real-UI capture instructions, with no screenshot asset or physical display review claimed. Candidate preparation and website content do not establish final public-release readiness. Helper checks do not substitute for downloader acceptance.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -604,12 +604,12 @@
       "id": "A055",
       "task": "UPD-0405",
       "type": "manual",
-      "given": "Draft website content and real screenshot captured locally.",
-      "when": "Review against stable candidate.",
+      "given": "Draft website content and a real local screenshot or accurate capture instructions, as permitted by UPD-0405.",
+      "when": "Review against committed candidate source, current evidence and actual publication status.",
       "expected": "Current-version placeholder not falsely advertised as released; features/limitations/privacy/license/support accurate; real UI not generated imagery.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0405.md"
     },
     {
       "id": "A056",
@@ -619,8 +619,8 @@
       "when": "Prepare website material.",
       "expected": "Portable static content/metadata only; no domain, hosting, DNS or live site changes.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0405.md"
     },
     {
       "id": "A057",

@@ -140,7 +140,7 @@ The historical baseline emitted 2 warnings on PS7 and 1 on native PS5.1, whose a
 
 ## CI and verified sources
 
-[test.yml](../../.github/workflows/test.yml) runs Windows PowerShell 5.1 and PowerShell 7 on `windows-2022`, with a 40-minute job limit and two-job maximum. It triggers for pull requests, pushes to `main` and manual dispatch. It uses only `contents: read`, disables checkout credential persistence and has no artifact/release/publication step. Test/analysis counts and runtime inventory appear in the job summary. Workflow configuration alone is not evidence of a completed CI run; consult the task evidence and actual GitHub checks.
+[test.yml](../../.github/workflows/test.yml) runs Windows PowerShell 5.1 and PowerShell 7 on `windows-2022`, with a 40-minute job limit and two-job matrix maximum. It triggers for pull requests, pushes to `main` and manual dispatch. Workflow defaults deny permissions; jobs grant only `contents: read` and disable checkout credential persistence. After both engines pass, a separate fresh job builds and verifies the same immutable source, then uploads only its candidate ZIP, manifest and checksums with seven-day retention. It creates no tag, GitHub release or public distribution. Test/analysis counts and runtime inventory appear in the job summary. Workflow configuration alone is not evidence of a completed CI run; consult the task evidence and actual GitHub checks.
 
 Action references were verified against the official release tags and source on 2026-10-02:
 
@@ -368,3 +368,16 @@ Current1791=1453 Unit+338 Integration. New43 are19 workflow-policy/mutation chec
 Use Test.ps1 -Suite Unit -Filter '*A053*', Integration -Filter '*A049*' or '*A051/A052*', and Analyze.ps1 through the fresh-process/native module/Python wrappers above. On a clean committed checkout, invoke Prepare-ReleaseCandidate.ps1 -SourceCommit <full HEAD> -OutputDirectory <new owned parent>; optional -GitHubOutput <existing owned file> exports exactly3 validated paths. Dot-sourcing loads only development validator functions. No runtime imports or publication API are added.
 
 Clean-checkpoint actual wrapper builds on both engines independently verify Git blob bytes,36 payloads/37 ZIP entries, original MIT, manifests/checksums and output identities. Final-head candidates and final downloaded CI artifact are rebuilt/verified separately and recorded with exact source/run/hash identities in PR/handoff. New CI tests/packages the same immutable event head after both complete engine jobs, unlike the historical default PR merge checkout. It does not certify a future merge result. Require final full All1791/0/0/0 and116-file analysis0/0/0 plus actual candidate upload before handoff; never infer them from focused local runs. Review [workflow trust boundaries](RELEASE_WORKFLOW.md) and [approval checklist](../releases/APPROVAL_CHECKLIST.md) before any separate publication decision.
+
+## UPD-0405 portable website content verification
+
+No runtime/test/package/workflow file changes. Use the same fresh-process/Python PATH/native module wrappers:
+
+```powershell
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Integration -Filter '*A049/A050*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
+```
+
+Repeat in native Windows PowerShell5.1. Both engines pass docs8/0/0/330 of338 and whole116-file analysis parse/new/baseline0/0/0. Inventory remains1791=1453 Unit+338 Integration: eight distinct selected Pester assertions,1783 not selected locally; no new/current full local All pass. Separate one-off metadata/null-placeholder/21-relative-link/three-PowerShell-fence checks and real console recipe observations are helper/manual evidence, not additional Pester tests or release acceptance. No screenshot PNG is supplied. Exact commands, versions, timings, historical long-path refusals and actual final CI/source/package identities are in [UPD-0405 evidence](evidence/UPD-0405.md) and PR/handoff.
+
+[Capture instructions](../website/SCREENSHOT_CAPTURE.md) use only an already available fixture Python, an owned loopback server and actual nested console entry point with WhatIf. Normal downloader use needs none of those development dependencies. The portable product/metadata/integration content stays outside the unchanged36-file application package. Publication and clean-clone readiness remain separate gates; no site/framework/deployment is introduced.

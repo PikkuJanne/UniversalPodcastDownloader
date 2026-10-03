@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0405",
+  "current_task": "UPD-0501",
   "status_values": [
     "todo",
     "ready",
@@ -741,7 +741,7 @@
       "id": "UPD-0405",
       "milestone": "M4",
       "title": "Prepare website-ready distribution content",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0404"
       ],
@@ -761,15 +761,17 @@
         "A055",
         "A056"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0405.md"
+      ],
+      "implementation_commit": "1e4a794193d94c118062cbc9f59d4c9bb7c0f9e1",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0501",
       "milestone": "M5",
       "title": "Run release-candidate acceptance from a clean clone",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0405"
       ],
