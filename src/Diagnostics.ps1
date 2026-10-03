@@ -100,6 +100,14 @@ function Get-PodcastDiagnosticError {
         '-CustomCount conflicts with an explicit Latest or All mode.',
         '-NonInteractive requires an explicit nonblank -FeedUrl.',
         '-NonInteractive cannot be combined with -Confirm.',
+        'The destination is not writable. Check output-folder permissions and retry.',
+        'Insufficient available space for the validated media response. Free space or choose another output folder.',
+        'The podcast archive writer lock is in use. Wait for the current writer to finish, then retry.',
+        'The archive selection lock is in use. Wait for the current writer to finish, then retry.',
+        'The podcast archive writer lock is inaccessible. Check destination permissions and retry.',
+        'The archive selection lock is inaccessible. Check output-folder permissions and retry.',
+        'The owned media stream could not be closed safely; partial preserved for review.',
+        'Legacy action resources could not be closed safely; retained media and history require review.',
         'A Windows name cannot be a dot or dot-dot path component.',
         'Conflicting episode metadata reuses one identity in this feed snapshot; no media destinations were created.'
     )

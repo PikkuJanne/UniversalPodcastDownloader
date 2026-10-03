@@ -237,19 +237,56 @@ function ConvertTo-PodcastHistoryV2 {
     return $promoted
 }
 
+function Get-PodcastWriterLockMessage {
+    [CmdletBinding()]
+    param(
+        [AllowNull()][object]$ErrorObject,
+        [ValidateSet('History', 'Archive')][string]$Scope = 'History',
+        [switch]$UnavailableOnly
+    )
+
+    $cause = if ($ErrorObject -is [Management.Automation.ErrorRecord]) { $ErrorObject.Exception } else { $ErrorObject }
+    $busy = $false
+    for ($depth = 0; $cause -is [Exception] -and $depth -lt 16; $depth++) {
+        # No authored lock message may replace a typed cancellation. The caller
+        # rethrows its original error when this pure classifier returns no text.
+        if ($cause -is [OperationCanceledException] -or $cause -is [Management.Automation.PipelineStoppedException]) { return $null }
+        # HRESULT_FROM_WIN32(ERROR_SHARING_VIOLATION / ERROR_LOCK_VIOLATION).
+        # Exception text, PID-like lock contents and other IO failures are not
+        # evidence that another writer owns this exact native handle.
+        if ($cause -is [IO.IOException] -and $cause.HResult -in @(-2147024864, -2147024863)) { $busy = $true }
+        $cause = $cause.InnerException
+    }
+    if ($busy -and -not $UnavailableOnly) {
+        if ($Scope -eq 'Archive') { return 'The archive selection lock is in use. Wait for the current writer to finish, then retry.' }
+        return 'The podcast archive writer lock is in use. Wait for the current writer to finish, then retry.'
+    }
+    if ($Scope -eq 'Archive') { return 'The archive selection lock is inaccessible. Check output-folder permissions and retry.' }
+    return 'The podcast archive writer lock is inaccessible. Check destination permissions and retry.'
+}
+
 function Enter-PodcastHistoryLock {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Root)
 
     $canonicalRoot = Assert-PodcastDestination -Root $Root -Directory
     $metadataRoot = Assert-PodcastDestination -Root $canonicalRoot -RelativePath '.upd' -Directory
-    $null = [IO.Directory]::CreateDirectory($metadataRoot)
+    try { $null = [IO.Directory]::CreateDirectory($metadataRoot) }
+    catch {
+        $message = Get-PodcastWriterLockMessage -ErrorObject $_ -Scope History -UnavailableOnly
+        if ($null -eq $message) { throw }
+        throw $message
+    }
     $path = Assert-PodcastDestination -Root $canonicalRoot -RelativePath '.upd\writer.lock'
     $stream = $null
     try {
-        $stream = New-Object IO.FileStream($path, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+        $stream = [IO.File]::Open($path, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
     }
-    catch { throw 'Cannot acquire the archive writer lock. Another downloader may be active or the folder may be inaccessible.' }
+    catch {
+        $message = Get-PodcastWriterLockMessage -ErrorObject $_ -Scope History
+        if ($null -eq $message) { throw }
+        throw $message
+    }
     try {
         $state = Read-PodcastHistory -Root $canonicalRoot
         $generation = if ($null -eq $state) { 0 } else { $state.generation }
@@ -257,7 +294,11 @@ function Enter-PodcastHistoryLock {
         $lock.PSObject.TypeNames.Insert(0, 'UPD.PodcastHistoryLock')
         return $lock
     }
-    catch { $stream.Dispose(); throw }
+    catch {
+        try { $stream.Dispose() }
+        catch { Write-Verbose 'Writer lock cleanup failed; the original acquisition error is preserved.' }
+        throw
+    }
 }
 
 function Write-PodcastHistory {

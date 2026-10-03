@@ -5,7 +5,11 @@ function Enter-PodcastArchiveLock {
 
     $path = Assert-PodcastDestination -Root $Root -RelativePath '.upd-archive.lock'
     try { return [IO.File]::Open($path, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None) }
-    catch { throw 'Another archive selection writer is active, or the output lock is inaccessible. Retry after that run finishes.' }
+    catch {
+        $message = Get-PodcastWriterLockMessage -ErrorObject $_ -Scope Archive
+        if ($null -eq $message) { throw }
+        throw $message
+    }
 }
 
 function Get-PodcastFileEvidence {

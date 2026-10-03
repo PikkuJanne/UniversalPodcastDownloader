@@ -235,6 +235,12 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
   - HTTP Content-Length is checked against bytes received when the platform exposes it. Original media bytes are kept; unexpected HTTP content encodings are rejected.
 
 **Troubleshooting**
+- Writer lock in use:
+  - Wait for the current writer for that archive to finish, then retry. Different shows can transfer concurrently after brief output-root selection. Persistent lock files are normal; do not delete them or kill a process based on their contents.
+- Destination or space error:
+  - Check output-folder write permissions or free space, then retry or choose another output folder. Confirmed runs probe write access and compare known response bytes with available space before copying media. Unknown response length or capacity is reported explicitly; a preflight check cannot guarantee space throughout a transfer.
+- Cancelled transfer:
+  - Keep the partial and its history/sidecar. A catchable cancellation attempts to close every held handle and checkpoints eligible actual bytes. Cleanup or checkpoint failure and unknown-length partials can require review; never infer resume ownership from a filename alone. See [state and recovery policy](docs/codex/STATE_AND_MIGRATION.md).
 - Script window closes immediately:
   - Run UniversalPodcastDownloader.bat from an existing cmd window to see errors.
   - Check PowerShell’s ExecutionPolicy and any corporate restrictions.

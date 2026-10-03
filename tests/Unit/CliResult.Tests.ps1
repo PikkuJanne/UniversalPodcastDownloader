@@ -145,7 +145,12 @@ Describe 'A039: command-line selection validation' -Tag 'Unit', 'A039' {
         $media = @(Get-ChildItem -LiteralPath $script:CliOutputRoot -Filter '*.mp3' -Recurse)
         $media.Count | Should -Be 1
         [BitConverter]::ToString([IO.File]::ReadAllBytes($media[0].FullName)) | Should -BeExactly ([BitConverter]::ToString($cancelMediaFixture))
-        @(Get-ChildItem -LiteralPath $script:CliOutputRoot -Filter '*.tmp' -Recurse -Force).Count | Should -Be 0
+        $partials = @(Get-ChildItem -LiteralPath $script:CliOutputRoot -Filter '*.tmp' -Recurse -Force)
+        $partials.Count | Should -Be 1
+        [BitConverter]::ToString([IO.File]::ReadAllBytes($partials[0].FullName)) | Should -BeExactly 'FF'
+        $partialProbe = [IO.File]::Open($partials[0].FullName, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+        $partialProbe.Dispose()
+        @(Get-ChildItem -LiteralPath $script:CliOutputRoot -Filter 'resume-*.json' -Recurse -Force).Count | Should -Be 0
         $show = @(Get-ChildItem -LiteralPath $script:CliOutputRoot -Directory)[0]
         $state = Read-PodcastHistory -Root $show.FullName
         $verified = @($state.episodes | Where-Object { $_.status -eq 'transfer_verified' })

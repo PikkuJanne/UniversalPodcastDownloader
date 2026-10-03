@@ -160,7 +160,10 @@ function Open-PodcastResumePartial {
         $stream = $null
         return $result
     }
-    catch { throw 'Resume checkpoint is inconsistent; partial and sidecar were preserved for review.' }
+    catch {
+        if (Test-PodcastCancellation -ErrorObject $_) { throw }
+        throw 'Resume checkpoint is inconsistent; partial and sidecar were preserved for review.'
+    }
     finally { if ($null -ne $stream) { $stream.Dispose() } }
 }
 

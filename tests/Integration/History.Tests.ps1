@@ -326,7 +326,12 @@ Describe 'Durable history against actual processes and loopback transfers' {
         $blocked = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $blocked.Result.Succeeded | Should -BeFalse
         $blocked.Result.RunResult.Status | Should -Be 'fatal'
-        $blocked.Result.ErrorMessage | Should -Match 'Private error details were omitted'
+        $expectedMessage = if ($Scope -eq 'Show') {
+            'The podcast archive writer lock is in use. Wait for the current writer to finish, then retry.'
+        } else {
+            'The archive selection lock is in use. Wait for the current writer to finish, then retry.'
+        }
+        $blocked.Result.ErrorMessage | Should -BeExactly $expectedMessage
         (Get-FileHash -LiteralPath $archive.Path -Algorithm SHA256).Hash | Should -Be $stateHash
         (Get-UpdFixtureState -Context $context).'/media/history.mp3' | Should -Be 1
         $holder.Process.Kill()

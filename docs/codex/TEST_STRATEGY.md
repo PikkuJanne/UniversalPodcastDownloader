@@ -47,6 +47,10 @@ Mocked external URLs use reserved `.invalid` hosts. The XML DTD fixture's extern
 
 ## Evidence records
 
+UPD-0302 run-safety checks use real owned workers and actual streamed bytes. Gate a writer only after its checkpoint callback; reject a same-show contender without another media request, run another show concurrently, release only tracked workers and reopen stale persistent lock files without interpreting their contents. Assert history validity, original hashes, cancellation 130 and exclusive partial reopening. Resume recovery must validate the actual final checkpoint, request only the remaining tail and produce the original complete media hash before a verified repeat skip.
+
+Permission fixtures deny CreateFiles or CreateDirectories only on marked owned directories for the current user, save the original ACL and restore it in finally before cleanup. Prove separate CreateFiles permission when testing denied directory creation. Test-only capacity providers return observed zero or unknown; the actual HTTP pipeline still validates headers/ranges and copies bodies. Assert zero body progress on reliable insufficient-space rejection, no enclosure-metadata hard gate for an unknown body and no probe/capacity/archive work under preview. Cleanup fault units verify primary-error precedence and release actual media guards before injecting disposal errors; a failing Dispose is not a universal release guarantee.
+
 For each case record task ID, case ID, source commit, actual command, engine version, date, result and sanitized evidence path. Capture failed/skipped/not-run explicitly. Summaries should be compact enough for future threads; store huge generated logs as ignored local output, not repository history. Re-run impacted cases after architecture changes; prior evidence is not automatically applicable to a changed release.
 
 ## Release gate

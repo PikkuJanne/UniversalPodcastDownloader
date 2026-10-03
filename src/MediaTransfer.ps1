@@ -1,4 +1,6 @@
 # Resume only a checkpoint owned by this episode, under the archive writer lock.
+. (Join-Path $PSScriptRoot 'Preflight.ps1')
+
 function Invoke-PodcastMediaTransfer {
     [CmdletBinding()]
     param(
@@ -23,27 +25,27 @@ function Invoke-PodcastMediaTransfer {
     $resume = $null
     $session = [pscustomobject]@{ State = $null; Lock = $null; Stream = $null; PartialName = ''; Preserve = $false }
     $requestFingerprint = ''
-    if ($null -ne $ResumeContext) {
-        Assert-PodcastResumeLock -Lock $ResumeContext.Lock
-        if (-not [string]::Equals([IO.Path]::GetFullPath($Root), [IO.Path]::GetFullPath($ResumeContext.Lock.Root), [StringComparison]::OrdinalIgnoreCase)) {
-            throw 'Resume context does not belong to this archive.'
-        }
-        $session.Lock = $ResumeContext.Lock
-        $requestFingerprint = Get-PodcastResumeUriFingerprint -Uri (Get-PodcastRequestUri -Uri $Uri)
-        $session.State = Read-PodcastResumeState -Root $Root -EpisodeId $ResumeContext.EpisodeId
-        if ($null -ne $session.State) {
-            $destinationStream = Open-PodcastResumePartial -Lock $session.Lock -State $session.State -FeedId $ResumeContext.FeedId `
-                -EpisodeId $ResumeContext.EpisodeId -RelativePath $RelativePath -RequestFingerprint $requestFingerprint
-            if ($null -ne $destinationStream) {
-                $temporaryRelative = $session.State.partial_name
-                $resume = [pscustomobject]@{ Offset = $session.State.offset; TotalLength = $session.State.total_length;
-                    ETag = $session.State.etag; ContentType = $session.State.content_type; FinalUriFingerprint = $session.State.final_uri_fingerprint }
-                $session.Preserve = $true
-            }
-            else { Write-PodcastDiagnostic -Level WARN -Message 'Resume checkpoint requires a fresh transfer; previous partial preserved.' }
-        }
-    }
     try {
+        if ($null -ne $ResumeContext) {
+            Assert-PodcastResumeLock -Lock $ResumeContext.Lock
+            if (-not [string]::Equals([IO.Path]::GetFullPath($Root), [IO.Path]::GetFullPath($ResumeContext.Lock.Root), [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Resume context does not belong to this archive.'
+            }
+            $session.Lock = $ResumeContext.Lock
+            $requestFingerprint = Get-PodcastResumeUriFingerprint -Uri (Get-PodcastRequestUri -Uri $Uri)
+            $session.State = Read-PodcastResumeState -Root $Root -EpisodeId $ResumeContext.EpisodeId
+            if ($null -ne $session.State) {
+                $destinationStream = Open-PodcastResumePartial -Lock $session.Lock -State $session.State -FeedId $ResumeContext.FeedId `
+                    -EpisodeId $ResumeContext.EpisodeId -RelativePath $RelativePath -RequestFingerprint $requestFingerprint
+                if ($null -ne $destinationStream) {
+                    $temporaryRelative = $session.State.partial_name
+                    $resume = [pscustomobject]@{ Offset = $session.State.offset; TotalLength = $session.State.total_length;
+                        ETag = $session.State.etag; ContentType = $session.State.content_type; FinalUriFingerprint = $session.State.final_uri_fingerprint }
+                    $session.Preserve = $true
+                }
+                else { Write-PodcastDiagnostic -Level WARN -Message 'Resume checkpoint requires a fresh transfer; previous partial preserved.' }
+            }
+        }
         # At most one safe fresh GET follows a rejected range in this attempt.
         # The existing outer transport policy alone owns retries/backoff.
         for ($requestNumber = 0; $requestNumber -lt 2; $requestNumber++) {
@@ -58,30 +60,36 @@ function Invoke-PodcastMediaTransfer {
             $session.Stream = $destinationStream
             $session.PartialName = $temporaryRelative
             $requestArguments = @{ Uri = $Uri; DestinationStream = $destinationStream; Policy = $Policy }
+            $requestArguments.OnResponse = {
+                param($Info)
+                # The validated response describes bytes still to be written.
+                # Publisher enclosure sizes remain advisory and do not gate I/O.
+                $space = Assert-PodcastTransferSpace -Root $Root -RequiredBytes $Info.ResponseLength
+                if ($space.SpaceCheck -ne 'sufficient') { Write-Host ('[*] ' + $space.Message) }
+                Write-PodcastDiagnostic -Message $space.Message
+                if ($null -eq $ResumeContext -or -not $Info.ResumeSupported) { return }
+                # Preserve the reserved file even if checkpoint replacement
+                # fails: its durable ownership outcome may be uncertain.
+                $session.Preserve = $true
+                $next = [pscustomobject]@{
+                    schema_version = 1; feed_id = $ResumeContext.FeedId; episode_id = $ResumeContext.EpisodeId
+                    relative_path = $RelativePath; partial_name = $session.PartialName
+                    request_fingerprint = $requestFingerprint; final_uri_fingerprint = $Info.FinalUriFingerprint
+                    etag = $Info.ETag; total_length = [long]$Info.TotalLength; content_type = $Info.ContentType
+                    content_encoding = 'identity'; offset = [long]$session.Stream.Length
+                    prefix_sha256 = Get-PodcastResumeStreamHash -Stream $session.Stream
+                }
+                $session.State = Write-PodcastResumeState -Lock $session.Lock -State $next -Expected $session.State
+            }
             if ($null -ne $ResumeContext) {
                 $requestArguments.Resume = $resume
-                $requestArguments.OnResponse = {
-                    param($Info)
-                    if (-not $Info.ResumeSupported) { return }
-                    # Preserve the reserved file even if checkpoint replacement
-                    # fails: its durable ownership outcome may be uncertain.
-                    $session.Preserve = $true
-                    $next = [pscustomobject]@{
-                        schema_version = 1; feed_id = $ResumeContext.FeedId; episode_id = $ResumeContext.EpisodeId
-                        relative_path = $RelativePath; partial_name = $session.PartialName
-                        request_fingerprint = $requestFingerprint; final_uri_fingerprint = $Info.FinalUriFingerprint
-                        etag = $Info.ETag; total_length = [long]$Info.TotalLength; content_type = $Info.ContentType
-                        content_encoding = 'identity'; offset = [long]$session.Stream.Length
-                        prefix_sha256 = Get-PodcastResumeStreamHash -Stream $session.Stream
-                    }
-                    $session.State = Write-PodcastResumeState -Lock $session.Lock -State $next -Expected $session.State
-                }
                 $requestArguments.OnProgress = {
                     param([long]$Bytes)
                     if ($Bytes -ne $session.Stream.Length) { throw 'Resume progress does not match the owned stream.' }
                     Update-PodcastResumeCheckpoint -Session $session
                 }
             }
+            $requestFailed = $false
             try {
                 $null = Assert-PodcastDestination -Root $Root -RelativePath $temporaryRelative
                 $transfer = Invoke-PodcastMediaRequest @requestArguments
@@ -89,6 +97,17 @@ function Invoke-PodcastMediaTransfer {
                 if ($transfer.Completed) { Update-PodcastResumeCheckpoint -Session $session -Force }
             }
             catch {
+                $requestFailed = $true
+                $primaryError = $_
+                if (Test-PodcastCancellation -ErrorObject $primaryError) {
+                    $session.Preserve = $true
+                    # Graceful cancellation commits the actual prefix before
+                    # closing. If that commit fails, keep both artifacts for
+                    # review and preserve cancellation as the primary outcome.
+                    try { Update-PodcastResumeCheckpoint -Session $session -Force }
+                    catch { Write-PodcastDiagnostic -Level WARN -Message 'Cancellation checkpoint could not be updated; retained partial and prior evidence require review.' }
+                    throw $primaryError
+                }
                 # A caught network failure can checkpoint its written prefix.
                 # Local errors remain non-retryable and preserve existing evidence.
                 if ($null -ne (Get-PodcastTransportFailure -ErrorObject $_)) {
@@ -96,7 +115,18 @@ function Invoke-PodcastMediaTransfer {
                 }
                 throw
             }
-            finally { $destinationStream.Dispose(); $destinationStream = $null }
+            finally {
+                try { $destinationStream.Dispose() }
+                catch {
+                    $session.Preserve = $true
+                    if (-not $requestFailed) {
+                        if (Test-PodcastCancellation -ErrorObject $_) { throw }
+                        throw 'The owned media stream could not be closed safely; partial preserved for review.'
+                    }
+                    Write-PodcastDiagnostic -Level WARN -Message 'Media stream cleanup failed; retained partial and the primary failure are preserved.'
+                }
+                finally { $destinationStream = $null; $session.Stream = $null }
+            }
             if ($transfer.Completed) { break }
             if ($null -eq $resume -or -not $transfer.RestartRequired) { throw 'Media transfer did not complete.' }
             Write-PodcastDiagnostic -Level WARN -Message 'Resume response requires a fresh transfer; previous partial preserved.'
@@ -155,8 +185,18 @@ function Invoke-PodcastMediaTransfer {
         $owned = $false
         return $result
     }
+    catch {
+        if (Test-PodcastCancellation -ErrorObject $_) { $session.Preserve = $true }
+        throw
+    }
     finally {
-        if ($null -ne $destinationStream) { $destinationStream.Dispose() }
+        if ($null -ne $destinationStream) {
+            try { $destinationStream.Dispose() }
+            catch {
+                $session.Preserve = $true
+                Write-PodcastDiagnostic -Level WARN -Message 'Media stream cleanup failed; retained partial and the primary failure are preserved.'
+            }
+        }
         if ($owned -and -not $session.Preserve) {
             # Clean only an uncheckpointed file reserved by this attempt.
             # Previously owned or unclaimed partials always remain untouched.

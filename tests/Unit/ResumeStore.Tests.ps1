@@ -3,6 +3,7 @@ BeforeAll {
     . (Join-Path $script:RepositoryRoot 'src/PathSafety.ps1')
     . (Join-Path $script:RepositoryRoot 'src/Naming.ps1')
     . (Join-Path $script:RepositoryRoot 'src/HistoryStore.ps1')
+    . (Join-Path $script:RepositoryRoot 'src/Diagnostics.ps1')
     . (Join-Path $script:RepositoryRoot 'src/NetworkPolicy.ps1')
     . (Join-Path $script:RepositoryRoot 'src/ResumeStore.ps1')
     . (Join-Path $script:RepositoryRoot 'src/MediaValidation.ps1')
@@ -297,6 +298,7 @@ Describe 'A027/A029: strict resume store and durable prefix evidence' -Tag 'Unit
             & $OnResponse ([pscustomobject]@{
                 ResumeSupported = $true; FinalUriFingerprint = $script:State.final_uri_fingerprint
                 ETag = $script:State.etag; TotalLength = $script:State.total_length; ContentType = 'audio/mpeg'
+                Offset = [long]$Resume.Offset; ResponseLength = [long]($script:CompleteMedia.Length - $Resume.Offset)
             })
             $DestinationStream.Write($script:CompleteMedia, [int]$Resume.Offset, ($script:CompleteMedia.Length - [int]$Resume.Offset))
             & $OnProgress $DestinationStream.Length

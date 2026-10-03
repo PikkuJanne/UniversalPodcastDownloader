@@ -711,10 +711,15 @@ function Invoke-PodcastRun {
                 -Catalogue $resolved.Catalogue -Plan $publicPlan -Message 'Archive plan completed without changes.'
         }
         if ($diagnosticConfirmation) { $null = Initialize-PodcastDiagnostics }
+        $null = Invoke-PodcastDestinationPreflight -Root $baseOutputPath
         if (-not (Test-Path -LiteralPath $baseOutputPath)) {
             Write-Host '[*] Creating selected base output directory.'
             $null = Assert-PodcastDestination -Root $baseOutputPath -Directory
-            $null = [IO.Directory]::CreateDirectory($baseOutputPath)
+            try { $null = [IO.Directory]::CreateDirectory($baseOutputPath) }
+            catch {
+                if (Test-PodcastCancellation -ErrorObject $_) { throw }
+                throw 'The destination is not writable. Check output-folder permissions and retry.'
+            }
         }
 
         # Serialize discovery and first state creation across title changes. This
@@ -735,7 +740,11 @@ function Invoke-PodcastRun {
         if (-not (Test-Path -LiteralPath $OutputPath)) {
             Write-Host '[*] Creating podcast folder.'
             $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
-            $null = [IO.Directory]::CreateDirectory($OutputPath)
+            try { $null = [IO.Directory]::CreateDirectory($OutputPath) }
+            catch {
+                if (Test-PodcastCancellation -ErrorObject $_) { throw }
+                throw 'The destination is not writable. Check output-folder permissions and retry.'
+            }
         }
 
         # Lock the established show before logs, ownership or history changes, then
@@ -751,6 +760,7 @@ function Invoke-PodcastRun {
         $legacyReview = Find-PodcastLegacyReview -Root $baseOutputPath -ArchiveRoot $OutputPath -FeedTitle $feedTitle `
             -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
         if ($null -ne $legacyReview) { throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.' }
+        $null = Invoke-PodcastDestinationPreflight -Root $OutputPath
         if ($historyState.generation -eq 0) {
             $historyState.generation = 1
             $historyState = Write-PodcastHistory -Lock $historyLock -State $historyState
