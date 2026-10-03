@@ -77,6 +77,38 @@ BeforeAll {
         (Get-Item -LiteralPath $media).Length | Should -Be $script:safetyResumeBytes.Length
         (Get-FileHash -LiteralPath $media -Algorithm SHA256).Hash.ToLowerInvariant() | Should -Be $script:safetyResumeHash
     }
+
+    function Assert-UpdSafetyAclRestore {
+        param([Parameter(Mandatory)]$OriginalAcl, [Parameter(Mandatory)]$RestoredAcl)
+        $originalDescriptor = [Security.AccessControl.RawSecurityDescriptor]::new($OriginalAcl.GetSecurityDescriptorBinaryForm(), 0)
+        $restoredDescriptor = [Security.AccessControl.RawSecurityDescriptor]::new($RestoredAcl.GetSecurityDescriptorBinaryForm(), 0)
+        $restoredDescriptor.Owner.Value | Should -BeExactly $originalDescriptor.Owner.Value
+        $restoredDescriptor.Group.Value | Should -BeExactly $originalDescriptor.Group.Value
+        $originalFlags = [int]$originalDescriptor.ControlFlags
+        $restoredFlags = [int]$restoredDescriptor.ControlFlags
+        $autoInherited = [int][Security.AccessControl.ControlFlags]::DiscretionaryAclAutoInherited
+        # Windows may add AI when Set-Acl restores inherited permissions. Permit
+        # only that addition; protection, inheritance requirements and every
+        # other control flag must remain unchanged, including any original AI.
+        ($restoredFlags -eq $originalFlags -or $restoredFlags -eq ($originalFlags -bor $autoInherited)) |
+            Should -BeTrue -Because 'Windows may only add the discretionary ACL automatic-inheritance bookkeeping flag'
+        $restoredDescriptor.ResourceManagerControl | Should -Be $originalDescriptor.ResourceManagerControl
+        foreach ($aclName in @('DiscretionaryAcl', 'SystemAcl')) {
+            $originalEntries = $originalDescriptor.$aclName
+            $restoredEntries = $restoredDescriptor.$aclName
+            ($null -ne $restoredEntries) | Should -Be ($null -ne $originalEntries)
+            if ($null -eq $originalEntries) { continue }
+            $restoredEntries.Revision | Should -Be $originalEntries.Revision
+            $restoredEntries.Count | Should -Be $originalEntries.Count
+            $originalBytes = New-Object byte[] $originalEntries.BinaryLength
+            $restoredBytes = New-Object byte[] $restoredEntries.BinaryLength
+            $originalEntries.GetBinaryForm($originalBytes, 0)
+            $restoredEntries.GetBinaryForm($restoredBytes, 0)
+            # Complete ACL bytes preserve ACE order, identity, type, rights,
+            # object flags, inheritance, propagation and inherited status.
+            [Convert]::ToBase64String($restoredBytes) | Should -BeExactly ([Convert]::ToBase64String($originalBytes))
+        }
+    }
 }
 
 Describe 'A042/A043 run safety through actual owned processes and loopback media' {
@@ -172,7 +204,7 @@ Describe 'A042/A043 run safety through actual owned processes and loopback media
             $run.Result.RunResult.Message | Should -Be 'The destination is not writable. Check output-folder permissions and retry.'
         }
         finally { Set-Acl -LiteralPath $output -AclObject $originalAcl }
-        (Get-Acl -LiteralPath $output).Sddl | Should -Be $originalAcl.Sddl
+        Assert-UpdSafetyAclRestore -OriginalAcl $originalAcl -RestoredAcl (Get-Acl -LiteralPath $output)
     }
 
     It 'rejects reliable response length above available space before any body write or accepted episode evidence' {
@@ -230,7 +262,7 @@ Describe 'A042/A043 run safety through actual owned processes and loopback media
             $run.Result.RunResult.Message | Should -Be 'The destination is not writable. Check output-folder permissions and retry.'
         }
         finally { Set-Acl -LiteralPath $parent -AclObject $originalAcl }
-        (Get-Acl -LiteralPath $parent).Sddl | Should -Be $originalAcl.Sddl
+        Assert-UpdSafetyAclRestore -OriginalAcl $originalAcl -RestoredAcl (Get-Acl -LiteralPath $parent)
     }
 
     It 'allows an independent show under the same base while another show holds its writer handle' {
@@ -372,5 +404,6 @@ Describe 'A042/A043 run safety through actual owned processes and loopback media
             (Get-UpdFixtureState -Context $context).'/media/ok.mp3' | Should -BeNullOrEmpty
         }
         finally { Set-Acl -LiteralPath $output -AclObject $originalAcl }
+        Assert-UpdSafetyAclRestore -OriginalAcl $originalAcl -RestoredAcl (Get-Acl -LiteralPath $output)
     }
 }
