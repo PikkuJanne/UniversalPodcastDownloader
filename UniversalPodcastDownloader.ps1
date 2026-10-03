@@ -46,6 +46,12 @@ FEATURES
     - Optional -KeepAwake temporarily requests Windows system wakefulness:
         - Disabled by default; active only after confirmation and released in finally.
         - Does not keep the display on or change the Windows power plan.
+    - Optional saved shows and sequential batch:
+        - SaveShow stores current-user-protected feed and selection settings.
+        - ListShows, ShowName, RemoveShow and ExportShows are explicit operations.
+        - Batch runs at most 100 saved shows sequentially with combined results.
+        - WhatIf plans every selected show without persistent writes or media requests.
+        - See docs/codex/SAVED_SHOWS.md for protection, export and override limits.
     - Explicit feed pagination:
         - Follows feed-level Atom next/prev-archive links before date selection.
         - MaxFeedPages defaults to 20 (1-100); entry/metadata limits also apply.
@@ -191,6 +197,14 @@ param(
 
     [switch]$PassThru,
 
+    [string]$SaveShow,
+    [switch]$ListShows,
+    [string]$RemoveShow,
+    [string]$ExportShows,
+    [string[]]$ShowName,
+    [switch]$Batch,
+    [string]$ConfigPath,
+
     [string]$LegacyPath,
 
     [ValidateSet('Preview','Adopt','Redownload','Rollback')]
@@ -224,6 +238,9 @@ param(
 . (Join-Path $PSScriptRoot 'src/Progress.ps1')
 . (Join-Path $PSScriptRoot 'src/KeepAwake.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryStore.ps1')
+. (Join-Path $PSScriptRoot 'src/SavedShows.ps1')
+. (Join-Path $PSScriptRoot 'src/Batch.ps1')
+. (Join-Path $PSScriptRoot 'src/Commands.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryIdentity.ps1')
 . (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
 . (Join-Path $PSScriptRoot 'src/NetworkPolicy.ps1')
@@ -1037,7 +1054,7 @@ $runArguments = @{}
 foreach ($key in $PSBoundParameters.Keys) {
     if ($key -ne 'PassThru') { $runArguments[$key] = $PSBoundParameters[$key] }
 }
-$runResult = Invoke-PodcastRun @runArguments
+$runResult = Invoke-PodcastCommand -Options $runArguments
 if ($PassThru) { $runResult }
 if ($launcherGuided) {
     try { $null = Read-Host 'Press Enter to close' }

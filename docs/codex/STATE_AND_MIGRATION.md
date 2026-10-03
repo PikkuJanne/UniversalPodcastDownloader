@@ -26,7 +26,7 @@ The HTTP body's expected byte count, when meaningful for the delivered represent
 
 ## State and checkpoint files
 
-`src/HistoryStore.ps1` defines and validates the current schemas. Keep the existing show directory and media names. Migration stores additional full-history snapshots as `.upd/legacy-<32 lowercase hex characters>.json`; it never copies media into a checkpoint. These snapshots use the same strict schema reader and limits as live history. `src/ResumeStore.ps1` separately validates schema-1 resume sidecars and their owned byte checkpoints. Local subscription configuration remains future work.
+`src/HistoryStore.ps1` defines and validates the current schemas. Keep the existing show directory and media names. Migration stores additional full-history snapshots as `.upd/legacy-<32 lowercase hex characters>.json`; it never copies media into a checkpoint. These snapshots use the same strict schema reader and limits as live history. `src/ResumeStore.ps1` separately validates schema-1 resume sidecars and their owned byte checkpoints. Optional schema-1 saved-show configuration is separate from archive history and resume state; it does not adopt, rename or reset archive files. See [SAVED_SHOWS.md](SAVED_SHOWS.md) for its DPAPI/permission/export policy.
 
 Unknown newer schemas and corrupt primary, backup or selected checkpoint files fail clearly and remain untouched. History is parsed as data, never evaluated as PowerShell.
 

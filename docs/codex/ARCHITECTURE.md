@@ -100,6 +100,12 @@ Keep PowerShell 5.1 syntax throughout runtime code: no null-conditional operator
 
 Use appropriate generic collections internally rather than repeatedly growing large arrays, but return stable public shapes. Date parsing should use explicit culture and offset handling; UTC chronological comparison plus a documented filename date convention avoids machine-dependent behavior. Missing/tied dates must have a deterministic fallback, and old filenames should remain bound through history rather than renamed on every improved parse.
 
+## Implemented UPD-0304 saved shows and batch
+
+`src/Commands.ps1` routes optional saved selectors while forwarding ordinary one-off arguments unchanged. `src/SavedShows.ps1` owns bounded strict schema-1 JSON, current-user DPAPI protection, ACL validation, an exclusive persistent configuration lock and same-directory atomic replacement. Imports perform no configuration I/O or native initialization. Preview/declined management operations stop before directory, lock or protection work. List/export explicitly project metadata; no expression evaluation or portable credential import is supported.
+
+`src/Batch.ps1` validates a bounded selection and allowlisted overrides before executing one existing run at a time. Each child attempts all existing media/history/progress/power cleanup before the next begins; failing disposal/native cleanup remains an explicit limitation. Per-show credential/transfer/catalogue errors remain isolated; structural configuration errors stop safely, and typed cancellation stops with completed counts/unstarted names. Public aggregate children remove sensitive LegacyResult and unknown properties. History/resume/media invariants remain in the existing single-show engine. See [SAVED_SHOWS.md](SAVED_SHOWS.md) and [CLI_RESULTS.md](CLI_RESULTS.md).
+
 ## Out of scope
 
 No GUI rewrite, playback, transcoding/tag rewriting, hosted media downloader, DRM/auth bypass, podcast-provider scraper, browser automation, mandatory scheduler, cloud accounts, unrelated website deployment or aggressive parallelism. Saved shows, batch, progress and keep-awake are optional user-facing features, not mandatory new steps in the basic workflow.

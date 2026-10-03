@@ -65,7 +65,30 @@ Usage
 
 The script and batch launcher return 0 for success, 1 for fatal setup/input errors, 2 for incomplete work, and 130 for catchable cancellation. Unresolved feed pages, failed/deferred transfers, conflicts and ordinary runs encountering unverified adopted media remain incomplete. Preview creates no archive/media/diagnostic files; an unresolved catalogue still returns 2. Parameterized batch launches do not pause. An argument-free launch retains the guided feed/count prompts and a final Enter prompt.
 
-For an in-process result, dot-source the script and call `Invoke-PodcastRun`; the API returns one `Podcast.RunResult` without exiting the host. `-PassThru` on the entry script also emits its result before the script sets `$LASTEXITCODE`. Legacy review/action output is carried in `LegacyResult` and contains sensitive local inventory. This inventory can also appear when ordinary `-WhatIf` encounters an archive requiring review. See [CLI, results and launcher policy](docs/codex/CLI_RESULTS.md) for the schema, quoting and cancellation limits.
+For an in-process result, dot-source the script and call `Invoke-PodcastRun`; the API returns one `Podcast.RunResult` without exiting the host. `Invoke-PodcastCommand -Options @{ ... }` also routes saved-show operations. `-PassThru` on the entry script emits its result before the script sets `$LASTEXITCODE`. Legacy review/action output is carried in `LegacyResult` and contains sensitive local inventory. This inventory can also appear when ordinary `-WhatIf` encounters an archive requiring review. See [CLI, results and launcher policy](docs/codex/CLI_RESULTS.md) for the schema, quoting and cancellation limits.
+
+**Optional saved shows and sequential batch**
+
+Save a feed under a short name, then reuse it without supplying the URL again. Saving changes settings only; it does not fetch the feed or download media. The ordinary one-off and argument-free workflows do not read or create saved settings.
+
+```powershell
+# Replace the example URL and output path with your own values.
+.\UniversalPodcastDownloader.ps1 -SaveShow news -FeedUrl 'https://example.invalid/feed.xml' -OutputPath 'D:\Podcasts' -CustomCount 5
+.\UniversalPodcastDownloader.ps1 -ListShows
+.\UniversalPodcastDownloader.ps1 -ShowName news -NonInteractive
+.\UniversalPodcastDownloader.ps1 -Batch -NonInteractive
+.\UniversalPodcastDownloader.ps1 -Batch -WhatIf
+.\UniversalPodcastDownloader.ps1 -RemoveShow news -WhatIf
+.\UniversalPodcastDownloader.ps1 -ExportShows 'D:\Share\shows-summary.json'
+```
+
+Names start with a letter or digit and contain at most 64 letters, digits, underscores or hyphens; they are unique ignoring case. The configuration supports at most 100 shows. `-Batch` runs them one at a time in saved order; `-Batch -ShowName news` selects one. In a PowerShell session, an array selects several in the supplied order: `& .\UniversalPodcastDownloader.ps1 -Batch -ShowName @('news', 'other')`. Native Windows PowerShell `-File` and the `.bat` wrapper cannot pass a multi-element array; use all shows, one name, or the in-process API.
+
+Feed URLs are protected with Windows DPAPI for the current user. The default file is `%LOCALAPPDATA%\UniversalPodcastDownloader\saved-shows\shows.json`; `-ConfigPath` selects another absolute file in a dedicated private directory. Created configuration directories/files have protected current-user-only access. Existing unsafe permissions or malformed/newer configuration stop the operation and preserve it. Another process running as the same user can decrypt DPAPI data; this does not protect against that user, malware running as that user, or an administrator. Input history and transcripts can retain the URL supplied to save.
+
+List and export show only names, selection modes/counts and whether a feed is configured. They omit URLs, encrypted payloads and output paths; names can still reveal subscriptions. An export creates a new file in an existing directory and never overwrites; it is a sanitized summary, not an importable credential backup. Re-save URLs under a different Windows account/profile. Removal changes settings and preserves all media/history.
+
+Batch continues after an individual show fails and prints combined show and episode counts. Exit 2 means any selected show was fatal or incomplete; configuration/selection setup failure returns 1, catchable cancellation stops remaining shows with 130, and a clean batch returns 0. Preview plans every selected show without writing settings, locks, logs or archive data, requesting enclosure media or activating keep-awake. See [saved-show storage, overrides and batch policy](docs/codex/SAVED_SHOWS.md).
 
 **Output layout**  
 - Default root:
