@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A038 passed; A039-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0206 evidence](evidence/UPD-0206.md).
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A041 passed; A042-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0301 evidence](evidence/UPD-0301.md) and [actual launcher observations](evidence/UPD-0301-LAUNCHER.md).
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -42,9 +42,9 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A038 passed; A039-A060 rem
 | A036 | UPD-0205 | integration | passed | Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation. |
 | A037 | UPD-0206 | integration | passed | Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue. |
 | A038 | UPD-0206 | integration | passed | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
-| A039 | UPD-0301 | integration | not_run | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
-| A040 | UPD-0301 | integration | not_run | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
-| A041 | UPD-0301 | manual | not_run | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |
+| A039 | UPD-0301 | integration | passed | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
+| A040 | UPD-0301 | integration | passed | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
+| A041 | UPD-0301 | manual | passed | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |
 | A042 | UPD-0302 | integration | not_run | Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented. |
 | A043 | UPD-0302 | integration | not_run | Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed. |
 | A044 | UPD-0303 | manual | not_run | Progress never reports misleading 100% before success; episode/byte information honest; readable noninteractive summary. |
