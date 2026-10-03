@@ -303,6 +303,12 @@ function Close-PodcastDiagnostics {
         }
     }
     catch { Write-PodcastDiagnosticFallback -Message 'Diagnostic logging could not be closed; the original operation result is preserved.' }
+    finally {
+        # End exact-request correlation without replacing the dictionary or
+        # creating diagnostic state when no run has been initialized.
+        $requestIds = $ExecutionContext.SessionState.PSVariable.Get('script:PodcastDiagnosticRequestIds')
+        if ($null -ne $requestIds -and $null -ne $requestIds.Value) { $requestIds.Value.Clear() }
+    }
 }
 
 function Export-PodcastDiagnostics {

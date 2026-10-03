@@ -82,8 +82,7 @@ function Invoke-PodcastCommand {
             throw 'Saved-show operations cannot be combined with direct feed or legacy arguments.'
         }
         $common = @('ConfigPath', 'NonInteractive', 'WhatIf', 'Confirm', 'Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ProgressAction')
-        $runtime = @('Mode', 'CustomCount', 'OutputPath', 'KeepAwake', 'MaxFeedPages', 'MaxAttempts',
-            'HeaderTimeoutSeconds', 'IdleTimeoutSeconds', 'RetryBudgetSeconds', 'BaseDelaySeconds', 'MaxDelaySeconds')
+        $runtime = @(Get-PodcastSavedRunOptionName)
         $allowed = $common + @($active)
         if ($operation -eq 'SaveShow') { $allowed += @('FeedUrl', 'Mode', 'CustomCount', 'OutputPath') }
         if ($operation -in @('ShowName', 'Batch')) { $allowed += $runtime }
