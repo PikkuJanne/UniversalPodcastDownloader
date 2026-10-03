@@ -54,19 +54,18 @@ Usage
     .\UniversalPodcastDownloader.ps1 -OutputPath "D:\Podcasts"
 
 3. Command line (non-interactive)
-   - Use when you already know the RSS URL and desired mode:
-    #All episodes for a known feed
-    .\UniversalPodcastDownloader.ps1 
-        -FeedUrl "https://example.com/feed.xml" 
-        -Mode All 
-        -OutputPath "D:\Podcasts"
+   - Supply `-NonInteractive` and an explicit feed URL. Without a mode/count, this selects the latest episode. A positive `-CustomCount` alone selects Custom; an explicit Latest/All mode combined with a count fails before discovery.
 
-    #10 newest episodes
-    .\UniversalPodcastDownloader.ps1 
-        -FeedUrl "https://example.com/feed.xml" 
-        -Mode Custom 
-        -CustomCount 10 
-        -OutputPath "D:\Podcasts"
+```powershell
+# Accessible catalogue
+.\UniversalPodcastDownloader.ps1 -NonInteractive -FeedUrl "https://example.com/feed.xml" -Mode All -OutputPath "D:\Podcasts"
+# Ten newest episodes
+.\UniversalPodcastDownloader.ps1 -NonInteractive -FeedUrl "https://example.com/feed.xml" -CustomCount 10 -OutputPath "D:\Podcasts"
+```
+
+The script and batch launcher return 0 for success, 1 for fatal setup/input errors, 2 for incomplete work, and 130 for catchable cancellation. Unresolved feed pages, failed/deferred transfers, conflicts and ordinary runs encountering unverified adopted media remain incomplete. Preview creates no archive/media/diagnostic files; an unresolved catalogue still returns 2. Parameterized batch launches do not pause. An argument-free launch retains the guided feed/count prompts and a final Enter prompt.
+
+For an in-process result, dot-source the script and call `Invoke-PodcastRun`; the API returns one `Podcast.RunResult` without exiting the host. `-PassThru` on the entry script also emits its result before the script sets `$LASTEXITCODE`. Legacy review/action output is carried in `LegacyResult` and contains sensitive local inventory. This inventory can also appear when ordinary `-WhatIf` encounters an archive requiring review. See [CLI, results and launcher policy](docs/codex/CLI_RESULTS.md) for the schema, quoting and cancellation limits.
 
 **Output layout**  
 - Default root:
@@ -111,7 +110,8 @@ $legacy = @{
     OutputPath = 'D:\Podcasts'
     LegacyPath = 'D:\Podcasts\Original show'
 }
-$preview = & .\UniversalPodcastDownloader.ps1 @legacy
+$previewRun = & .\UniversalPodcastDownloader.ps1 @legacy -PassThru
+$preview = $previewRun.LegacyResult
 $preview.Episodes | Select-Object EpisodeId, Title, Classification, Candidates, SuggestedPath | Format-List
 $preview.Files | Select-Object RelativePath, Bytes, Sha256, Plausible, Classification, Reason, RecordedStatus | Format-List
 ```
@@ -139,21 +139,21 @@ $adopt = @{
     LegacyFile = $fileName
     LegacySha256 = $chosen[0].Sha256
 }
-& .\UniversalPodcastDownloader.ps1 @legacy @adopt -WhatIf
-$result = & .\UniversalPodcastDownloader.ps1 @legacy @adopt
-$result
+& .\UniversalPodcastDownloader.ps1 @legacy @adopt -WhatIf -PassThru
+$result = & .\UniversalPodcastDownloader.ps1 @legacy @adopt -PassThru
+$result.LegacyResult
 ```
 
-Adoption keeps the original path and bytes. Its status is `adopted`, with `owner-approved-local-signature` evidence and `local-signature-only; transfer-completeness-unverified` confidence. A digest and recognizable signature do not prove that the publisher supplied a complete or correct episode. Later runs count unchanged adopted files separately from verified transfer skips. Missing or changed adopted files require another review; they do not trigger an automatic replacement.
+Adoption keeps the original path and bytes. Its status is `adopted`, with `owner-approved-local-signature` evidence and `local-signature-only; transfer-completeness-unverified` confidence. A digest and recognizable signature do not prove that the publisher supplied a complete or correct episode. A successful explicit adoption or rollback can return 0 because the requested metadata action completed; it does not count adopted media as downloaded. Later ordinary runs count unchanged adopted files separately from verified transfer skips and return 2 for that unverified media. Missing or changed adopted files require another review; they do not trigger an automatic replacement.
 
 ### Download one separate replacement
 
 Use this action when you choose to obtain a new transfer for the reviewed episode. It allocates a separate filename, preserves every original and records the observed transfer for the selected episode.
 
 ```powershell
-& .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId -WhatIf
-$result = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId
-$result
+& .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId -WhatIf -PassThru
+$result = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Redownload -LegacyEpisodeId $episodeId -PassThru
+$result.LegacyResult
 ```
 
 The new file receives `transfer_verified` evidence from the observed transfer and bounded signature check. This does not establish cryptographic completeness or publisher authenticity.
@@ -163,11 +163,11 @@ The new file receives `transfer_verified` evidence from the observed transfer an
 Each changing legacy action returns a `Checkpoint` basename and prints it before its final mutation. Keep that value. The `.upd/legacy-<id>.json` checkpoint contains the archive's full prior history metadata. Rollback restores all records from that snapshot in a new generation, so it can also remove metadata decisions made after the checkpoint. Review its proposed `Operation.RestoreRecords` before applying it.
 
 ```powershell
-$checkpoint = $result.Checkpoint
-$rollbackPreview = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint -WhatIf
-$rollbackPreview.Operation.RestoreRecords | Format-List
-$rollback = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint
-$rollback
+$checkpoint = $result.LegacyResult.Checkpoint
+$rollbackPreview = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint -WhatIf -PassThru
+$rollbackPreview.LegacyResult.Operation.RestoreRecords | Format-List
+$rollback = & .\UniversalPodcastDownloader.ps1 @legacy -LegacyAction Rollback -LegacyCheckpoint $checkpoint -PassThru
+$rollback.LegacyResult
 ```
 
 Rollback never deletes, renames or restores media bytes. Original files and separate downloads survive; files whose records were removed return to review. Schema 2 and the feed association remain, including when rolling back the first adoption to an empty history. Rollback itself saves another checkpoint. A corrupt checkpoint or one from a different feed is refused; copying `.bak` over live state is not an automatic recovery procedure.
@@ -202,7 +202,7 @@ Nothing is uploaded automatically. Logs, startup copies and exports remain until
 **Batch wrapper (included)**  
 - UniversalPodcastDownloader.bat (double-click launcher):
   - Double-click = open the TUI.
-  - If you want drag-and-drop support later, you can extend the wrapper to pass %* through to the script.
+  - Parameterized launches forward the original arguments to the colocated script and return its exit code without pausing. Use named script parameters; a dragged file path alone is not a feed URL.
 
 **Technical details**
 - Feed resolution:

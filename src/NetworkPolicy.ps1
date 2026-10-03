@@ -105,6 +105,7 @@ function Invoke-PodcastHttpGet {
                 $known = Get-PodcastTransportFailure -ErrorObject $_
                 if ($null -ne $known) { throw $known }
                 if ($timedOut) { throw (New-PodcastTransportException -Kind HeaderTimeout -Message 'The HTTP request exceeded the connection/header timeout.' -Retryable $true) }
+                if (Test-PodcastCancellation -ErrorObject $_) { throw }
                 throw (New-PodcastTransportException -Kind Connection -Message 'HTTP request failed before response headers were available.' -Retryable (Test-PodcastTransientException -ErrorObject $_))
             }
             finally { $cancellation.Dispose() }
@@ -260,6 +261,7 @@ function Invoke-PodcastMetadataRequestOnce {
     catch {
         $known = Get-PodcastTransportFailure -ErrorObject $_
         if ($null -ne $known) { throw $known }
+        if (Test-PodcastCancellation -ErrorObject $_) { throw }
         throw $failure
     }
     finally {

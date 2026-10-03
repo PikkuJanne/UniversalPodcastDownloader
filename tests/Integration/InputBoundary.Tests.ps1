@@ -199,7 +199,7 @@ Describe 'A022/A024: real preview and untrusted-input boundaries' -Tag 'Integrat
 
     It 'A023 refuses a forbidden media redirect without completing an episode' {
         $run = Invoke-UpdBoundaryWorker -Context $context -Action Download -FeedPath '/feeds/redirect-file-media.xml'
-        $run.ExitCode | Should -Be 1
+        $run.ExitCode | Should -Be 2
         @(Get-ChildItem -LiteralPath (Join-Path $run.Root 'out') -Recurse -Filter '*.mp3' -File).Count | Should -Be 0
         $stats = Get-UpdFixtureState -Context $context
         $stats.'/media/redirect-file.mp3' | Should -Be 1

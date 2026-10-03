@@ -77,7 +77,9 @@ Describe 'A007/A023: centralized metadata requests without legacy DOM parsing' -
         }
         Mock Invoke-PodcastMediaRequest { throw 'Media must not be requested.' }
         $root = Join-Path $TestDrive 'absent'
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath $root -WhatIf } | Should -Throw
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath $root -WhatIf
+        $result.ExitCode | Should -Be 1
+        $result.Status | Should -Be 'fatal'
         Test-Path -LiteralPath $root | Should -BeFalse
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
         Should -Invoke Get-PodcastHttpClient -Times 0 -Exactly

@@ -1,5 +1,7 @@
 #requires -Version 5.1
 
+. (Join-Path $PSScriptRoot 'RunResult.ps1')
+
 function New-PodcastTransportPolicy {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates only an in-memory policy value.')]
     [CmdletBinding()]
@@ -224,6 +226,7 @@ function Read-PodcastResponseChunk {
         $known = Get-PodcastTransportFailure -ErrorObject $_
         if ($null -ne $known) { throw $known }
         if ($timedOut) { throw (New-PodcastTransportException -Kind IdleTimeout -Message 'The response body exceeded the idle transfer timeout.' -Retryable $true) }
+        if (Test-PodcastCancellation -ErrorObject $_) { throw }
         throw (New-PodcastTransportException -Kind Connection -Message 'The response body could not be read completely.' -Retryable (Test-PodcastTransientException -ErrorObject $_ -ResponseRead))
     }
     finally { $cancellation.Dispose() }

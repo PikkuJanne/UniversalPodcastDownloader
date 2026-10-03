@@ -95,7 +95,13 @@ function Get-PodcastDiagnosticError {
         'Legacy review requires an existing -LegacyPath and an explicit -FeedUrl.',
         'Legacy options require -LegacyPath and an explicit -FeedUrl.',
         'Output root is too long to retain safe identifiers. Choose a shorter output path.',
-        "Mode 'Custom' requires -CustomCount with a value >= 1."
+        "Mode 'Custom' requires -CustomCount with a value >= 1.",
+        '-CustomCount must be a positive integer.',
+        '-CustomCount conflicts with an explicit Latest or All mode.',
+        '-NonInteractive requires an explicit nonblank -FeedUrl.',
+        '-NonInteractive cannot be combined with -Confirm.',
+        'A Windows name cannot be a dot or dot-dot path component.',
+        'Conflicting episode metadata reuses one identity in this feed snapshot; no media destinations were created.'
     )
     if ($cause -is [Exception]) {
         foreach ($publicMessage in $publicMessages) {

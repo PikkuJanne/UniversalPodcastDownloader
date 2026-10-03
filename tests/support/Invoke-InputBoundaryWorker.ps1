@@ -2,6 +2,8 @@ param([Parameter(Mandatory)][string]$ConfigPath)
 
 $ErrorActionPreference = 'Stop'
 $config = [IO.File]::ReadAllText($ConfigPath) | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'WorkerRunProjection.ps1')
+$workerExit = 1
 # Compile test infrastructure before redirecting the application's log roots.
 if ($config.Action -eq 'Decline') {
     Add-Type -Path (Join-Path $PSScriptRoot 'DeclineConfirmationHost.cs')
@@ -35,6 +37,7 @@ try {
         $parameters = @{
             FeedUrl = $config.FeedUrl; OutputPath = Join-Path $config.Root 'out'
             Mode = 'All'; DiagnosticExportPath = Join-Path $config.ExportRoot 'diagnostics.json'
+            PassThru = $true
         }
         if ($config.Action -eq 'Preview') { $parameters.WhatIf = $true }
         if ($config.Action -eq 'Decline') {
@@ -45,13 +48,19 @@ try {
             $pipeline = [Management.Automation.PowerShell]::Create()
             $pipeline.Runspace = $runspace
             $null = $pipeline.AddCommand($config.ProductScript).AddParameters($parameters)
-            $result.Output = @($pipeline.Invoke())
+            $published = @($pipeline.Invoke())
             $result.ConfirmationCount = $testHost.ConfirmationCount
             if ($pipeline.HadErrors) { throw $pipeline.Streams.Error[0] }
         }
-        else { $result.Output = @(& $config.ProductScript @parameters) }
+        else { $published = @(& $config.ProductScript @parameters) }
+        $projection = Get-UpdWorkerRunProjection -Output $published
+        $result.Output = @($projection.RunResult.Plan)
+        $result.Succeeded = $projection.Succeeded
+        $result.ErrorMessage = $projection.ErrorMessage
+        $result.RunResult = $projection.RunResult
+        $workerExit = $projection.ExitCode
     }
-    $result.Succeeded = $true
+    if ($config.Action -in @('Resolve', 'Metadata')) { $result.Succeeded = $true; $workerExit = 0 }
 }
 catch { $result.ErrorMessage = $_.Exception.Message }
 finally {
@@ -63,5 +72,4 @@ $result.RootEntries = @(if ([IO.Directory]::Exists($config.Root)) {
     Get-ChildItem -LiteralPath $config.Root -Recurse -Force | ForEach-Object { $_.FullName.Substring($config.Root.Length) }
 })
 [IO.File]::WriteAllText($config.ResultPath, ($result | ConvertTo-Json -Depth 12), [Text.UTF8Encoding]::new($false))
-if ($result.Succeeded) { exit 0 }
-exit 1
+exit $workerExit

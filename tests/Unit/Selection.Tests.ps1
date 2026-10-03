@@ -89,9 +89,12 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
         # A non-downloadable item also exercises filtering down to a singleton.
         $feedResponse.Content = '<rss><channel><title>Unit show</title><item><title>No media</title></item>' + ($items -join '') + '</channel></rss>'
         $output = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        $arguments = @{ FeedUrl = 'https://feed.example.invalid/rss'; OutputPath = $output; Mode = $Mode; CustomCount = $CustomCount }
+        $arguments = @{ FeedUrl = 'https://feed.example.invalid/rss'; OutputPath = $output; Mode = $Mode }
+        if ($Mode -eq 'Custom') { $arguments.CustomCount = $CustomCount }
 
-        & $script:DownloaderPath @arguments
+        $result = Invoke-PodcastRun @arguments
+        $result.ExitCode | Should -Be 0
+        $result.Downloaded | Should -Be $ExpectedCount
 
         @(Get-ChildItem -LiteralPath $output -Filter '*.mp3' -Recurse).Count | Should -Be $ExpectedCount
         $log = Get-Content -LiteralPath (Get-ChildItem -LiteralPath $output -Filter '*.log' -Recurse).FullName -Raw
@@ -108,7 +111,9 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
             }
         }
 
-        & $script:DownloaderPath @arguments
+        $result = Invoke-PodcastRun @arguments
+        $result.ExitCode | Should -Be 0
+        $result.VerifiedSkipped | Should -Be $ExpectedCount
 
         Should -Invoke Invoke-PodcastMediaRequest -Times $ExpectedCount -Exactly
         Should -Invoke Write-Progress -Times $ExpectedCount -Exactly -ParameterFilter { $Status -like 'Skipping (verified history):*' }
@@ -123,8 +128,11 @@ Describe 'A006: entrypoint counts and progress' -Tag 'Unit', 'A006' {
     ) {
         $feedResponse.Content = '<rss><channel><title>Empty show</title>' + $Items + '</channel></rss>'
         $output = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $output -Mode $Mode -CustomCount 1 } |
-            Should -Throw $Message
+        $arguments = @{ FeedUrl = 'https://feed.example.invalid/rss'; OutputPath = $output; Mode = $Mode }
+        if ($Mode -eq 'Custom') { $arguments.CustomCount = 1 }
+        $result = Invoke-PodcastRun @arguments
+        $result.ExitCode | Should -Be 1
+        $result.Message | Should -BeLike $Message
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
         Should -Invoke Write-Progress -Times 0 -Exactly
         Test-Path -LiteralPath $output | Should -BeFalse

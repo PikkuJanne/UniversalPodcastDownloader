@@ -256,8 +256,9 @@ Describe 'A014 entrypoint identity boundaries' -Tag 'Unit' {
     It 'rejects contradictory GUIDs even when Latest would hide the older item' {
         $identityFeedResponse.Content = '<rss><channel><title>Identity show</title><item><guid>reused</guid><title>New</title><pubDate>2026-09-02T12:00:00Z</pubDate><enclosure url="https://media.example.invalid/new.mp3"/></item><item><guid>reused</guid><title>Old</title><pubDate>2026-09-01T12:00:00Z</pubDate><enclosure url="https://media.example.invalid/old.mp3"/></item></channel></rss>'
         $output = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
-        $downloader = Join-Path $script:RepositoryRoot 'UniversalPodcastDownloader.ps1'
-        { & $downloader -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $output -Mode Latest } | Should -Throw '*Conflicting episode metadata*'
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $output -Mode Latest
+        $result.ExitCode | Should -Be 1
+        $result.Message | Should -BeExactly 'Conflicting episode metadata reuses one identity in this feed snapshot; no media destinations were created.'
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
         Test-Path -LiteralPath $output | Should -BeFalse
     }
@@ -265,7 +266,8 @@ Describe 'A014 entrypoint identity boundaries' -Tag 'Unit' {
         $identityFeedResponse.Content = '<rss><channel><title>Identity show</title><item><guid>first</guid><title>Episode</title><enclosure url="https://media.example.invalid/audio.mp3"/></item></channel></rss>'
         $output = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         $exactUrl = 'https://feed.example.invalid/Case/%2f.xml?feedId=one&amp=two&signature=A%2bB'
-        & (Join-Path $script:RepositoryRoot 'UniversalPodcastDownloader.ps1') -FeedUrl $exactUrl -OutputPath $output -Mode Latest
+        $result = Invoke-PodcastRun -FeedUrl $exactUrl -OutputPath $output -Mode Latest
+        $result.ExitCode | Should -Be 0
         $show = @(Get-ChildItem -LiteralPath $output -Directory)[0]
         $state = Read-PodcastHistory -Root $show.FullName
         $expected = Get-PodcastNameHash -IdentityKey ('feed:' + $exactUrl)

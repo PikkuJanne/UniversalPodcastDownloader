@@ -5,6 +5,8 @@ param([Parameter(Mandatory)][string]$ConfigPath)
 $ErrorActionPreference = 'Stop'
 $VerbosePreference = 'Continue'
 $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'WorkerRunProjection.ps1')
+$workerExit = 1
 $result = [ordered]@{
     Succeeded = $false
     EngineVersion = $PSVersionTable.PSVersion.ToString()
@@ -143,6 +145,8 @@ try {
             throw 'Unexpected or repeated application prompt in discovery integration worker.'
         }
     }
+    $modeParameters = @{}
+    if ($config.Mode -eq 'Custom') { $modeParameters.CustomCount = [int]$config.CustomCount }
     switch ($config.Action) {
         'Discover' {
             . $config.ProductScript
@@ -185,10 +189,10 @@ try {
             $result.EpisodeUrls = @($episodes | ForEach-Object { $_.Url })
         }
         'Preview' {
-            & $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -WhatIf @paginationParameters
+            $published = @(& $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -WhatIf -PassThru @modeParameters @paginationParameters)
         }
         'InteractivePreview' {
-            & $config.ProductScript -Mode $config.Mode -OutputPath $config.OutputPath -WhatIf @paginationParameters
+            $published = @(& $config.ProductScript -Mode $config.Mode -OutputPath $config.OutputPath -WhatIf -PassThru @modeParameters @paginationParameters)
             $result.PromptCount = $discoveryPromptState.Count
         }
         'Download' {
@@ -206,11 +210,18 @@ try {
                     Microsoft.PowerShell.Utility\Write-Progress @PSBoundParameters
                 }
             }
-            & $config.ProductScript -Mode $config.Mode -CustomCount $config.CustomCount -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose @paginationParameters
+            $published = @(& $config.ProductScript -Mode $config.Mode -FeedUrl $config.FeedUrl -OutputPath $config.OutputPath -Verbose -PassThru @modeParameters @paginationParameters)
         }
         default { throw 'Unknown integration worker action.' }
     }
-    $result.Succeeded = $true
+    if ($config.Action -in @('Preview', 'InteractivePreview', 'Download')) {
+        $projection = Get-UpdWorkerRunProjection -Output $published
+        $result.Succeeded = $projection.Succeeded
+        $result.ErrorMessage = $projection.ErrorMessage
+        $result.RunResult = $projection.RunResult
+        $workerExit = $projection.ExitCode
+    }
+    else { $result.Succeeded = $true; $workerExit = 0 }
 }
 catch {
     $result.ErrorMessage = $_.Exception.Message
@@ -223,5 +234,4 @@ if ($config.Action -eq 'Download' -and (Test-Path -LiteralPath $config.OutputPat
     $result.RemainingTemporaryCount = @(Get-ChildItem -LiteralPath $config.OutputPath -Recurse -File -Filter '.upd-*.tmp' -Force).Count
 }
 $result | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $config.ResultPath -Encoding UTF8
-if ($result.Succeeded) { exit 0 }
-exit 1
+exit $workerExit

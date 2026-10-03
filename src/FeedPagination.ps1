@@ -108,6 +108,7 @@ function Resolve-PodcastCatalogue {
         if ($characters -ge $MaxCharacters) { $reason = 'character_limit'; break }
         try { $nextPage = Resolve-PodcastSource -Uri $target.AbsoluteUri }
         catch {
+            if (Test-PodcastCancellation -ErrorObject $_) { throw }
             $reason = if ($null -ne (Get-PodcastTransportFailure -ErrorObject $_)) { 'page_failed' } else { 'invalid_page' }
             break
         }

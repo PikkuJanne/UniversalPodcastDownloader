@@ -21,7 +21,7 @@ After an ordinary download is confirmed and its show directory is available, the
 
 URLs are displayed as hostname plus an opaque random request ID, for example `example.com [url <random ID>]`. All user information, path, query and fragment content is discarded. This avoids trying to guess which tokenized path or query names are safe. The same run can correlate a URL while it remains in the bounded request-ID map; no stable URL hash is exported. Exact request URLs remain in process for networking and are never replaced with their display values.
 
-Routine console, verbose and log messages omit raw feed/episode titles, local paths, publisher IDs, headers, response bodies and raw exception messages. Error formatting uses fixed local categories and exact allowlisted application instructions; unrecognized exception text is omitted. The original exception is retained in process; its safe ErrorDetails controls normal rendering. Text filtering adds a second check to application-authored messages, but it is not a general detector for secrets in arbitrary prose.
+Routine console, verbose and log messages omit raw feed/episode titles, local paths, publisher IDs, headers, response bodies and raw exception messages. Error formatting uses fixed local categories and exact allowlisted application instructions; unrecognized exception text is omitted. Caught failures produce fixed safe console text and result messages; raw exceptions are excluded from returned run/episode results. Text filtering adds a second check to application-authored messages, but it is not a general detector for secrets in arbitrary prose.
 
 Logs can contain hostnames, episode identity fingerprints, dates, counters, attempt numbers, validation categories and outcomes. Hostnames can themselves identify a private subscription, and fingerprints allow correlation. Treat logs as local diagnostic data and review them before sharing. The restricted JSON export below contains fewer fields.
 
@@ -46,7 +46,7 @@ The exporter omits message text, URL hosts and request IDs as well as raw URLs, 
 
 ## Sensitive local data outside the export
 
-- Legacy inventory and migration results expose titles, exact filenames, identities and checkpoint basenames needed to choose and reverse local actions. Keep these review objects local.
+- Legacy inventory and migration results expose titles, exact filenames, identities and checkpoint basenames needed to choose and reverse local actions. UPD-0301 preserves these local review/action objects in RunResult.LegacyResult, including a legacy inventory encountered during WhatIf. Keep these objects local. Ordinary run/episode results contain safe authored messages, counts and opaque identities; no raw exceptions or destination paths.
 - Media filenames and history relative paths can contain publisher-provided text. State, backups and checkpoints also retain identity fingerprints and verification evidence. They are not diagnostic exports.
 - PowerShell parameter binding, source-loading errors and host behavior occur outside the initialized run boundary. A caller can inspect original exceptions and in-process request state. PowerShell input history, typed commands, transcripts and caller-created dumps may contain credentials. The downloader does not scrub those external records.
 - Logs created before UPD-0106 may contain complete URLs, credentials and local paths. They are neither rewritten nor read into current exports. Inspect them locally before any sharing.
@@ -57,4 +57,4 @@ Startup copies, show logs and exported JSON remain until the owner deletes them.
 
 Archive state, backups and migration checkpoints have a separate purpose: they support identity binding, verification and explicit metadata recovery. Keep them with the archive. The downloader does not delete or expire them, originals or unknown partial files. Deleting history can remove evidence required for verified skips; deleting checkpoints removes those rollback options. Diagnostic cleanup must not be treated as archive cleanup.
 
-No raw sensitive-debug mode is introduced. Broader network/XML validation, future saved-subscription storage and launcher behavior remain assigned to their later tasks.
+No raw sensitive-debug mode is introduced. Network/XML boundaries and [CLI/launcher results](CLI_RESULTS.md) are implemented; future saved-subscription storage retains its separate privacy task.
