@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and downloader acceptance. A001-A052 passed through UPD-0403; A053-A060 not_run. Packaging A051 uses actual committed ZIP builds, A052 retains manual source/license/extraction review. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and downloader acceptance. A001-A054 passed through UPD-0404; A055-A060 not_run. A053/A054 use reviewed candidate-only workflow, mutation/actual-package gates and local draft material; final public-release readiness remains outstanding. Helper checks do not substitute for downloader acceptance.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -586,8 +586,8 @@
       "when": "Review CI and draft release.",
       "expected": "Minimal job permissions, reviewed SHA-pinned actions, no pull_request_target execution of untrusted code, secret-safe artifacts; no automatic public release.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0404.md"
     },
     {
       "id": "A054",
@@ -597,8 +597,8 @@
       "when": "Complete release preparation.",
       "expected": "Draft/artifacts ready; no tag push, release publication, merge, branch deletion, visibility/settings change or purchase occurs.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0404.md"
     },
     {
       "id": "A055",
