@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0303",
+  "current_task": "UPD-0304",
   "status_values": [
     "todo",
     "ready",
@@ -552,7 +552,7 @@
       "id": "UPD-0303",
       "milestone": "M3",
       "title": "Improve progress and optional temporary keep-awake",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0302"
       ],
@@ -573,15 +573,18 @@
         "A044",
         "A045"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0303.md",
+        "docs/codex/evidence/UPD-0303-WINDOWS.md"
+      ],
+      "implementation_commit": "19c299f5075a17eb258e1347ca520a9a9760caed",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/4"
     },
     {
       "id": "UPD-0304",
       "milestone": "M3",
       "title": "Add opt-in saved shows and sequential batch mode",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0303"
       ],

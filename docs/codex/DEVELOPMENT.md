@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## Historical suite coverage and current checks
 
-The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0302 inventory is **1,460 checks per engine**, detailed in its section below; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0303 inventory is **1,534 checks per engine**, detailed in its section below; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -77,7 +77,7 @@ The UPD-0201 snapshot retained two unit characterizations: Atom updated-before-p
 
 UPD-0101 replaced both PS5.1 failure characterizations with desired-behavior regressions by routing page/feed requests through `Invoke-PodcastWebRequest`, which supplied `-UseBasicParsing` to `Invoke-WebRequest`; that implementation remains recorded in its historical evidence. UPD-0107 retains the helper name but delegates metadata to the built-in .NET HttpClient with explicit HTTP(S), redirect and body limits. Media uses the same request policy and keeps its streamed completion checks from UPD-0103. Product requests no longer use the legacy web DOM parser. Feed XML uses bounded XmlReader settings with DTD prohibited and external resolution disabled. The HTML discovery worker supplies only the exact application UI responses; its hidden child remains `-NonInteractive`. Harness control traffic retains its own safe parsing switch.
 
-`Select-PodcastEpisode` returns an array for zero, one or many entries. Unit cases cover Latest, All and Custom counts of 1, 2 and 5, null input, invalid Custom counts, sorting, URL filtering, counts, download/skip progress, and explicit empty/no-enclosure errors. The entry point still rejects an empty feed or a feed without downloadable URLs before episode progress/media requests. A006 covers valid arithmetic; byte-level progress timing and other UX changes remain UPD-0303.
+`Select-PodcastEpisode` returns an array for zero, one or many entries. Unit cases cover Latest, All and Custom counts of 1, 2 and 5, null input, invalid Custom counts, sorting, URL filtering, counts, download/skip progress, and explicit empty/no-enclosure errors. The entry point still rejects an empty feed or a feed without downloadable URLs before episode progress/media requests. A006 covers valid arithmetic; UPD-0303 adds byte-level progress timing and verified-success presentation.
 
 Focused UPD-0101 commands (use the same native child wrapper above for PS5.1):
 
@@ -90,7 +90,7 @@ Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008,
 
 Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 169 not_run. Run `-Suite Integration` for all 40 loopback cases. Transaction tests kill only their owned worker process after an actual stream write or immediately before/after File.Move. Process-local debugger breakpoints also insert a competing final file and verify the temporary stream has closed; product code has no test hook. Reruns preserve abandoned partials and begin a fresh request. Signature validation is bounded and is not full decoding.
 
-UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0302 section; historical counts belong to their recorded task snapshots.
+UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0303 section; historical counts belong to their recorded task snapshots.
 
 UPD-0105 legacy units use `-Suite Unit -Filter '*A01[78]*'` (71 checks); focused integration uses `-Suite Integration -Filter '*A01[78]*'` (25 checks, including the updated A009/A017 historical-folder guard and A016/A017 unknown-destination guard). CLI tests hash every copied original before/after operations, assert unchanged preview trees, require exact reviewed adoption digests, distinguish adoption from observed transfers, preserve remote-changed originals, choose one redownload from a multi-episode feed, and restore only metadata from explicit checkpoints. Ordinary WhatIf now performs no filesystem writes; early invalid feeds/identities leave the output root absent. Schema-1 behavior stays supported alongside explicit schema-2 migration.
 
@@ -232,7 +232,7 @@ Settled inventory **1,364** = **1,075 units** (1,065 product/ten runner guards) 
 
 Fresh focused commands use -Suite Unit -Filter '*A039*' / '*A040*', and -Suite Integration -Filter '*A039/A040*' / '*real Windows batch launcher plumbing*'. Run full Unit/Integration and Analyze in fresh processes with native module isolation and process-only bundled Python PATH above. Real owned Windows terminal observations establish guided prompts/final Enter and success 0/incomplete 2, while parameterized/missing-script paths do not pause. No graphical double-click or universal physical Ctrl+C claim. The GitHub Windows job deadline is 40 minutes because the concurrent local PS7 integration took 1,968.36 s plus 194.23 s for units, exceeding 36 minutes before setup/analysis; native integration took 1,113.33 s plus 138.73 s for units. Product request/retry limits are unchanged. Required assertions and both engines remain enabled. [Task evidence](evidence/UPD-0301.md) and [launcher observations](evidence/UPD-0301-LAUNCHER.md) distinguish baselines, interim failures, focused passes and manual limitations.
 
-## UPD-0302 focused checks
+## UPD-0302 focused checks (historical snapshot)
 
 Use fresh processes, native module isolation/process-only Bypass and the bundled Python PATH wrapper above:
 
@@ -250,6 +250,20 @@ pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite All
 pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
 ```
 
-Current inventory: **1,460** = **1,158 units** (1,148 product + ten runner guards) + **302 integrations**. Full local Unit passed **1158/0/0/0 each**, PS7 216.48 s/native 148.61 s. New real run-safety focus passed **13/0/0/289 each**, PS7 130.39 s/native 74.76 s. Final whole-tree analysis passed **87 files**, parse/new zero, bounded baseline PS7 2/native 1. Broader local Integration was launched; actual final counts and exact-source full All CI are recorded separately in the draft PR/final handoff. Filtered/helper/historical counts are not current full-suite passes.
+UPD-0302 inventory: **1,460** = **1,158 units** (1,148 product + ten runner guards) + **302 integrations**. Full local Unit passed **1158/0/0/0 each**, PS7 216.48 s/native 148.61 s. New real run-safety focus passed **13/0/0/289 each**, PS7 130.39 s/native 74.76 s. Final whole-tree analysis passed **87 files**, parse/new zero, bounded baseline PS7 2/native 1. Broader local Integration was launched; actual final counts and exact-source full All CI are recorded separately in the draft PR/final handoff. Filtered/helper/historical counts are not current full-suite passes.
 
 Tests cover actual concurrent OS writer locks, independent same-root shows, release/stale-content reopening without PID authority, real ACL denial with exact owned restoration, actual-byte cancellation checkpoints/remaining-tail recovery, retained unknown-length partials, known/unknown space observations and preview no-write boundaries. New cleanup/guard units include checkpoint and disposal faults, actual exclusive reopening, primary-error precedence, legacy inspection and resume-prefix cancellation. Earlier broad Unit failures were stale cancelled-partial cleanup expectations and incomplete standalone mock dependencies/metadata; their assertions were strengthened/migrated and final full Unit rerun. No fixture helper changed, so predecessor helper results remain historical. See [UPD-0302 evidence](evidence/UPD-0302.md) for every baseline/snapshot and limitation.
+
+## UPD-0303 progress and temporary keep-awake checks
+
+Use fresh processes and the native/Python process-only wrappers above:
+
+```powershell
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite All -Filter '*A04[45]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A009 rechecks a destination junction inserted*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
+```
+
+Current inventory **1534** = **1224 units** (1214 product/ten runner guards) + **310 integrations**. Fresh settled new focus passed **74/0/0/1460 each**, PS7 79.33 s/native 51.25 s, child/outer 0. Affected junction focus passed **2/0/0/308 each**, PS7 15.78 s/native 9.60 s. Whole-tree analyzers passed **94 files**, parse/new zero, baseline PS7 2/native 1. Earlier broad Unit passed **1221/0/0/0 each**, PS7 187.87 s/native 125.31 s, before the final three cleanup tests/fix; it is not full current-unit coverage. Final exact-head full All CI is recorded separately in the PR/handoff. No local full All or full settled Integration was claimed; filtered-out/helper checks are not passes.
+
+The 66 new units and eight loopback cases cover honest known/unknown response totals, offsets/retries, completion-history ordering, throttling/preferences/owned IDs, quiet/preview, invalid body/history failure, cancellation/resumed final hash/catalogue gaps, lazy native thread-scoped leases and independent cleanup. Actual Windows ConsoleHost/native API observations are separate from mocked/forced presentation. [UPD-0303 evidence](evidence/UPD-0303.md) and [manual observations](evidence/UPD-0303-WINDOWS.md) retain baselines, exact versions, commands and limits. Physical Ctrl+C, sleep/lid behavior and hard-kill restoration remain unclaimed. No fixture helper change or rerun; predecessor helper results remain historical.
