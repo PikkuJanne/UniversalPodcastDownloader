@@ -702,6 +702,7 @@
         "docs/codex/evidence/UPD-0403.md"
       ],
       "implementation_commit": "6bcb7c64bdfbc64d6489dad622e70443b1a3464f",
+      "verification_followup": "Unit-only native diagnostic whitespace correction and stronger dirty/missing-license output-absence checks after historical CI37133849561; final rebuilt source and full CI require separate verification in PR before handoff.",
       "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {

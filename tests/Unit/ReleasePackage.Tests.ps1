@@ -23,7 +23,7 @@ Describe 'A051/A052 release packaging safety and traceability' -Tag 'Unit', 'A05
         }
 
         function Invoke-UpdPackageBuild {
-            param([string[]]$Arguments)
+            param([string[]]$Arguments, [switch]$WrapDiagnosticWords)
             $start = New-Object Diagnostics.ProcessStartInfo
             $start.FileName = $script:PackageEngine
             $values = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
@@ -51,7 +51,15 @@ Describe 'A051/A052 release packaging safety and traceability' -Tag 'Unit', 'A05
                 }
                 $data = $null
                 if ($process.ExitCode -eq 0) { $data = $stdout.Result | ConvertFrom-Json }
-                return [pscustomobject]@{ Code = $process.ExitCode; Data = $data; Text = ($stdout.Result + $stderr.Result) }
+                $rawText = $stdout.Result + $stderr.Result
+                # Native error display wraps words according to the host width
+                # and source-path length. Selected refusal cases force wrapping
+                # of their actual captured diagnostic to exercise that format
+                # without depending on local or hosted temporary-path lengths.
+                $diagnostic = $stderr.Result
+                if ($WrapDiagnosticWords) { $diagnostic = [regex]::Replace($diagnostic, '[ \t]+', "`r`n    ") }
+                return [pscustomobject]@{ Code = $process.ExitCode; Data = $data; RawText = $rawText;
+                    Text = [regex]::Replace(($stdout.Result + $diagnostic), '\s+', ' ') }
             }
             finally { $process.Dispose() }
         }
@@ -130,10 +138,10 @@ Describe 'A051/A052 release packaging safety and traceability' -Tag 'Unit', 'A05
         $Label | Should -Not -BeNullOrEmpty
         [IO.File]::WriteAllText((Join-Path $script:PackageFixture $Path), 'changed synthetic source')
         if ($Stage) { $null = Invoke-UpdPackageFixtureGit -Arguments @('add', '--', $Path) }
-        $result = Invoke-UpdPackageBuild
+        $result = Invoke-UpdPackageBuild -WrapDiagnosticWords
         $result.Code | Should -Be 1
-        $result.Text | Should -Match 'Release source must be clean'
         Test-Path -LiteralPath $script:PackageOutput | Should -BeFalse
+        $result.Text | Should -Match 'Release source must be clean'
     }
 
     It 'rejects a <Label> allowlist committed to the selected source' -TestCases @(
@@ -172,8 +180,9 @@ Describe 'A051/A052 release packaging safety and traceability' -Tag 'Unit', 'A05
         $null = Invoke-UpdPackageFixtureGit -Arguments @('rm', '-q', '--', 'LICENSE')
         $null = Invoke-UpdPackageFixtureGit -Arguments @('-c', 'user.name=UPD fixture', '-c', 'user.email=upd-test@example.invalid',
             '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Remove owned synthetic license')
-        $result = Invoke-UpdPackageBuild
+        $result = Invoke-UpdPackageBuild -WrapDiagnosticWords
         $result.Code | Should -Be 1
+        Test-Path -LiteralPath $script:PackageOutput | Should -BeFalse
         $result.Text | Should -Match 'Missing committed payload file: LICENSE'
     }
 
