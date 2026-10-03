@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A045 passed through UPD-0303; A046-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A047 passed through UPD-0304; A048-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -509,8 +509,8 @@
       "when": "Load saved-show configuration.",
       "expected": "Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0304.md"
     },
     {
       "id": "A047",
@@ -520,8 +520,8 @@
       "when": "Run batch and preview batch.",
       "expected": "Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0304.md"
     },
     {
       "id": "A048",

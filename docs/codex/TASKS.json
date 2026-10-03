@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0304",
+  "current_task": "UPD-0401",
   "status_values": [
     "todo",
     "ready",
@@ -584,7 +584,7 @@
       "id": "UPD-0304",
       "milestone": "M3",
       "title": "Add opt-in saved shows and sequential batch mode",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0303"
       ],
@@ -605,15 +605,17 @@
         "A046",
         "A047"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0304.md"
+      ],
+      "implementation_commit": "0dd7a556af161885ee33a022f046bb995af37467",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/4"
     },
     {
       "id": "UPD-0401",
       "milestone": "M4",
       "title": "Complete maintainability and compatibility audit",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0304"
       ],

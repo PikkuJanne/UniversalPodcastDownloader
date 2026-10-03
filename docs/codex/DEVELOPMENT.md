@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## Historical suite coverage and current checks
 
-The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0303 inventory is **1,534 checks per engine**, detailed in its section below; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0304 inventory is **1,682 checks per engine**, detailed in its section below; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -90,7 +90,7 @@ Focused UPD-0102 unit coverage uses `-Suite Unit -Filter '*A0[01][089]*'` (A008,
 
 Focused UPD-0103 units use `-Suite Unit -Filter '*A01[123]*'`: 68 checks, with 169 not_run. Run `-Suite Integration` for all 40 loopback cases. Transaction tests kill only their owned worker process after an actual stream write or immediately before/after File.Move. Process-local debugger breakpoints also insert a competing final file and verify the temporary stream has closed; product code has no test hook. Reruns preserve abandoned partials and begin a fresh request. Signature validation is bounded and is not full decoding.
 
-UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0303 section; historical counts belong to their recorded task snapshots.
+UPD-0104 identity units use `-Suite Unit -Filter '*A014*'` (25 checks); state units use `-Suite Unit -Filter '*A015*'` (60 checks). History integrations use `-Suite Integration -Filter '*A01[56]*'` (18 checks). Real child processes exercise both lock scopes and crashes before/after state replacement and final placement. Prepared evidence, changed/deleted media, signed URL refreshes and corrupt history are checked against actual disk and loopback requests. Full `-Suite All` uses the current inventory in the UPD-0304 section; historical counts belong to their recorded task snapshots.
 
 UPD-0105 legacy units use `-Suite Unit -Filter '*A01[78]*'` (71 checks); focused integration uses `-Suite Integration -Filter '*A01[78]*'` (25 checks, including the updated A009/A017 historical-folder guard and A016/A017 unknown-destination guard). CLI tests hash every copied original before/after operations, assert unchanged preview trees, require exact reviewed adoption digests, distinguish adoption from observed transfers, preserve remote-changed originals, choose one redownload from a multi-episode feed, and restore only metadata from explicit checkpoints. Ordinary WhatIf now performs no filesystem writes; early invalid feeds/identities leave the output root absent. Schema-1 behavior stays supported alongside explicit schema-2 migration.
 
@@ -264,6 +264,20 @@ pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Fil
 pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
 ```
 
-Current inventory **1534** = **1224 units** (1214 product/ten runner guards) + **310 integrations**. Fresh settled new focus passed **74/0/0/1460 each**, PS7 79.33 s/native 51.25 s, child/outer 0. Affected junction focus passed **2/0/0/308 each**, PS7 15.78 s/native 9.60 s. Whole-tree analyzers passed **94 files**, parse/new zero, baseline PS7 2/native 1. Earlier broad Unit passed **1221/0/0/0 each**, PS7 187.87 s/native 125.31 s, before the final three cleanup tests/fix; it is not full current-unit coverage. Final exact-head full All CI is recorded separately in the PR/handoff. No local full All or full settled Integration was claimed; filtered-out/helper checks are not passes.
+UPD-0303 inventory **1534** = **1224 units** (1214 product/ten runner guards) + **310 integrations**. Fresh settled new focus passed **74/0/0/1460 each**, PS7 79.33 s/native 51.25 s, child/outer 0. Affected junction focus passed **2/0/0/308 each**, PS7 15.78 s/native 9.60 s. Whole-tree analyzers passed **94 files**, parse/new zero, baseline PS7 2/native 1. Earlier broad Unit passed **1221/0/0/0 each**, PS7 187.87 s/native 125.31 s, before the final three cleanup tests/fix; it is not full current-unit coverage. Final exact-head full All CI is recorded separately in the PR/handoff. No local full All or full settled Integration was claimed; filtered-out/helper checks are not passes.
 
 The 66 new units and eight loopback cases cover honest known/unknown response totals, offsets/retries, completion-history ordering, throttling/preferences/owned IDs, quiet/preview, invalid body/history failure, cancellation/resumed final hash/catalogue gaps, lazy native thread-scoped leases and independent cleanup. Actual Windows ConsoleHost/native API observations are separate from mocked/forced presentation. [UPD-0303 evidence](evidence/UPD-0303.md) and [manual observations](evidence/UPD-0303-WINDOWS.md) retain baselines, exact versions, commands and limits. Physical Ctrl+C, sleep/lid behavior and hard-kill restoration remain unclaimed. No fixture helper change or rerun; predecessor helper results remain historical.
+
+## UPD-0304 saved-show and sequential-batch checks
+
+Use fresh processes and the same native/Python process-only wrappers:
+
+```powershell
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite All -Filter '*A04[67]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Test.ps1 -Suite Integration -Filter '*A0[34][019]*'
+pwsh -NoProfile -NonInteractive -File ./scripts/Analyze.ps1
+```
+
+Current inventory **1682 =1359 units (1349 product/ten runner guards)+323 integrations**. Frozen new148 focus passed148/0/0/1534 each, PS7 211.88s/native103.51s; whole analysis102 files parse/new0 baseline2/1; child/outer0. Earlier affected prior entry58 focus passed58/0/0/263 of321 each222.05/120.88s, before two added entry cases. Earlier full Unit1351 passed each297.29/177.53s before the last eight guards/preference/catch corrections; not full current coverage. Final exact-head full All CI is independently recorded in PR/handoff. No local current fullAll/fullIntegration pass is inferred.
+
+135 new units and13 product integrations cover strict schema/DPAPI/protected ACL/atomic update/no-evaluation/safe export, real named repetition, complete WhatIf tree preservation, sequential failure isolation and counts, subset/conflicts and typed real-byte cancellation with strict checkpoints/closed guards/unstarted shows. Eleven owned worker cases import the actual dispatcher; two use the actual product -File parameter/exit boundary. All tests use explicit marked owned configuration/output paths; no real archive/subscriptions. [UPD-0304 evidence](evidence/UPD-0304.md) preserves baseline/fixture/runtime failures, exact commands/versions and limitations. Pinned development tools and CI40-minute deadlines remain unchanged; fixture helper checks remain historical and separate.
