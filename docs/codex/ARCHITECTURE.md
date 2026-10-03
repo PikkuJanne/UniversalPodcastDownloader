@@ -1,23 +1,41 @@
 # Implementation design and behavior contracts
 
-This document specifies proposed behavior except where a section explicitly identifies implemented work. Prefer the smallest change that satisfies each task; introduce seams early and consolidate after evidence. Keep root entry-point names and current simple default workflow.
+UPD-0401 records the implemented portable architecture below. Earlier design contracts remain applicable where their implementation sections identify the evidence. Keep the original entry points and simple default workflow; release packaging and verified user help remain separate later tasks.
 
-## Suggested structure
+## Implemented structure and API boundaries (UPD-0401)
 
 ```text
 UniversalPodcastDownloader.ps1          # Parameter binding, TUI/CLI, exit boundary
 UniversalPodcastDownloader.bat          # Double-click/argument-forwarding launcher
-src/UniversalPodcastDownloader/         # Small import-safe module, if needed
-  UniversalPodcastDownloader.psd1
-  UniversalPodcastDownloader.psm1
-  Private/                             # Only split where useful to testing
-scripts/                               # Test/build developer commands, added in M0/M4
-tests/                                 # Product Pester unit/integration suites, added by Codex
+src/*.ps1                              # 27 bundled import-safe implementation helpers
+scripts/                               # Development-only test/analyzer/tool setup commands
+tests/                                 # Product Pester unit/integration suites
 tools/codex-handoff/                    # Supplied synthetic helper kit, not app runtime
 docs/codex/                             # Bounded task/evidence continuity
 ```
 
-Do not make a framework out of a small script. A module can be a single small implementation file at first. Imports must not prompt, fetch, create directories or execute the program. Only the script boundary translates result objects into process exit codes. If dot-sourcing is unsupported, document it; never accidentally terminate a parent shell from module helpers.
+The runtime needs only the two root entry files, the complete relative `src` directory and a supported Windows PowerShell engine. It does not load `scripts`, `tests`, `tools`, documentation or development modules. The script explicitly loads 24 helper files; NetworkPolicy loads TransportPolicy/ResumePolicy and MediaTransfer loads Preflight. Repeated definition-only imports do not allocate run state. There is no installed package manager, module manifest, Python or native-library download requirement. HTTP/DPAPI assemblies and the optional keep-awake bridge initialize lazily on the relevant invocation.
+
+| Boundary | Responsibility |
+| --- | --- |
+| Root `.ps1` / `.bat` | Parameter binding, guided input, orchestration, literal launcher forwarding and the process exit boundary |
+| Commands / Batch / RunResult | Optional command routing, one shared saved-run argument allowlist, strict primitive overrides, sequential aggregation and schema-1 results |
+| FeedDiscovery / FeedXml / FeedPagination / PublicationDate / MediaSelection | Bounded source classification/parsing, catalogue collection, UTC ordering and supported audio candidate selection |
+| NetworkPolicy / TransportPolicy / MediaRequest | One URL/redirect/client policy, bounded retries/header/idle waits, metadata buffering and media response framing |
+| MediaTransfer / MediaValidation / Preflight | Confirmed transactional byte transfer, bounded media indications, owned write/capacity checks |
+| HistoryStore / HistoryIdentity / HistoryWorkflow / ResumeStore / ResumePolicy | Exclusive state ownership, stable identities, prepared/completed ordering and strict owned resume evidence |
+| LegacyInventory / LegacyMigration | Explicit private review and confirmed metadata/adoption/redownload/rollback actions |
+| Naming / PathSafety | Supported filename allocation, containment and reparse checks |
+| Diagnostics / Progress / KeepAwake | Bounded safe diagnostic events, real-byte presentation and optional temporary native leases |
+| SavedShows | Separate strict configuration, CurrentUser protection, private permissions and atomic mutation |
+
+The stable entry API is `Invoke-PodcastRun` for one show and `Invoke-PodcastCommand -Options` for the same workflow plus opt-in management/named/batch operations. Dot-sourcing loads functions without starting a run or exiting the caller. `Invoke-PodcastBatchRun` is the lower-level batch API; its primitive override allowlist and configuration policy are unchanged. Lower-level helpers are implementation/testing seams, not independently installable engines. Existing resolver/naming/parser helpers remain callable; standalone requests use fresh default policies and resolvers default to 20 pages. Dot-source parameter values and earlier runs no longer configure hidden script defaults. Pass `Policy`/`MaxPages` explicitly to resolver helpers or use the documented run options.
+
+Only the script boundary translates a result into process status. Run/command/batch helpers return one result and preserve caller preferences and LASTEXITCODE. Management/batch projections omit credential URLs, ciphertext and output paths. Named runs retain the private RunResult contract, including sensitive LegacyResult during a legacy review encountered in preview. See [CLI_RESULTS.md](CLI_RESULTS.md).
+
+`Invoke-PodcastRun` creates one local transport policy and passes it through guided/direct resolution, the selected HTML feed, every catalogue page and legacy/media execution. The operation owns its retry loop; redirect/backoff waits share a helper while retaining the original clock observation, deadlines, rounded sleeps and attempt metadata. Body adapters remain separate because metadata has an 8 MiB memory bound whereas media streams with framing/resume/progress/transaction ownership. Likewise HTML whitespace/deduplication, pagination alias keys, original feed identity, legacy identity hints and resume fingerprints are distinct policies, not interchangeable normalization rules.
+
+Diagnostics retain a bounded run context for deliberate post-close export. Close releases the exact-URL correlation dictionary's keys in finally, including absent/failing writers; it does not erase immutable strings throughout process memory. Progress, native leases and locks retain their private ownership contexts and independent cleanup. Function-local error/confirmation preferences and owned progress cleanup are scoped to the invocation. No product global preference, process execution policy, TLS/certificate, environment, culture or working-directory mutation is needed.
 
 ## Pipeline
 

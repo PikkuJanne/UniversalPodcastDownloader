@@ -1,10 +1,18 @@
 #requires -Version 5.1
 
+function Get-PodcastSavedRunOptionName {
+    [CmdletBinding()]
+    param()
+
+    # Routing and strict primitive validation share one argument allowlist.
+    'Mode', 'CustomCount', 'OutputPath', 'KeepAwake', 'MaxFeedPages', 'MaxAttempts',
+        'HeaderTimeoutSeconds', 'IdleTimeoutSeconds', 'RetryBudgetSeconds', 'BaseDelaySeconds', 'MaxDelaySeconds'
+}
+
 function Get-PodcastBatchOverride {
     [CmdletBinding()]
     param([AllowNull()][Collections.IDictionary]$RunOptions)
-    $accepted = @('Mode', 'CustomCount', 'OutputPath', 'KeepAwake', 'MaxFeedPages', 'MaxAttempts',
-        'HeaderTimeoutSeconds', 'IdleTimeoutSeconds', 'RetryBudgetSeconds', 'BaseDelaySeconds', 'MaxDelaySeconds')
+    $accepted = @(Get-PodcastSavedRunOptionName)
     $options = @{}
     if ($null -eq $RunOptions) { return $options }
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)

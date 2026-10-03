@@ -125,24 +125,33 @@ function Get-PodcastRetryAfterUtc {
 
 function Wait-PodcastRetryDelay {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][DateTimeOffset]$NotBefore, [Parameter(Mandatory)][DateTimeOffset]$Deadline, [Parameter(Mandatory)]$Policy)
+    param([Parameter(Mandatory)][DateTimeOffset]$NotBefore, [Parameter(Mandatory)][DateTimeOffset]$Deadline,
+        [Parameter(Mandatory)]$Policy, [DateTimeOffset]$ObservedUtc, [ValidateRange(1, 10)][int]$Attempts)
 
-    $now = [DateTimeOffset](& $Policy.Clock)
+    # A retry owner supplies its existing observation so consolidation does not
+    # add a clock sample or alter zero-delay/deadline decisions.
+    $now = if ($PSBoundParameters.ContainsKey('ObservedUtc')) { $ObservedUtc } else { [DateTimeOffset](& $Policy.Clock) }
     if ($NotBefore -le $now) { return }
     if ($NotBefore -gt $Deadline) {
-        throw (New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the required retry delay exceeds the retry budget.')
+        $deferred = New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the required retry delay exceeds the retry budget.'
+        if ($PSBoundParameters.ContainsKey('Attempts')) { $deferred.Data['Attempts'] = $Attempts }
+        throw $deferred
     }
     while ($now -lt $NotBefore) {
         $milliseconds = [int][Math]::Ceiling(($NotBefore - $now).TotalMilliseconds)
         $null = & $Policy.Delay $milliseconds
         $afterDelay = [DateTimeOffset](& $Policy.Clock)
         if ($afterDelay -le $now) {
-            throw (New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the retry clock did not advance.')
+            $deferred = New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the retry clock did not advance.'
+            if ($PSBoundParameters.ContainsKey('Attempts')) { $deferred.Data['Attempts'] = $Attempts }
+            throw $deferred
         }
         $now = $afterDelay
     }
     if ($now -gt $Deadline) {
-        throw (New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the retry budget expired while waiting.')
+        $deferred = New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the retry budget expired while waiting.'
+        if ($PSBoundParameters.ContainsKey('Attempts')) { $deferred.Data['Attempts'] = $Attempts }
+        throw $deferred
     }
 }
 
@@ -176,24 +185,10 @@ function Invoke-PodcastTransportOperation {
                 $deferred.Data['Attempts'] = $attempt
                 throw $deferred
             }
-            # Round upwards, then recheck the injected clock. A short wakeup must
-            # never turn a Retry-After value into an early retry.
-            while ($now -lt $next) {
-                $milliseconds = [int][Math]::Ceiling(($next - $now).TotalMilliseconds)
-                $null = & $Policy.Delay $milliseconds
-                $afterDelay = [DateTimeOffset](& $Policy.Clock)
-                if ($afterDelay -le $now) {
-                    $deferred = New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the retry clock did not advance.'
-                    $deferred.Data['Attempts'] = $attempt
-                    throw $deferred
-                }
-                $now = $afterDelay
-            }
-            if ($now -gt $deadline) {
-                $deferred = New-PodcastTransportException -Kind Deferred -Message 'The request was deferred because the retry budget expired while waiting.'
-                $deferred.Data['Attempts'] = $attempt
-                throw $deferred
-            }
+            # Redirects and failed-attempt backoff share the same rounded waits,
+            # short-wakeup checks and deadline enforcement. Only failures made
+            # by that helper acquire attempt metadata; injected errors pass through.
+            Wait-PodcastRetryDelay -NotBefore $next -Deadline $deadline -Policy $Policy -ObservedUtc $now -Attempts $attempt
         }
     }
 }
