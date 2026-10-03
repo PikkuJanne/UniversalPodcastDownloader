@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0302",
+  "current_task": "UPD-0303",
   "status_values": [
     "todo",
     "ready",
@@ -521,7 +521,7 @@
       "id": "UPD-0302",
       "milestone": "M3",
       "title": "Polish cancellation, preflight and concurrent-run safety",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0301"
       ],
@@ -542,15 +542,17 @@
         "A042",
         "A043"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0302.md"
+      ],
+      "implementation_commit": "a0eedde417f80a0ad3470afb6f232bb146d4a6fa",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/4"
     },
     {
       "id": "UPD-0303",
       "milestone": "M3",
       "title": "Improve progress and optional temporary keep-awake",
-      "status": "todo",
+      "status": "ready",
       "dependencies": [
         "UPD-0302"
       ],

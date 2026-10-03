@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A041 passed through UPD-0301; A042-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and planned downloader acceptance. A001-A043 passed through UPD-0302; A044-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -464,9 +464,9 @@
       "given": "Two processes target same show plus another independent show.",
       "when": "Start together, then cancel first.",
       "expected": "Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Integration/RunSafety.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0302.md"
     },
     {
       "id": "A043",
@@ -475,9 +475,9 @@
       "given": "Insufficient disk or write permission and cancellation mid-stream.",
       "when": "Preflight/start/stop.",
       "expected": "Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Integration/RunSafety.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0302.md"
     },
     {
       "id": "A044",

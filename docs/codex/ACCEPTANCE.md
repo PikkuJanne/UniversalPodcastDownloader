@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A041 passed; A042-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0301 evidence](evidence/UPD-0301.md) and [actual launcher observations](evidence/UPD-0301-LAUNCHER.md).
+Canonical statuses are in ACCEPTANCE_CASES.json. A001-A043 passed; A044-A060 remain NOT RUN. Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0302 evidence](evidence/UPD-0302.md), [UPD-0301 evidence](evidence/UPD-0301.md) and [actual launcher observations](evidence/UPD-0301-LAUNCHER.md).
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -45,8 +45,8 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A041 passed; A042-A060 rem
 | A039 | UPD-0301 | integration | passed | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
 | A040 | UPD-0301 | integration | passed | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
 | A041 | UPD-0301 | manual | passed | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |
-| A042 | UPD-0302 | integration | not_run | Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented. |
-| A043 | UPD-0302 | integration | not_run | Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed. |
+| A042 | UPD-0302 | integration | passed | Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented. |
+| A043 | UPD-0302 | integration | passed | Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed. |
 | A044 | UPD-0303 | manual | not_run | Progress never reports misleading 100% before success; episode/byte information honest; readable noninteractive summary. |
 | A045 | UPD-0303 | manual | not_run | Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented. |
 | A046 | UPD-0304 | integration | not_run | Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported. |
