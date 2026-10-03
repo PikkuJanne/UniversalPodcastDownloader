@@ -61,7 +61,7 @@ Replace `-Suite All` with `Unit`, `Integration`, or a filtered command for a foc
 
 ## Historical suite coverage and current checks
 
-The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The current UPD-0401 inventory is **1,709 checks per engine**, detailed in its section below; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
+The historical UPD-0201 suite contained **705 checks per engine**. Consult [UPD-0201 evidence](evidence/UPD-0201.md) for that snapshot. The historical UPD-0401 inventory is **1,709 checks per engine**, detailed in its section below; UPD-0402 adds eight integration checks for a current total of **1,717**; adding a test does not make an earlier run cover it. The following table is the historical UPD-0201 breakdown.
 
 | Group | Count | Scope |
 | --- | ---: | --- |
@@ -320,3 +320,20 @@ pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.
 Current inventory **1709 =1383 units (1373 product/ten runner guards)+326 integrations**. Full local All passed1709/0/0/0 each, PS7 2574.54s/native 1436.05s, child/outer0. Whole analysis108 files reports parse/new/known-baseline0 on both. Final focused diagnostic/run12 passed12/0/0/1371 of1383 in6.20/6.37s; source/context8 passed8/0/0/1371 of1379 in3.48/3.87s; affected150 passed150/0/0/1229 of1379 in12.31/14.47s; retry4 passed4/0/0/1379 of1383 in3.97/3.91s; frozen copied-runtime3 passed3/0/0/323 of326 in24.15/15.83s. Historical discovery inventories preceded four later retry checks; they are not current full coverage. Exact final-head CI is independently recorded in PR/handoff.
 
 24 new units/three integrations cover caller state, explicit/fresh policy, response reuse, diagnostics close/export, retry observations/exceptions, copied runtime/import/real media/repeat/preview and resource reopening. Runtime worker PATH/module lookup excludes development dependencies; parent Python is fixture tooling only. Tree snapshots compare names/lengths/hashes, not timestamps or a future release ZIP. Retained35 scoped runtime suppressions remain justified; colliding Write-Log/empty catch causes are fixed and the baseline is empty. [UPD-0401 evidence](evidence/UPD-0401.md) records every baseline/mixed-wiring/harness correction, exact versions/commands and limitations. No fixture helper changed/reran; prior helper results remain historical. Help/manual examples and package/release gates remain not_run.
+
+
+## UPD-0402 documentation verification
+
+Use the same fresh-process/Python PATH/native module wrappers. No app runtime dependency was added:
+
+```powershell
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Unit
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Integration -Filter '*A049/A050*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Integration -Filter '*A04[018]*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Test.ps1 -Suite Integration -Filter '*A01[78]*'
+pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/Analyze.ps1
+```
+
+Current1717=1383 Unit (1373 product/ten runner guards)+334 Integration. Both engines passed Unit1383/0/0/0, docs8/0/0/326, affected CLI/runtime32/0/0/302 and legacy25/0/0/309; final whole analysis110 files parse/new/known0. These are1448 distinct local assertions;269 integrations are filtered out, not passes. Current full All is final-head CI in M4 draft PR #5/final handoff; UPD-0401 full local1709 is historical. Exact versions/durations/failed harness snapshots are in [UPD-0402 evidence](evidence/UPD-0402.md).
+
+Eight new cases run literal11 README fences/four Get-Help examples, all public help parameters, script0/1/2 and genuine argument-free batch input from fresh runtime-only copies with Unicode/spaces and isolated owned profile/config/output. Native5.1 splits multiline examples into Code/Remarks; reconstruction must match authored AST command text. Actual hashes/history prove original preservation and adoption versus transfer verification. Preview/package/default-config boundaries are asserted. Manual A049/A050 are separately reviewed for meaning/rendering; no physical owner double-click/accessibility/keyboard cancellation check or release ZIP is claimed. No fixture helper selftest changed/reran.
