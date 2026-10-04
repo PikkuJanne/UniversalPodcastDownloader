@@ -13,7 +13,7 @@ An ordinary `-WhatIf` run resolves the feed, parses it, validates episode target
 | Follow planned enclosure URLs or start the media-transfer path | Not performed |
 | Create/change output directories, media, history, checkpoints or configuration | Not performed |
 | Create lock files, startup/show logs or diagnostic exports | Not performed |
-| Change keep-awake or power settings | Not performed; no keep-awake feature is implemented |
+| Change keep-awake or power settings | Not performed; opt-in KeepAwake is suppressed during preview |
 | Report a completed download | Not performed |
 
 Preview can contact metadata servers. The supplied URL or an allowed redirect can return unexpected content, including audio; the bounded metadata reader may read those bytes before rejecting the response as a feed. The preview guarantee covers avoiding planned enclosure requests, media-transfer execution and persistent downloader writes. It cannot determine a server's content before requesting it.
@@ -57,9 +57,11 @@ Text decoding uses a BOM first, then an HTTP charset, then supported XML encodin
 
 The XML helper first reads the complete document with a streaming reader to check depth and node/attribute counts. It then loads the DOM through a second reader with the same settings. DTDs are rejected on encounter; external entity, DTD and schema references are not fetched. Errors use a safe local message rather than including private XML text.
 
-The metadata cap does not limit episode audio to 8 MiB. Media still streams into an owned temporary file and must pass the existing completion/framing/signature checks before final placement. Parser limits bound accepted input size and structure; they are not a promise of a fixed total run time or a full media decoder. Retry/idle-timeout, resume, pagination and richer RSS/Atom selection remain later work.
+The metadata cap does not limit episode audio to 8 MiB. Media still streams into an owned temporary file and must pass the existing completion/framing/signature checks before final placement. Parser limits bound accepted input size and structure; they are not a promise of a fixed total run time or a full media decoder. Implemented policies include [bounded retries and header/idle timeouts](TRANSPORT_POLICY.md), [validator-aware resume](RESUME_POLICY.md), [bounded pagination](FEED_PAGINATION.md), and deterministic supported-audio selection documented in the README.
 
 ## Compatibility and evidence
+
+UPD-0203 adds [shared feed discovery](FEED_DISCOVERY.md) for both entry paths. The scanner keeps the 8 MiB character limit and 250 ms regex timeouts, adds a 100,000 token limit, ignores inert/raw text markup, validates decoded discovery/base targets, and stops at one selected feed. Final page/base URIs do not replace original direct-feed identities. Numbered guided choices and explicit CLI ambiguity errors occur before archive locks/writes; already fetched metadata is reused.
 
 The request and XML helpers use built-in .NET APIs available to Windows PowerShell 5.1 and PowerShell 7 on Windows. They add no runtime package, external binary or persistent configuration. Imports define helpers without starting requests or writing files.
 

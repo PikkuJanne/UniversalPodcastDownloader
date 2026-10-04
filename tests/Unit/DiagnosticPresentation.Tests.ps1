@@ -7,6 +7,21 @@ BeforeAll {
 }
 
 Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
+    It 'A025 renders only fixed transport categories despite a private error message' -ForEach @(
+        @{ Kind = 'Deferred'; Expected = '*deferred*' },
+        @{ Kind = 'HeaderTimeout'; Expected = '*connection/header timeout*' },
+        @{ Kind = 'IdleTimeout'; Expected = '*idle transfer timeout*' },
+        @{ Kind = 'Connection'; Expected = '*network connection failed*' },
+        @{ Kind = 'HttpStatus'; Expected = '*unsuccessful HTTP status*' },
+        @{ Kind = 'IncompleteBody'; Expected = '*body was incomplete*' },
+        @{ Kind = 'Permanent'; Expected = '*network policy*' }
+    ) {
+        $errorValue = New-PodcastTransportException -Kind $Kind -Message 'privateTransportCanary https://feed.invalid/token'
+        $publicMessage = Get-PodcastDiagnosticError -Error $errorValue
+        $publicMessage | Should -BeLike $Expected
+        $publicMessage | Should -Not -Match 'privateTransportCanary|feed.invalid|token'
+    }
+
     BeforeEach {
         Mock Read-Host { throw 'Unit tests must not prompt.' }
         Mock Write-Progress {}
@@ -24,7 +39,10 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
     It 'keeps secrets out of successful console verbose logs and the restricted export' {
         $root = Join-Path $TestDrive 'privateDirectoryCanary'
         $export = Join-Path $TestDrive 'diagnostics.json'
-        $output = @(& $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/privateFeedCanary?token=privateFeedQueryCanary' -Mode All -OutputPath $root -DiagnosticExportPath $export -Verbose *>&1)
+        $output = @(Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/privateFeedCanary?token=privateFeedQueryCanary' -Mode All -OutputPath $root -DiagnosticExportPath $export -Verbose *>&1)
+        $result = @($output | Where-Object { $_.PSObject.Properties['Type'] -and $_.Type -eq 'Podcast.RunResult' })
+        $result.Count | Should -Be 1
+        $result[0].ExitCode | Should -Be 0
         $logs = @(Get-ChildItem -LiteralPath $root -Filter '*.log' -Recurse | ForEach-Object { [IO.File]::ReadAllText($_.FullName) })
         $publicText = ($output | Out-String) + ($logs -join "`n") + [IO.File]::ReadAllText($export)
         $publicText | Should -Not -Match 'private(?:Title|Episode|Guid|Path|Query|Directory|Feed|FeedQuery)Canary'
@@ -42,8 +60,12 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
     It 'returns a WhatIf projection without internal episode or history objects and creates no export' {
         $root = Join-Path $TestDrive 'absent'
         $export = Join-Path $TestDrive 'must-not-exist.json'
-        $rows = @(& $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/privateFeedCanary' -Mode All -OutputPath $root -DiagnosticExportPath $export -WhatIf -Verbose *>&1)
-        $plan = @($rows | Where-Object { $_.PSObject.Properties['EpisodeId'] })
+        $rows = @(Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/privateFeedCanary' -Mode All -OutputPath $root -DiagnosticExportPath $export -WhatIf -Verbose *>&1)
+        $result = @($rows | Where-Object { $_.PSObject.Properties['Type'] -and $_.Type -eq 'Podcast.RunResult' })
+        $result.Count | Should -Be 1
+        $result[0].ExitCode | Should -Be 0
+        $result[0].Preview | Should -BeTrue
+        $plan = @($result[0].Plan)
         $serialized = ($rows | Out-String) + ($plan | ConvertTo-Json -Depth 10)
         $serialized | Should -Not -Match 'private(?:Title|Episode|Guid|Path|Query|Feed)Canary'
         $plan.Count | Should -Be 1
@@ -59,38 +81,32 @@ Describe 'A020: entrypoint diagnostic privacy' -Tag 'Unit', 'A020' {
         $root = Join-Path $TestDrive 'export-failure-output'
         $existing = Join-Path $TestDrive 'existing.json'
         [IO.File]::WriteAllText($existing, 'Preserved original export target')
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath $root -DiagnosticExportPath $existing } | Should -Not -Throw
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath $root -DiagnosticExportPath $existing
+        $result.ExitCode | Should -Be 0
         [IO.File]::ReadAllText($existing) | Should -Be 'Preserved original export target'
         @(Get-ChildItem -LiteralPath $root -Filter '*.mp3' -Recurse).Count | Should -Be 1
     }
 
-    It 'preserves the primary exception when optional export fails' {
+    It 'preserves the primary fatal outcome privately when optional export fails' {
         Mock Invoke-PodcastMetadataRequest { throw [InvalidOperationException]::new('privateErrorCanary https://example.invalid/privateExceptionPath') }
         $root = Join-Path $TestDrive 'failure-output'
-        $caught = $null
-        try {
-            & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/privateFeedCanary' -Mode All -OutputPath $root -DiagnosticExportPath (Join-Path $TestDrive 'absent-parent/export.json')
-        }
-        catch { $caught = $_ }
-        $caught | Should -Not -BeNullOrEmpty
-        $caught.Exception.Message | Should -Match '^No episodes found in the feed\.'
-        $caught.ErrorDetails.Message | Should -Not -Match 'privateErrorCanary|privateExceptionPath|privateFeedCanary'
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/privateFeedCanary' -Mode All -OutputPath $root -DiagnosticExportPath (Join-Path $TestDrive 'absent-parent/export.json')
+        $result.ExitCode | Should -Be 1
+        $result.Status | Should -Be 'fatal'
+        $result.Message | Should -Match 'operation failed'
+        ($result | ConvertTo-Json -Depth 10) | Should -Not -Match 'privateErrorCanary|privateExceptionPath|privateFeedCanary|Exception|StackTrace'
         Test-Path -LiteralPath $root | Should -BeFalse
     }
 
-    It 'keeps the original exception instance while formatting a private failure safely' {
+    It 'returns only a fixed safe fatal result for an unknown private exception' {
         $primary = [InvalidOperationException]::new('privateErrorCanary https://example.invalid/privateExceptionPath Authorization: privateHeaderCanary')
         Mock Get-EpisodeData { throw $primary }
-        $caught = $null
-        try {
-            & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath (Join-Path $TestDrive 'primary')
-        }
-        catch { $caught = $_ }
-        $caught | Should -Not -BeNullOrEmpty
-        [object]::ReferenceEquals($caught.Exception, $primary) | Should -BeTrue
-        $caught.Exception.Message | Should -Match 'privateErrorCanary'
-        ($caught | Out-String) | Should -Not -Match 'private(?:Error|ExceptionPath|Header)Canary'
-        $caught.ErrorDetails.Message | Should -Match 'operation failed'
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath (Join-Path $TestDrive 'primary')
+        $result.ExitCode | Should -Be 1
+        $result.Message | Should -Match 'operation failed'
+        $result.PSObject.Properties.Name | Should -Not -Contain 'Exception'
+        $result.PSObject.Properties.Name | Should -Not -Contain 'ErrorRecord'
+        ($result | ConvertTo-Json -Depth 10) | Should -Not -Match 'private(?:Error|ExceptionPath|Header)Canary|StackTrace'
     }
 
     It 'retains an exact safe review instruction while omitting injected suffixes' {

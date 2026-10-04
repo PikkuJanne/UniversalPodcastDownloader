@@ -34,17 +34,20 @@ Describe 'A007/A023: centralized metadata requests without legacy DOM parsing' -
 
     It 'resolves interactive HTML links against the final redirected page' {
         Mock Write-Host {}
-        Mock Read-Host {
-            if ($Prompt -eq 'Use this feed? (Y/n)') { return 'y' }
-            return 'https://show.example.invalid/podcast'
-        }
+        Mock Read-Host { 'https://show.example.invalid/podcast' }
         Mock Invoke-PodcastMetadataRequest {
-            [pscustomobject]@{ Content = '<html><head><link type="application/rss+xml" href="feed.xml"></head></html>'; FinalUri = [Uri]'https://destination.example.invalid/shows/index.html' }
+            if ($Uri -eq 'https://show.example.invalid/podcast') {
+                return [pscustomobject]@{ Content = '<html><head><link type="application/rss+xml" href="feed.xml"></head></html>'; FinalUri = [Uri]'https://destination.example.invalid/shows/index.html' }
+            }
+            [pscustomobject]@{ Content = '<rss><channel><item><title>Synthetic episode</title></item></channel></rss>'; FinalUri = [Uri]$Uri }
         }
-        Get-FeedUrlInteractive | Should -Be 'https://destination.example.invalid/shows/feed.xml'
-        Should -Invoke Invoke-PodcastMetadataRequest -Times 1 -Exactly
+        $resolved = Get-FeedUrlInteractive
+        $resolved.Url | Should -Be 'https://destination.example.invalid/shows/feed.xml'
+        $resolved.Items.Count | Should -Be 1
+        Should -Invoke Invoke-PodcastMetadataRequest -Times 2 -Exactly
+        Should -Invoke Invoke-PodcastMetadataRequest -Times 1 -Exactly -ParameterFilter { $Uri -eq 'https://destination.example.invalid/shows/feed.xml' }
         Should -Invoke Invoke-WebRequest -Times 0 -Exactly
-        Should -Invoke Read-Host -Times 2 -Exactly
+        Should -Invoke Read-Host -Times 1 -Exactly
     }
 
     It 'retains the original feed identity across an allowed redirect' {
@@ -74,7 +77,9 @@ Describe 'A007/A023: centralized metadata requests without legacy DOM parsing' -
         }
         Mock Invoke-PodcastMediaRequest { throw 'Media must not be requested.' }
         $root = Join-Path $TestDrive 'absent'
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath $root -WhatIf } | Should -Throw
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -Mode All -OutputPath $root -WhatIf
+        $result.ExitCode | Should -Be 1
+        $result.Status | Should -Be 'fatal'
         Test-Path -LiteralPath $root | Should -BeFalse
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
         Should -Invoke Get-PodcastHttpClient -Times 0 -Exactly

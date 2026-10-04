@@ -1,5 +1,8 @@
 #requires -Version 5.1
 
+. (Join-Path $PSScriptRoot 'TransportPolicy.ps1')
+. (Join-Path $PSScriptRoot 'ResumePolicy.ps1')
+
 function Get-PodcastRequestUri {
     [CmdletBinding()]
     param([Parameter(Mandatory)][AllowEmptyString()][string]$Uri, [Uri]$PreviousUri)
@@ -50,7 +53,13 @@ function Get-PodcastHttpClient {
     param()
 
     $handler = Get-PodcastHttpHandler
-    try { return [Net.Http.HttpClient]::new($handler, $true) }
+    try {
+        $client = [Net.Http.HttpClient]::new($handler, $true)
+        # Each header hop and body read has its own explicit timeout. A healthy
+        # long audio stream has no total-duration limit.
+        $client.Timeout = [Threading.Timeout]::InfiniteTimeSpan
+        return $client
+    }
     catch {
         $handler.Dispose()
         throw 'Could not initialize the HTTP request client.'
@@ -59,21 +68,52 @@ function Get-PodcastHttpClient {
 
 function Invoke-PodcastHttpGet {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Uri, [Parameter(Mandatory)]$Client)
+    param([Parameter(Mandatory)][string]$Uri, [Parameter(Mandatory)]$Client, $Policy = (New-PodcastTransportPolicy), $Resume)
 
     $current = Get-PodcastRequestUri -Uri $Uri
+    if ($null -ne $Resume -and -not (Test-PodcastResumeRequest -Resume $Resume)) { throw 'The resume request evidence is invalid.' }
     $request = $null
     $response = $null
     $redirects = 0
+    $redirectDeadline = ([DateTimeOffset](& $Policy.Clock)).AddSeconds($Policy.RetryBudgetSeconds)
+    if ($null -ne $Policy.PSObject.Properties['RetryDeadlineUtc']) { $redirectDeadline = [DateTimeOffset]$Policy.RetryDeadlineUtc }
     try {
         while ($true) {
             # Each hop gets a fresh, fixed header set. No response cookies,
             # Authorization, Referer or caller-supplied headers are propagated.
             $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Get, $current)
             $request.Headers.AcceptEncoding.ParseAdd('identity')
-            try { $response = $Client.SendAsync($request, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult() }
-            catch { throw 'HTTP request failed before response headers were available.' }
+            # Resume validators belong to one exact previously observed target.
+            # Intermediate or changed redirect targets never receive them.
+            if ($null -ne $Resume -and (Get-PodcastResumeUriFingerprint -Uri $current) -ceq $Resume.FinalUriFingerprint) {
+                $request.Headers.Range = [Net.Http.Headers.RangeHeaderValue]::new([long]$Resume.Offset, $null)
+                $request.Headers.IfRange = [Net.Http.Headers.RangeConditionHeaderValue]::new([Net.Http.Headers.EntityTagHeaderValue]::new($Resume.ETag))
+            }
+            $cancellation = [Threading.CancellationTokenSource]::new()
+            $timedOut = $false
+            try {
+                $milliseconds = [int][Math]::Ceiling($Policy.HeaderTimeoutSeconds * 1000)
+                $headerTask = $Client.SendAsync($request, [Net.Http.HttpCompletionOption]::ResponseHeadersRead, $cancellation.Token)
+                if (-not $headerTask.Wait($milliseconds)) {
+                    $timedOut = $true
+                    $cancellation.Cancel()
+                    throw (New-PodcastTransportException -Kind HeaderTimeout -Message 'The HTTP request exceeded the connection/header timeout.' -Retryable $true)
+                }
+                $response = $headerTask.GetAwaiter().GetResult()
+            }
+            catch {
+                $known = Get-PodcastTransportFailure -ErrorObject $_
+                if ($null -ne $known) { throw $known }
+                if ($timedOut) { throw (New-PodcastTransportException -Kind HeaderTimeout -Message 'The HTTP request exceeded the connection/header timeout.' -Retryable $true) }
+                if (Test-PodcastCancellation -ErrorObject $_) { throw }
+                throw (New-PodcastTransportException -Kind Connection -Message 'HTTP request failed before response headers were available.' -Retryable (Test-PodcastTransientException -ErrorObject $_))
+            }
+            finally { $cancellation.Dispose() }
             if (@(301, 302, 303, 307, 308) -notcontains [int]$response.StatusCode) {
+                if ([int]$response.StatusCode -ge 400 -and -not ($null -ne $Resume -and [int]$response.StatusCode -eq 416)) {
+                    $retryable = @(408, 429, 500, 502, 503, 504) -contains [int]$response.StatusCode
+                    throw (New-PodcastTransportException -Kind HttpStatus -Message ('HTTP status {0}; the response must be a complete HTTP 200 body.' -f [int]$response.StatusCode) -Retryable $retryable -StatusCode ([int]$response.StatusCode) -RetryAfterUtc (Get-PodcastRetryAfterUtc -Response $response -Policy $Policy))
+                }
                 $result = [pscustomobject]@{ Response = $response; Request = $request; FinalUri = $current; RedirectCount = $redirects }
                 $response = $null
                 $request = $null
@@ -89,6 +129,8 @@ function Invoke-PodcastHttpGet {
             $next = $null
             if (-not [Uri]::TryCreate($current, $location, [ref]$next)) { throw 'The HTTP redirect has an invalid Location header.' }
             $current = Get-PodcastRequestUri -Uri $next.AbsoluteUri -PreviousUri $current
+            $notBefore = Get-PodcastRetryAfterUtc -Response $response -Policy $Policy
+            if ($null -ne $notBefore) { Wait-PodcastRetryDelay -NotBefore $notBefore -Deadline $redirectDeadline -Policy $Policy }
             $redirects++
             $response.Dispose()
             $response = $null
@@ -140,7 +182,20 @@ function ConvertFrom-PodcastMetadataBody {
 
 function Invoke-PodcastMetadataRequest {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Uri, [ValidateRange(1, 8388608)][long]$MaximumBytes = 8388608)
+    param([Parameter(Mandatory)][string]$Uri, [ValidateRange(1, 8388608)][long]$MaximumBytes = 8388608, $Policy = (New-PodcastTransportPolicy))
+
+    $target = Get-PodcastRequestUri -Uri $Uri
+    $byteLimit = $MaximumBytes
+    return (Invoke-PodcastTransportOperation -Policy $Policy -Operation {
+        param($Attempt, $AttemptPolicy)
+        $null = $Attempt
+        Invoke-PodcastMetadataRequestOnce -Uri $target.AbsoluteUri -MaximumBytes $byteLimit -Policy $AttemptPolicy
+    })
+}
+
+function Invoke-PodcastMetadataRequestOnce {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Uri, [ValidateRange(1, 8388608)][long]$MaximumBytes = 8388608, [Parameter(Mandatory)]$Policy)
 
     # Reject unsafe input before creating a transport client or opening a body.
     $target = Get-PodcastRequestUri -Uri $Uri
@@ -152,7 +207,7 @@ function Invoke-PodcastMetadataRequest {
     $failure = 'Metadata request or stream failed before completion.'
     try {
         $client = Get-PodcastHttpClient
-        $exchange = Invoke-PodcastHttpGet -Uri $target.AbsoluteUri -Client $client
+        $exchange = Invoke-PodcastHttpGet -Uri $target.AbsoluteUri -Client $client -Policy $Policy
         $request = $exchange.Request
         $response = $exchange.Response
         if ([int]$response.StatusCode -ne 200 -or $response.Content.Headers.Contains('Content-Range')) {
@@ -179,7 +234,7 @@ function Invoke-PodcastMetadataRequest {
         $buffer = New-Object byte[] 16384
         while ($true) {
             $capacity = [int][Math]::Min($buffer.Length, ($MaximumBytes - $memory.Length + 1))
-            $read = $source.Read($buffer, 0, $capacity)
+            $read = Read-PodcastResponseChunk -Source $source -Buffer $buffer -Count $capacity -Policy $Policy
             if ($read -eq 0) { break }
             if ($memory.Length + $read -gt $MaximumBytes) {
                 $failure = 'Metadata response exceeds the configured byte limit (at most 8 MiB).'
@@ -189,7 +244,7 @@ function Invoke-PodcastMetadataRequest {
         }
         if ($null -ne $contentLength -and $memory.Length -ne $contentLength) {
             $failure = 'Metadata response Content-Length does not match the received byte count.'
-            throw $failure
+            throw (New-PodcastTransportException -Kind IncompleteBody -Message $failure -Retryable ($memory.Length -lt $contentLength))
         }
         $charset = $null
         if ($null -ne $response.Content.Headers.ContentType) { $charset = $response.Content.Headers.ContentType.CharSet }
@@ -203,7 +258,12 @@ function Invoke-PodcastMetadataRequest {
             ContentType = [string]$response.Content.Headers.ContentType
         }
     }
-    catch { throw $failure }
+    catch {
+        $known = Get-PodcastTransportFailure -ErrorObject $_
+        if ($null -ne $known) { throw $known }
+        if (Test-PodcastCancellation -ErrorObject $_) { throw }
+        throw $failure
+    }
     finally {
         foreach ($resource in @($source, $memory, $response, $request, $client)) {
             if ($null -ne $resource) {

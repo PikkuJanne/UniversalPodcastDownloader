@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>UTC filename boundary</title>
+<entry><title>Midnight publication</title><id>urn:fixture:publication-midnight</id><published>2026-09-01T00:30:00+14:00</published><updated>2028-01-01T00:00:00Z</updated><link rel="enclosure" href="{{BASE_URL}}/media/ok.mp3" type="audio/mpeg" length="{{AUDIO_BYTES}}"/></entry>
+</feed>

@@ -4,6 +4,8 @@ param([Parameter(Mandatory)][string]$ConfigPath)
 # and results live outside the copied archive being checked for zero mutations.
 $ErrorActionPreference = 'Stop'
 $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'WorkerRunProjection.ps1')
+$workerExit = 1
 $result = [ordered]@{
     Succeeded = $false
     EngineVersion = $PSVersionTable.PSVersion.ToString()
@@ -24,13 +26,16 @@ try {
     if ($config.LegacySha256) { $parameters.LegacySha256 = $config.LegacySha256 }
     if ($config.LegacyCheckpoint) { $parameters.LegacyCheckpoint = $config.LegacyCheckpoint }
     if ($config.PreviewOnly) { $parameters.WhatIf = $true }
-    $result.Output = @(& $config.ProductScript @parameters)
-    $result.Succeeded = $true
+    $projection = Get-UpdWorkerRunProjection -Output @(& $config.ProductScript @parameters -PassThru)
+    $result.Output = @(if ($projection.RunResult.PSObject.Properties['LegacyResult']) { $projection.RunResult.LegacyResult } else { $projection.RunResult.Plan })
+    $result.Succeeded = $projection.Succeeded
+    $result.ErrorMessage = $projection.ErrorMessage
+    $result.RunResult = $projection.RunResult
+    $workerExit = $projection.ExitCode
 }
 catch {
     $result.ErrorMessage = $_.Exception.Message
     $result.ErrorId = $_.FullyQualifiedErrorId
 }
 $result | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $config.ResultPath -Encoding UTF8
-if ($result.Succeeded) { exit 0 }
-exit 1
+exit $workerExit

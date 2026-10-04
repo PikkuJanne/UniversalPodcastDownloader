@@ -43,12 +43,14 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $run.Result.Succeeded | Should -BeTrue -Because ($run.Stdout + $run.Stderr + $run.Result.ErrorMessage)
         $run.ExitCode | Should -Be 0
         $run.Result.PromptCount | Should -Be 2
-        # The current discovery parser selects this fixture's Atom candidate;
-        # candidate selection and HTML parsing improvements belong to UPD-0203.
-        $run.Result.ResolvedUrl | Should -Be ($context.BaseUrl + '/feeds/atom.xml')
+        $run.Result.ResolvedUrl | Should -Be ($context.BaseUrl + '/feeds/single.xml?fake_token=NOT_A_SECRET&x=1')
+        $run.Result.ItemCount | Should -Be 1
+        $run.Stdout | Should -Match '1\.'
+        $run.Stdout | Should -Match '2\.'
         $run.Stdout | Should -Not -Match 'Security Warning|Script Execution Risk|UseBasicParsing'
         $stats = Get-UpdFixtureState -Context $context
         $stats.'/show' | Should -Be 1
+        $stats.'/feeds/single.xml' | Should -Be 1
         $stats.'/feeds/atom.xml' | Should -BeNullOrEmpty
         $stats.'/media/ok.mp3' | Should -BeNullOrEmpty
         Test-Path -LiteralPath $run.OutputPath | Should -BeFalse
@@ -134,7 +136,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/empty.xml' -Mode $Mode
         $run.Result.Succeeded | Should -BeFalse
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match '^No episodes found in the feed\.'
+        $run.Result.ErrorMessage | Should -Be 'The RSS or Atom feed is valid but contains no episodes.'
         $run.Result.ErrorMessage | Should -Not -Match 'divide by zero|null'
         $run.Stdout | Should -Not -Match 'Feed failed:'
         $run.Stdout | Should -Not -Match 'Security Warning|Script Execution Risk|UseBasicParsing|divide by zero'
@@ -183,7 +185,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath $FeedPath
         $run.Result.Succeeded | Should -BeFalse
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match 'path|component|dot|absolute|root'
+        $run.Result.ErrorMessage | Should -Match 'path|component|dot|absolute|root|Private error details were omitted'
         @(Get-ChildItem -LiteralPath $context.Root -Recurse -Filter '*.log').Count | Should -Be 0
         @(Get-ChildItem -LiteralPath $context.Root -Recurse -Filter '*.mp3').Count | Should -Be 1
         (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
@@ -224,7 +226,7 @@ Describe 'Real downloader against synthetic loopback fixtures' {
         $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/single.xml' -OutputName $outputName
         $run.Result.Succeeded | Should -BeFalse
         $run.ExitCode | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match 'reparse|junction'
+        $run.Result.ErrorMessage | Should -Match 'Private error details were omitted'
         @(Get-ChildItem -LiteralPath $archive -Force).Count | Should -Be 1
         (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
         (Get-Item -LiteralPath $sentinel).LastWriteTimeUtc | Should -Be $originalStamp
@@ -246,8 +248,9 @@ Describe 'Real downloader against synthetic loopback fixtures' {
             -BoundaryJunctionPath $paths.File -BoundaryJunctionTarget $archive -BoundaryStage $Stage
         $run.Result.Succeeded | Should -BeFalse
         $run.ExitCode | Should -Be 1
+        $run.Result.RunResult.Status | Should -Be 'fatal'
         $run.Result.BoundaryInjectionCount | Should -Be 1
-        $run.Result.ErrorMessage | Should -Match 'reparse|junction'
+        $run.Result.ErrorMessage | Should -Match 'Private error details were omitted'
         @(Get-ChildItem -LiteralPath $archive -Force).Count | Should -Be 1
         (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash | Should -Be $originalHash
         @(Get-ChildItem -LiteralPath $paths.Folder -Filter '*.tmp' -Force).Count | Should -Be 0

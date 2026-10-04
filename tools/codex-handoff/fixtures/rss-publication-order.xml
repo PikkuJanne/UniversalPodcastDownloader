@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Publication ordering</title>
+<item><title>Missing first</title><guid>publication-missing-first</guid><enclosure url="{{BASE_URL}}/media/ok.mp3?id=missing-first" type="audio/mpeg"/></item>
+<item><title>Tie first</title><guid>publication-tie-first</guid><pubDate>Tue, 01 Sep 2026 12:00:00 +0200</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=tie-first" type="audio/mpeg"/></item>
+<item><title>Missing second</title><guid>publication-missing-second</guid><pubDate>not-a-date</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=missing-second" type="audio/mpeg"/></item>
+<item><title>Tie second</title><guid>publication-tie-second</guid><pubDate>Tue, 01 Sep 2026 10:00:00 +0000</pubDate><enclosure url="{{BASE_URL}}/media/ok.mp3?id=tie-second" type="audio/mpeg"/></item>
+</channel></rss>

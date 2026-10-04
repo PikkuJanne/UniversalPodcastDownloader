@@ -2,6 +2,8 @@ BeforeAll {
     $script:RepositoryRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
     . (Join-Path $script:RepositoryRoot 'src/NetworkPolicy.ps1')
     . (Join-Path $script:RepositoryRoot 'src/MediaRequest.ps1')
+    . (Join-Path $script:RepositoryRoot 'src/RunResult.ps1')
+    . (Join-Path $script:RepositoryRoot 'src/Diagnostics.ps1')
     Add-Type -AssemblyName System.Net.Http
     Mock Invoke-WebRequest { throw 'Media units must not use the external network.' }
 
@@ -10,6 +12,7 @@ BeforeAll {
         $task = [pscustomobject]@{ Value = $Value }
         $task | Add-Member ScriptMethod GetAwaiter { return $this }
         $task | Add-Member ScriptMethod GetResult { return $this.Value }
+        $task | Add-Member ScriptMethod Wait { param($milliseconds) return ($milliseconds -ge 0) }
         return $task
     }
 
@@ -38,6 +41,71 @@ BeforeAll {
         }
         $client | Add-Member ScriptMethod Dispose { $this.Disposed = $true }
         return $client
+    }
+}
+
+Describe 'A040: media cleanup preserves primary outcomes' -Tag 'Unit', 'A040' {
+    BeforeEach {
+        $script:Client = Get-MediaTestClient
+        $script:Destination = [IO.MemoryStream]::new()
+        $script:Client.Response | Add-Member ScriptMethod Dispose {
+            $this.Disposed = $true
+            throw 'privateCleanupCanary'
+        } -Force
+        Mock Get-PodcastHttpClient { return $script:Client }
+        Mock Write-Verbose {}
+    }
+    AfterEach {
+        $script:Destination.Dispose()
+        $script:Client.Response.Content.Source.Dispose()
+    }
+
+    It 'preserves typed cancellation after streamed bytes when response cleanup also fails' {
+        $caught = $null
+        try {
+            $null = Invoke-PodcastMediaRequest -Uri 'https://media.invalid/audio.mp3' -DestinationStream $script:Destination -OnProgress {
+                throw [OperationCanceledException]::new('privateProgressCancellationCanary')
+            }
+        }
+        catch { $caught = $_ }
+        $caught | Should -Not -BeNullOrEmpty
+        Test-PodcastCancellation -ErrorObject $caught | Should -BeTrue
+        $script:Destination.ToArray() | Should -Be @(1, 2, 3, 4)
+        $script:Destination.CanWrite | Should -BeTrue
+        $script:Client.Disposed | Should -BeTrue
+        $script:Client.Response.Disposed | Should -BeTrue
+        $script:Client.Response.Content.Source.CanRead | Should -BeFalse
+        Should -Invoke Write-Verbose -Times 1 -Exactly -ParameterFilter { $Message -eq 'Media request cleanup failed; the primary operation failure is preserved.' }
+    }
+
+    It 'retains an ordinary primary callback failure and its safe category when cleanup also fails' {
+        $caught = $null
+        try {
+            $null = Invoke-PodcastMediaRequest -Uri 'https://media.invalid/audio.mp3' -DestinationStream $script:Destination -OnProgress {
+                throw [InvalidOperationException]::new('privatePrimaryCanary https://media.invalid/private-token')
+            }
+        }
+        catch { $caught = $_ }
+        $caught | Should -Not -BeNullOrEmpty
+        $caught.Exception.Message | Should -Match 'privatePrimaryCanary'
+        $caught.Exception.Message | Should -Not -Match 'privateCleanupCanary|could not be closed'
+        Test-PodcastCancellation -ErrorObject $caught | Should -BeFalse
+        $message = Get-PodcastDiagnosticError -Error $caught
+        $message | Should -Match 'operation failed'
+        $message | Should -Not -Match 'privatePrimaryCanary|privateCleanupCanary|media.invalid|private-token'
+        $script:Destination.ToArray() | Should -Be @(1, 2, 3, 4)
+        $script:Client.Disposed | Should -BeTrue
+        Should -Invoke Write-Verbose -Times 1 -Exactly -ParameterFilter { $Message -eq 'Media request cleanup failed; the primary operation failure is preserved.' }
+    }
+
+    It 'still fails a completed body when response resources cannot be closed safely' {
+        { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/audio.mp3' -DestinationStream $script:Destination } |
+            Should -Throw 'Media request resources could not be closed safely.'
+        $script:Destination.ToArray() | Should -Be @(1, 2, 3, 4)
+        $script:Destination.CanWrite | Should -BeTrue
+        $script:Client.Disposed | Should -BeTrue
+        $script:Client.Response.Content.Source.CanRead | Should -BeFalse
+        Should -Invoke Write-Verbose -Times 0 -Exactly
     }
 }
 
@@ -137,7 +205,11 @@ Describe 'A012/A013: media HTTP response streaming' -Tag 'Unit', 'A012', 'A013' 
         @{ Length = 5 }, @{ Length = 3 }
     ) {
         $script:Client = Get-MediaTestClient -Length $Length
-        { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/episode.mp3' -DestinationStream $script:Destination } | Should -Throw '*Content-Length*byte count*'
+        $failure = $null
+        try { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/episode.mp3' -DestinationStream $script:Destination }
+        catch { $failure = Get-PodcastTransportFailure -ErrorObject $_ }
+        $failure.Message | Should -BeLike '*Content-Length*byte count*'
+        $failure.Data['Retryable'] | Should -Be (4 -lt $Length)
         $script:Client.Disposed | Should -BeTrue
         $script:Client.Response.Disposed | Should -BeTrue
         $script:Client.Response.Content.Source.CanRead | Should -BeFalse
@@ -199,7 +271,8 @@ Describe 'A012/A013: media HTTP response streaming' -Tag 'Unit', 'A012', 'A013' 
         $errorRecord = $null
         try { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/private?secret-token' -DestinationStream $script:Destination }
         catch { $errorRecord = $_ }
-        $errorRecord.Exception.Message | Should -Be 'Media request or stream failed before completion.'
+        $errorRecord.Exception.Message | Should -Be 'HTTP request failed before response headers were available.'
+        $errorRecord.Exception.Message | Should -Not -Match 'secret-token|media.invalid'
         $script:Client.Disposed | Should -BeTrue
         $script:Destination.CanWrite | Should -BeTrue
     }
@@ -217,11 +290,11 @@ Describe 'A012/A013: media HTTP response streaming' -Tag 'Unit', 'A012', 'A013' 
     It 'closes response resources when reading fails and hides the raw read exception' {
         $script:Client.Response.Content.Source.Dispose()
         $source = [pscustomobject]@{ Disposed = $false }
-        $source | Add-Member ScriptMethod Read { throw 'synthetic-secret in response stream exception' }
+        $source | Add-Member ScriptMethod ReadAsync { throw 'synthetic-secret in response stream exception' }
         $source | Add-Member ScriptMethod Dispose { $this.Disposed = $true }
         $script:Client.Response.Content.Source = $source
         { Invoke-PodcastMediaRequest -Uri 'https://media.invalid/episode.mp3' -DestinationStream $script:Destination } |
-            Should -Throw 'Media request or stream failed before completion.'
+            Should -Throw 'The response body could not be read completely.'
         $source.Disposed | Should -BeTrue
         $script:Client.Response.Disposed | Should -BeTrue
         $script:Client.Disposed | Should -BeTrue

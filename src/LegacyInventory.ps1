@@ -19,7 +19,10 @@ function Get-PodcastHistoricalFileName {
     $title = if ([string]::IsNullOrWhiteSpace([string]$Episode.Title)) { 'Episode' } else { [string]$Episode.Title }
     $title = ($title -replace '[\\/:*?"<>|]', '_').Trim()
     if ([string]::IsNullOrWhiteSpace($title)) { $title = 'Episode' }
-    $prefix = if ($Episode.PubDate) { ([datetime]$Episode.PubDate).ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
+    $legacyDate = if ($null -ne $Episode.PSObject.Properties['LegacyPubDate']) { $Episode.LegacyPubDate }
+        elseif ($Episode.PubDate -is [DateTimeOffset]) { $Episode.PubDate.LocalDateTime }
+        else { $Episode.PubDate }
+    $prefix = if ($legacyDate) { ([datetime]$legacyDate).ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) + ' - ' } else { '' }
     $suffix = ''
     if ($title -eq 'Episode' -or $prefix.Length -eq 0) {
         $oldIdentity = if ($Episode.Guid) { [string]$Episode.Guid } else { [string]$Episode.Url }
@@ -67,7 +70,10 @@ function Get-PodcastLegacyFileObservation {
         }
         else { $result.Reason = $sniff.Category }
     }
-    catch { $result.Reason = 'file_unreadable' }
+    catch {
+        if (Test-PodcastCancellation -ErrorObject $_) { throw }
+        $result.Reason = 'file_unreadable'
+    }
     finally { if ($null -ne $guard) { $guard.Dispose() } }
     return $result
 }
@@ -119,6 +125,7 @@ function New-PodcastLegacyPlan {
             $file = Get-PodcastLegacyFileObservation -Root $canonicalRoot -RelativePath $name
         }
         catch {
+            if (Test-PodcastCancellation -ErrorObject $_) { throw }
             $file = [pscustomobject]@{
                 RelativePath = $name; Bytes = $null; Sha256 = $null; Plausible = $false
                 MediaKind = $null; InspectedBytes = 0; Classification = 'conflict'

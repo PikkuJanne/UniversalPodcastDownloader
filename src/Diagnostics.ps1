@@ -72,13 +72,44 @@ function Get-PodcastDiagnosticError {
     # Only exact application-authored messages may retain actionable wording.
     # Never accept a prefix match or append details from an external exception.
     $publicMessages = @(
+        'Feed catalogue incomplete; accessible selected episodes were processed, but advertised pages remain unresolved.',
+        'Feed catalogue incomplete; no accessible episodes were found.',
         'No episodes found in the feed. Double-check the RSS URL.',
+        'The RSS or Atom feed is valid but contains no episodes.',
+        'Source XML is invalid or exceeds safe parser limits.',
+        'The source XML root is not a supported RSS or Atom feed.',
+        'No RSS or Atom feed links were found on the page.',
+        'Multiple feed links were found. Supply a direct feed URL with -FeedUrl.',
+        'The discovered URL did not return an RSS or Atom feed.',
+        'HTML metadata exceeds the safe character limit.',
+        'HTML feed discovery exceeds the safe token limit.',
+        'HTML feed discovery exceeded its safe parser timeout.',
+        'Discovered feed URL is not allowed by the network policy.',
+        'HTML base URL is not allowed by the network policy.',
+        'Source content exceeds the safe character limit.',
+        'The metadata response does not contain supported source text.',
         'Feed parsed, but no downloadable enclosure URLs were found.',
+        'Feed parsed, but no downloadable enclosure URLs were found. No supported audio candidate was declared.',
+        'Resume identity does not match this episode; partial and sidecar were preserved for review.',
         'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.',
         'Legacy review requires an existing -LegacyPath and an explicit -FeedUrl.',
         'Legacy options require -LegacyPath and an explicit -FeedUrl.',
         'Output root is too long to retain safe identifiers. Choose a shorter output path.',
-        "Mode 'Custom' requires -CustomCount with a value >= 1."
+        "Mode 'Custom' requires -CustomCount with a value >= 1.",
+        '-CustomCount must be a positive integer.',
+        '-CustomCount conflicts with an explicit Latest or All mode.',
+        '-NonInteractive requires an explicit nonblank -FeedUrl.',
+        '-NonInteractive cannot be combined with -Confirm.',
+        'The destination is not writable. Check output-folder permissions and retry.',
+        'Insufficient available space for the validated media response. Free space or choose another output folder.',
+        'The podcast archive writer lock is in use. Wait for the current writer to finish, then retry.',
+        'The archive selection lock is in use. Wait for the current writer to finish, then retry.',
+        'The podcast archive writer lock is inaccessible. Check destination permissions and retry.',
+        'The archive selection lock is inaccessible. Check output-folder permissions and retry.',
+        'The owned media stream could not be closed safely; partial preserved for review.',
+        'Legacy action resources could not be closed safely; retained media and history require review.',
+        'A Windows name cannot be a dot or dot-dot path component.',
+        'Conflicting episode metadata reuses one identity in this feed snapshot; no media destinations were created.'
     )
     if ($cause -is [Exception]) {
         foreach ($publicMessage in $publicMessages) {
@@ -86,7 +117,29 @@ function Get-PodcastDiagnosticError {
         }
     }
     $depth = 0
-    while ($cause -is [Exception] -and $null -ne $cause.InnerException -and $depth -lt 16) {
+    while ($cause -is [Exception] -and $depth -lt 16) {
+        # Exact local validation messages map to fixed explanations; no response
+        # body, MIME value or URL is incorporated into a diagnostic.
+        switch ($cause.Message) {
+            'Media validation failed: ambiguous_media.' { return 'Media validation failed: ambiguous_media. Supported audio evidence was not found within the inspection limit.' }
+            'Media validation failed: unsupported_media.' { return 'Media validation failed: unsupported_media. The recognized media type is not supported audio.' }
+            'Media validation failed: non_audio_text.' { return 'Media validation failed: non_audio_text. The response contains text rather than recognized audio.' }
+            'Media validation failed: unrecognized_media.' { return 'Media validation failed: unrecognized_media. The response has no supported audio signature.' }
+        }
+        if ($cause.Data['PodcastTransport'] -eq $true) {
+            # Map fixed categories only; never print the tagged message, header,
+            # retry date or any arbitrary data that an exception may carry.
+            switch ([string]$cause.Data['Kind']) {
+                'Deferred' { return 'The request was deferred because its retry budget could not allow another attempt.' }
+                'HeaderTimeout' { return 'The request exceeded the connection/header timeout.' }
+                'IdleTimeout' { return 'The response body exceeded the idle transfer timeout.' }
+                'Connection' { return 'The network connection failed before the transfer completed.' }
+                'HttpStatus' { return 'The server returned an unsuccessful HTTP status.' }
+                'IncompleteBody' { return 'The response body was incomplete.' }
+                'Permanent' { return 'The request was rejected by the network policy.' }
+            }
+        }
+        if ($null -eq $cause.InnerException) { break }
         $cause = $cause.InnerException
         $depth++
     }
@@ -250,6 +303,12 @@ function Close-PodcastDiagnostics {
         }
     }
     catch { Write-PodcastDiagnosticFallback -Message 'Diagnostic logging could not be closed; the original operation result is preserved.' }
+    finally {
+        # End exact-request correlation without replacing the dictionary or
+        # creating diagnostic state when no run has been initialized.
+        $requestIds = $ExecutionContext.SessionState.PSVariable.Get('script:PodcastDiagnosticRequestIds')
+        if ($null -ne $requestIds -and $null -ne $requestIds.Value) { $requestIds.Value.Clear() }
+    }
 }
 
 function Export-PodcastDiagnostics {
