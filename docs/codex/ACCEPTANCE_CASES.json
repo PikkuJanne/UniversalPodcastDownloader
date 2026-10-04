@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A047 passed through UPD-0304; A048-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and downloader acceptance. UPD-0501 retains its historical refusal/reconciliation evidence. UPD-0502 adds direct human Explorer double-click and physical Ctrl+C observations on the exact ed3 unreleased candidate in Windows Sandbox: A041/A045 passed within recorded guest/native/byte-preservation limits; A059 gate-qualified owner handoff passed. Current canonical counts are 59 passed / 1 not_run; A060 exact publication authority/action/outcome remains separately owner-gated. A055 is content/capture-instructions review without screenshot or physical display approval. Helper checks and green CI never substitute for downloader acceptance; no publication authority inferred.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -455,7 +455,7 @@
       "expected": "Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible.",
       "fixture": null,
       "status": "passed",
-      "evidence": "docs/codex/evidence/UPD-0301-LAUNCHER.md"
+      "evidence": "docs/codex/evidence/UPD-0502-MANUAL.md"
     },
     {
       "id": "A042",
@@ -499,7 +499,7 @@
       "expected": "Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented.",
       "fixture": null,
       "status": "passed",
-      "evidence": "docs/codex/evidence/UPD-0303-WINDOWS.md"
+      "evidence": "docs/codex/evidence/UPD-0502-MANUAL.md"
     },
     {
       "id": "A046",
@@ -531,8 +531,8 @@
       "when": "Run final structural/compatibility review and both engine suites.",
       "expected": "No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0401.md"
     },
     {
       "id": "A049",
@@ -542,8 +542,8 @@
       "when": "Copy/paste each advertised example on Windows.",
       "expected": "Commands work, functions/parameters exist, capabilities match tests, no promised unreleased feature or machine-wide security bypass.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0402.md"
     },
     {
       "id": "A050",
@@ -553,8 +553,8 @@
       "when": "Read limitations and recovery instructions.",
       "expected": "All scope is explicit; legacy unverified files not presented as verified; repair procedure avoids deleting originals.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0402.md"
     },
     {
       "id": "A051",
@@ -564,8 +564,8 @@
       "when": "Build ZIP twice with declared tooling.",
       "expected": "Deterministic file inventory and version; checksums validate; includes imported modules/license/help; excludes logs, media, secrets, test fixtures and handoff history.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0403.md"
     },
     {
       "id": "A052",
@@ -575,8 +575,8 @@
       "when": "Run supported smoke scenarios.",
       "expected": "No hidden checkout dependency; source version traceable; original MIT license retained.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0403.md"
     },
     {
       "id": "A053",
@@ -586,8 +586,8 @@
       "when": "Review CI and draft release.",
       "expected": "Minimal job permissions, reviewed SHA-pinned actions, no pull_request_target execution of untrusted code, secret-safe artifacts; no automatic public release.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0404.md"
     },
     {
       "id": "A054",
@@ -597,19 +597,19 @@
       "when": "Complete release preparation.",
       "expected": "Draft/artifacts ready; no tag push, release publication, merge, branch deletion, visibility/settings change or purchase occurs.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0404.md"
     },
     {
       "id": "A055",
       "task": "UPD-0405",
       "type": "manual",
-      "given": "Draft website content and real screenshot captured locally.",
-      "when": "Review against stable candidate.",
+      "given": "Draft website content and a real local screenshot or accurate capture instructions, as permitted by UPD-0405.",
+      "when": "Review against committed candidate source, current evidence and actual publication status.",
       "expected": "Current-version placeholder not falsely advertised as released; features/limitations/privacy/license/support accurate; real UI not generated imagery.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0405.md"
     },
     {
       "id": "A056",
@@ -619,8 +619,8 @@
       "when": "Prepare website material.",
       "expected": "Portable static content/metadata only; no domain, hosting, DNS or live site changes.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0405.md"
     },
     {
       "id": "A057",
@@ -630,8 +630,8 @@
       "when": "Run end-to-end acceptance under both engines and release ZIP.",
       "expected": "All mandatory cases have concrete evidence; user archive untouched; unrun/manual cases remain clearly outstanding.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A058",
@@ -640,9 +640,9 @@
       "given": "Mandatory cases pending, skipped, failed, or docs-only checks green.",
       "when": "Evaluate release readiness.",
       "expected": "Gate fails; bundle/server validation never substitutes for downloader acceptance.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Unit/ReleaseReadiness.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A059",
@@ -652,8 +652,8 @@
       "when": "Prepare final handoff.",
       "expected": "Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0502.md"
     },
     {
       "id": "A060",
@@ -664,7 +664,7 @@
       "expected": "No inferred authority for other destructive/publication operations; audit trail records scope and resulting identifiers.",
       "fixture": null,
       "status": "not_run",
-      "evidence": null
+      "evidence": "docs/codex/evidence/UPD-0502.md"
     }
   ]
 }

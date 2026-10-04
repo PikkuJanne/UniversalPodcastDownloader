@@ -19,6 +19,8 @@ For example, `-MaxAttempts 2 -HeaderTimeoutSeconds 20 -IdleTimeoutSeconds 60 -Re
 
 ## Time boundaries
 
+UPD-0401 makes each run's policy a local value passed explicitly through guided/direct source resolution, the selected HTML feed, all catalogue pages and media/legacy execution. Standalone metadata helpers create independent default policies; resolver page limits default to 20. Imports and earlier runs do not overwrite caller script transport/page settings. The retry owner and redirect handling share Wait-PodcastRetryDelay. Retry backoff passes its already observed clock instant and attempt number, preserving zero-delay timing and adding attempt metadata only to helper-created Deferred errors; injected delay/cancellation errors remain unchanged.
+
 `HttpClient.Timeout` is disabled in favor of explicit bounded header waits. Each GET uses `ResponseHeadersRead` and a cancellation token. Body reads use `ReadAsync`, a bounded task wait and cancellation plus stream disposal on timeout. The explicit wait also covers .NET Framework streams that do not honor cancellation after a read starts. Final cleanup disposes streams, responses, requests and clients.
 
 The retry window begins before the initial attempt and is shared by retries and redirect delays. It controls starting more work after failure or a server-requested wait; it is not a total download deadline. A transfer that continues producing bytes within the idle limit may outlast both the header timeout and retry window. A later failure after the window ends is reported without another attempt. No arbitrary short total-duration limit kills an active episode. Local filesystem calls and operating-system cleanup are not covered by network deadlines.

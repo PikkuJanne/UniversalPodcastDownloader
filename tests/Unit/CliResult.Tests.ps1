@@ -164,7 +164,7 @@ Describe 'A039: command-line selection validation' -Tag 'Unit', 'A039' {
     }
 
     It 'does not relabel a recorded download when cancellation occurs during the completed summary' {
-        Mock Write-Log { throw [OperationCanceledException]::new('privateSummaryCancellationCanary') } -ParameterFilter { $Message -eq 'Run completed.' }
+        Mock Write-PodcastDiagnostic { throw [OperationCanceledException]::new('privateSummaryCancellationCanary') } -ParameterFilter { $Message -eq 'Run completed.' }
         $result = Invoke-PodcastRun -FeedUrl 'https://feeds.example.invalid/cli.xml' -NonInteractive -OutputPath $script:CliOutputRoot
         $result.ExitCode | Should -Be 130
         $result.Status | Should -Be 'cancelled'

@@ -1,0 +1,469 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-10-04T11:50:23.724350+00:00",
+  "candidate": {
+    "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+    "sourceTree": "86cbb1c5907aa37b5db1af56bbbfd7913fe326af",
+    "runId": 37180637487,
+    "runAttempt": 1,
+    "artifactId": 11295685474,
+    "artifactName": "candidate-ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8-37180637487-1",
+    "artifactBytes": 6217665,
+    "artifactDigest": "sha256:79be50ff76513afb8c4faf06a4985cdfdcf136ac3e823d09d1edc9aee54903a3",
+    "artifactExpiresUtc": "2026-10-11T06:00:23Z"
+  },
+  "package": {
+    "status": "verified",
+    "verifier": "UPD-0404 independent audit helper",
+    "python": "3.14.7",
+    "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+    "sourceTree": "86cbb1c5907aa37b5db1af56bbbfd7913fe326af",
+    "version": "0.1.0-rc.1",
+    "releaseStatus": "UNRELEASED_CANDIDATE",
+    "payloadFilesVerified": 36,
+    "zipEntriesVerified": 37,
+    "originalMitMatches": true,
+    "zipSha256": "6ddc6c7e3a2b315ada19cd7c298d4c02284bb6177948b55fc2918b6e717d3ff2",
+    "manifestSha256": "df4ca4eac0b242ac5e75f1281abd8e46513bbb83957df631b397bd03fc1a5c26",
+    "sha256sumsSha256": "5f6014ea657b251970caded740cf4250cfde059f6b57463bc37da98d87c80a29"
+  },
+  "runtimeFingerprint": "709367285219c0ac0f4f1b8be2d346d6b91d5d6885b3b3afc27372352f745ca1",
+  "environment": {
+    "utc": "2026-10-04T10:41:49.1762991Z",
+    "token": "122202eca59642e7ab1f93dde5812121",
+    "ready": true,
+    "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+    "sourceTree": "86cbb1c5907aa37b5db1af56bbbfd7913fe326af",
+    "package": "C:\\UPD manual ä\\Podcast test ü",
+    "packageFilesVerified": 36,
+    "guestUser": "WDAGUtilityAccount",
+    "guestProfile": "C:\\Users\\WDAGUtilityAccount",
+    "guestArchive": "C:\\Users\\WDAGUtilityAccount\\Downloads\\Podcasts",
+    "os": "Microsoft Windows NT 10.0.26100.0",
+    "nativePowerShell": "5.1.26100.9444",
+    "python": "Python 3.12.14",
+    "serverPid": 7548,
+    "feed": "http://127.0.0.1:49670/feeds/single.xml",
+    "humanLauncherObservation": false
+  },
+  "A041": {
+    "humanFollowingDirectExplorerDoubleClickInstructions": true,
+    "humanReport": "Success. Downloaded: 1; Skipped: 0; Adopted: 0; Failed: 0. [OK] Done.",
+    "humanClosingPromptAndEnterCloseConfirmed": true,
+    "package": "C:\\UPD manual ä\\Podcast test ü",
+    "packageUnchanged": true,
+    "packageFilesVerified": 36,
+    "manifestSha256": "df4ca4eac0b242ac5e75f1281abd8e46513bbb83957df631b397bd03fc1a5c26",
+    "collectorPowerShell": "5.1.26100.9444",
+    "collectorHost": "ConsoleHost",
+    "captureTiming": "before_human_close",
+    "archiveFiles": [
+      {
+        "relativePath": ".upd-archive.lock",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exclusiveReadOpened": true
+      },
+      {
+        "relativePath": "Fixture Podcast-4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9/.upd/state.json",
+        "size": 815,
+        "sha256": "5f7901813defde9c839177fb53cc74a8a9c0cfe8902cba8379ff687250da769e",
+        "exclusiveReadOpened": true
+      },
+      {
+        "relativePath": "Fixture Podcast-4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9/.upd/state.json.bak",
+        "size": 806,
+        "sha256": "afcba5a516902daa6aad9bb5c6dfb711be09da733740b5ede2eec52b764cf79b",
+        "exclusiveReadOpened": true
+      },
+      {
+        "relativePath": "Fixture Podcast-4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9/.upd/writer.lock",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exclusiveReadOpened": true
+      },
+      {
+        "relativePath": "Fixture Podcast-4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9/2026-09-01 - One synthetic episode-a22dccb02bd883547cf0e73671e45d2e4d14f7b28c1a5ebaab81527523876ddc.mp3",
+        "size": 1689,
+        "sha256": "fcf79a0b8481d71b4f20c4dcb27f68f262ee2f5455e5f07d8f9fa1a3edabdd33",
+        "exclusiveReadOpened": true
+      },
+      {
+        "relativePath": "Fixture Podcast-4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9/download-20261004T104418815Z-85a5d5e1114749a5b0ad05e43ddb5e43.log",
+        "size": 1478,
+        "sha256": "c42534e4b19fa0f2154c647a018de2b714997e1a8643db7b94d44ac2532d888c",
+        "exclusiveReadOpened": true
+      }
+    ],
+    "fixtureMedia": {
+      "relativePath": "Fixture Podcast-4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9/2026-09-01 - One synthetic episode-a22dccb02bd883547cf0e73671e45d2e4d14f7b28c1a5ebaab81527523876ddc.mp3",
+      "size": 1689,
+      "sha256": "fcf79a0b8481d71b4f20c4dcb27f68f262ee2f5455e5f07d8f9fa1a3edabdd33",
+      "exclusiveReadOpened": true
+    },
+    "history": {
+      "schema_version": 1,
+      "feed_id": "4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9",
+      "feed_alias_fingerprints": [
+        "4c90a4b26e9f48120ba451b23cd936f532bc036ca7bb03658facdbc292ddefe9"
+      ],
+      "generation": 3,
+      "episodes": [
+        {
+          "episode_id": "a22dccb02bd883547cf0e73671e45d2e4d14f7b28c1a5ebaab81527523876ddc",
+          "identity_source": "rss-guid",
+          "identity_fingerprint": "1d9408a5fb0a3173704459f25266cee96c3af135b8bd9eff8979bb5e1d4d4c9d",
+          "relative_path": "2026-09-01 - One synthetic episode-a22dccb02bd883547cf0e73671e45d2e4d14f7b28c1a5ebaab81527523876ddc.mp3",
+          "status": "transfer_verified",
+          "bytes": 1689,
+          "local_sha256": "fcf79a0b8481d71b4f20c4dcb27f68f262ee2f5455e5f07d8f9fa1a3edabdd33",
+          "completed_utc": "2026-10-04T10:44:27.1264317Z",
+          "verification": {
+            "method": "completed-http-length-and-signature",
+            "media_kind": "mpeg-audio",
+            "notes": []
+          }
+        }
+      ]
+    },
+    "snapshotByteEquality": true,
+    "allArchiveFilesExclusiveReadable": true,
+    "noActivePartialOrCheckpoint": true,
+    "rawCaptureSha256": "24288ac25e879401d60cbf90a974f69d6ccd3ed28ce9f97563db4904c21dc67d",
+    "humanCloseRecordSha256": "7c390c4af305e727771c056c3935a808938aa90fb44f0f7f22a7e76fde63a13b",
+    "nativeChildExitCode": null,
+    "nativeChildExitCodeAvailable": false,
+    "processCaptureLimit": "The first collector returned Access is denied before process metadata was captured. File-only capture and human Enter/window-close observation followed; no fresh numeric Explorer-process exit is claimed."
+  },
+  "A045": [
+    {
+      "engine": "PS51",
+      "psVersion": "5.1.26100.9444",
+      "edition": "Desktop",
+      "auditUtc": "2026-10-04T11:31:58.6690866Z",
+      "probeId": "e6b6b45f2d254082b3febb79458c082c",
+      "humanPhysicalCtrlCConfirmed": true,
+      "humanReport": "Yes, I pressed Ctrl+C during Receiving",
+      "rawAuditSha256": "726be0c1267ee9735f3ca62a3b7b33dfbe22a5fd2b32fa1637941f171e527b71",
+      "humanRecordSha256": "c63366be878b624e012bef1abbcc2ab54c8b482c61d2bd0ae29fc6221324c6b5",
+      "power": {
+        "requested": true,
+        "activeImmediatelyAfterStart": true,
+        "contextActiveAfterInterruption": false,
+        "leasePresent": true,
+        "activationSucceeded": true,
+        "previousState": 2147483648,
+        "activationThreadId": 6576,
+        "restorationThreadId": 6576,
+        "active": false,
+        "restored": true,
+        "isAlive": false
+      },
+      "progress": {
+        "Enabled": true,
+        "QuietReason": "",
+        "Bytes": 483328,
+        "TotalBytes": 2026800,
+        "Offset": 0,
+        "Attempt": 1,
+        "Stage": "bytes",
+        "EpisodeOutcome": "",
+        "EpisodePercent": 0,
+        "TransferPercent": 23,
+        "ProcessedEpisodes": 0,
+        "VerifiedEpisodes": 0,
+        "RunVerified": false,
+        "TransferStarted": true,
+        "Closed": true
+      },
+      "runResultPresent": false,
+      "numericProcessExitCode": null,
+      "auditErrors": [],
+      "files": [
+        {
+          "relativePath": ".upd-archive.lock",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-9566092b67a5d7942628fe4db8768a5f43ac8f8108b3c43a0c9169ea1e95332e\\.upd-d1e7295fbf8d4ca399a0c90147e81da3.tmp",
+          "size": 483328,
+          "sha256": "58b68848422ae850e5bd087f852cc889cdb15c90cf4fd4941fe207c71fabb373",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-9566092b67a5d7942628fe4db8768a5f43ac8f8108b3c43a0c9169ea1e95332e\\download-20261004T113104643Z-57bea8862e4d447b983d1c7ff6c2db61.log",
+          "size": 1133,
+          "sha256": "8939b15d1045c0e02387f4ce150175c5b3de583467ac2d2d23ceb0ad621987b4",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-9566092b67a5d7942628fe4db8768a5f43ac8f8108b3c43a0c9169ea1e95332e\\.upd\\resume-41a11e56a1649b65702d44537b9af720.json",
+          "size": 727,
+          "sha256": "156f63c786e715d7bdd32266940a8bd98b45cc25ca5bf31b8dfb7da832933d11",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-9566092b67a5d7942628fe4db8768a5f43ac8f8108b3c43a0c9169ea1e95332e\\.upd\\state.json",
+          "size": 221,
+          "sha256": "fb69faffcf8feed59765dd52257011b605566010178581319b395472a8307b54",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-9566092b67a5d7942628fe4db8768a5f43ac8f8108b3c43a0c9169ea1e95332e\\.upd\\writer.lock",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exclusiveOpen": true
+        }
+      ],
+      "retainedPartialBytes": 483328,
+      "retainedPartialSha256": "58b68848422ae850e5bd087f852cc889cdb15c90cf4fd4941fe207c71fabb373",
+      "retainedBytesMatchTrustedFixturePrefix": true,
+      "checkpoint": {
+        "schema_version": 1,
+        "feed_id": "9566092b67a5d7942628fe4db8768a5f43ac8f8108b3c43a0c9169ea1e95332e",
+        "episode_id": "41a11e56a1649b65702d44537b9af720f36a26a3b5590d7504a665d5c7a63013",
+        "relative_path": "Original resume audio-41a11e56a1649b65702d44537b9af720f36a26a3b5590d7504a665d5c7a63013.mp3",
+        "partial_name": ".upd-d1e7295fbf8d4ca399a0c90147e81da3.tmp",
+        "request_fingerprint": "932ca6e8811be9b5a1b126eb9a1c4201e379d9915c3be4222280415ae8dce357",
+        "final_uri_fingerprint": "932ca6e8811be9b5a1b126eb9a1c4201e379d9915c3be4222280415ae8dce357",
+        "etag": "\"resume-v1\"",
+        "total_length": 2026800,
+        "content_type": "audio/mpeg",
+        "content_encoding": "identity",
+        "offset": 65536,
+        "prefix_sha256": "48fad4d77558d80fe0cceff7483aa37ce09ce271aa69e5dd667215701c4d00f9"
+      },
+      "savedCheckpointPrefixMatches": true,
+      "wholePartialMatchesCheckpoint": false,
+      "automaticResumeVerified": false,
+      "verifiedHistoryEpisodes": 0,
+      "rawHelperCriteria": {
+        "humanCtrlCStillRequiresDirectObservation": true,
+        "realNativeActivationAndRestorationObserved": true,
+        "actualNonzeroReceivingBytes": true,
+        "progressContextClosed": true,
+        "partialPresent": true,
+        "locksPresent": true,
+        "allObservedFilesExclusivelyReopened": true,
+        "matchingNonzeroCheckpoint": false,
+        "historyContainsNoVerifiedEpisode": true,
+        "noFinalMp3": true,
+        "noAuditErrors": true,
+        "automaticAcceptancePass": false
+      },
+      "limit": "The prior checkpoint describes only 65536 bytes. Strict recovery refuses the longer partial without truncating it."
+    },
+    {
+      "engine": "PS7",
+      "psVersion": "7.6.5",
+      "edition": "Core",
+      "auditUtc": "2026-10-04T11:44:50.9437410Z",
+      "probeId": "d71d06e573404772951605c86c8d60e2",
+      "humanPhysicalCtrlCConfirmed": true,
+      "humanReport": "Yes, I pressed Ctrl+C during Receiving",
+      "rawAuditSha256": "d47b4079b7626d1f572e4a2b5446dc3afff8f884fda13bea1c413507be958fd8",
+      "humanRecordSha256": "6544fd71854340c64f2254d823e8b062daa84a68aa882acc3c9e524710944aa9",
+      "power": {
+        "requested": true,
+        "activeImmediatelyAfterStart": true,
+        "contextActiveAfterInterruption": false,
+        "leasePresent": true,
+        "activationSucceeded": true,
+        "previousState": 2147483648,
+        "activationThreadId": 4688,
+        "restorationThreadId": 4688,
+        "active": false,
+        "restored": true,
+        "isAlive": false
+      },
+      "progress": {
+        "Enabled": true,
+        "QuietReason": "",
+        "Bytes": 139264,
+        "TotalBytes": 2026800,
+        "Offset": 0,
+        "Attempt": 1,
+        "Stage": "bytes",
+        "EpisodeOutcome": "",
+        "EpisodePercent": 0,
+        "TransferPercent": 6,
+        "ProcessedEpisodes": 0,
+        "VerifiedEpisodes": 0,
+        "RunVerified": false,
+        "TransferStarted": true,
+        "Closed": true
+      },
+      "runResultPresent": false,
+      "numericProcessExitCode": null,
+      "auditErrors": [],
+      "files": [
+        {
+          "relativePath": ".upd-archive.lock",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-3a85f06ee309b6e5ed1ab2ed870590a840419a1376a221e653ec431d8957d1e3\\.upd-82a5b59596534babb98e1004a2286213.tmp",
+          "size": 139264,
+          "sha256": "dd1ffdbbf370bf6b42d0b59c166bba7e38afe444d44935eaf0291c032631047e",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-3a85f06ee309b6e5ed1ab2ed870590a840419a1376a221e653ec431d8957d1e3\\download-20261004T114435353Z-c5b91e839b4347f6a9f3e0acd38aa726.log",
+          "size": 1133,
+          "sha256": "77e65f4768973e4856ac7577ceecc884ec30f572e7b077e336569da3a65b7722",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-3a85f06ee309b6e5ed1ab2ed870590a840419a1376a221e653ec431d8957d1e3\\.upd\\resume-46051086afa960c97f3b513e4d3e6bbb.json",
+          "size": 727,
+          "sha256": "edf5d6b6ab7ddbd2c0eaad06232454876154b87c5c0bfb8a10260490f3aa54aa",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-3a85f06ee309b6e5ed1ab2ed870590a840419a1376a221e653ec431d8957d1e3\\.upd\\state.json",
+          "size": 221,
+          "sha256": "892862fd77520726b10e2541c472e2298cb7700711d1555176d02989b00226ff",
+          "exclusiveOpen": true
+        },
+        {
+          "relativePath": "Resume fixture-3a85f06ee309b6e5ed1ab2ed870590a840419a1376a221e653ec431d8957d1e3\\.upd\\writer.lock",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exclusiveOpen": true
+        }
+      ],
+      "retainedPartialBytes": 139264,
+      "retainedPartialSha256": "dd1ffdbbf370bf6b42d0b59c166bba7e38afe444d44935eaf0291c032631047e",
+      "retainedBytesMatchTrustedFixturePrefix": true,
+      "checkpoint": {
+        "schema_version": 1,
+        "feed_id": "3a85f06ee309b6e5ed1ab2ed870590a840419a1376a221e653ec431d8957d1e3",
+        "episode_id": "46051086afa960c97f3b513e4d3e6bbba640313f4231240a7c07a17c219fe6d0",
+        "relative_path": "Original resume audio-46051086afa960c97f3b513e4d3e6bbba640313f4231240a7c07a17c219fe6d0.mp3",
+        "partial_name": ".upd-82a5b59596534babb98e1004a2286213.tmp",
+        "request_fingerprint": "c1a0beaabf23764403c5c118077686e73240bb2786f9896a1fa573bc43b1385d",
+        "final_uri_fingerprint": "c1a0beaabf23764403c5c118077686e73240bb2786f9896a1fa573bc43b1385d",
+        "etag": "\"resume-v1\"",
+        "total_length": 2026800,
+        "content_type": "audio/mpeg",
+        "content_encoding": "identity",
+        "offset": 65536,
+        "prefix_sha256": "48fad4d77558d80fe0cceff7483aa37ce09ce271aa69e5dd667215701c4d00f9"
+      },
+      "savedCheckpointPrefixMatches": true,
+      "wholePartialMatchesCheckpoint": false,
+      "automaticResumeVerified": false,
+      "verifiedHistoryEpisodes": 0,
+      "rawHelperCriteria": {
+        "humanCtrlCStillRequiresDirectObservation": true,
+        "realNativeActivationAndRestorationObserved": true,
+        "actualNonzeroReceivingBytes": true,
+        "progressContextClosed": true,
+        "partialPresent": true,
+        "locksPresent": true,
+        "allObservedFilesExclusivelyReopened": true,
+        "matchingNonzeroCheckpoint": false,
+        "historyContainsNoVerifiedEpisode": true,
+        "noFinalMp3": true,
+        "noAuditErrors": true,
+        "automaticAcceptancePass": false
+      },
+      "limit": "The prior checkpoint describes only 65536 bytes. Strict recovery refuses the longer partial without truncating it."
+    }
+  ],
+  "fixture": {
+    "testOnly": true,
+    "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+    "originalTrackedFixture": "tools/codex-handoff/fixture_server.py",
+    "originalFixtureSha256": "75fd3d7ddb8cda5b9bd22268a69b95602339fe91303c4e17a3bd0d858ee061e5",
+    "manualFixtureSha256": "f00fd684c83248702e150d824f2c733cbc08692584ab78b28866b86406f15e99",
+    "diffSha256": "04457f60fe584989c8ebdf73f5e5a72a82734ed35964b95a2508f023a3d21b93",
+    "audioSha256": "fcf79a0b8481d71b4f20c4dcb27f68f262ee2f5455e5f07d8f9fa1a3edabdd33",
+    "audioBytes": 1689,
+    "manualAudioRepeatCount": 1200,
+    "expectedTotalBytes": 2026800,
+    "expectedFullBodySha256": "9c6ab4e2e8033ec4d3ef6b3dabe648c1d5e9c29c0ebbc23fbcbd80474f55aaeb",
+    "initialBytes": 65536,
+    "laterChunkBytes": 8192,
+    "laterDelaySeconds": 0.5,
+    "humanCancellationOnly": true
+  },
+  "collectorSources": [
+    {
+      "file": "Capture-A041.ps1",
+      "sha256": "0acd17f7b832046571e33ac42ebb17c8f1b692fded784ceb6a0207206b114ca9"
+    },
+    {
+      "file": "Capture-A041-v2.ps1",
+      "sha256": "54b1a1fa6f820b630b858fdfcc19a31858ed358e84cd070e881fd57c8a97bf85"
+    },
+    {
+      "file": "Prepare-A045.ps1",
+      "sha256": "3039abebceb92650c74a4140a2dbe8ca712974a7cc2d9f8892668035fcb91576"
+    },
+    {
+      "file": "Audit-A045.ps1",
+      "sha256": "80d1a2180321ede7caeda5b57f2acadc3aa46d83218af56d7a7e2c6137b9161b"
+    }
+  ],
+  "claims": {
+    "realArchiveUsed": false,
+    "nativePowerScope": "Windows Sandbox guest only",
+    "hostSleepOrLidPreventionVerified": false,
+    "automaticResumeVerified": false,
+    "numericPhysicalCancellationExitVerified": false,
+    "releaseAuthorized": false,
+    "published": false
+  },
+  "preservedRawRecords": [
+    {
+      "file": "a041-error-4c472fdf8aa6425d820ea238deeef610.json",
+      "sha256": "c99288c9db570bddf401fb6d964cf70c2cf1e45877dba82df68669d2ff33dd69"
+    },
+    {
+      "file": "a041-human-close.json",
+      "sha256": "7c390c4af305e727771c056c3935a808938aa90fb44f0f7f22a7e76fde63a13b"
+    },
+    {
+      "file": "a041-human-summary.json",
+      "sha256": "8144483e44c9a41aa25a125f848003af50d0c052d299f2728646697976f8e657"
+    },
+    {
+      "file": "a041-v2-file-capture.json",
+      "sha256": "24288ac25e879401d60cbf90a974f69d6ccd3ed28ce9f97563db4904c21dc67d"
+    },
+    {
+      "file": "A045-PS51-e6b6b45f2d254082b3febb79458c082c-audit.json",
+      "sha256": "726be0c1267ee9735f3ca62a3b7b33dfbe22a5fd2b32fa1637941f171e527b71"
+    },
+    {
+      "file": "A045-PS51-e6b6b45f2d254082b3febb79458c082c-human.json",
+      "sha256": "c63366be878b624e012bef1abbcc2ab54c8b482c61d2bd0ae29fc6221324c6b5"
+    },
+    {
+      "file": "A045-PS51-ready.json",
+      "sha256": "ef0cef169d2ac038bb718641ed372372e0c31d45ed298575f1773f1162277869"
+    },
+    {
+      "file": "A045-PS7-d71d06e573404772951605c86c8d60e2-audit.json",
+      "sha256": "d47b4079b7626d1f572e4a2b5446dc3afff8f884fda13bea1c413507be958fd8"
+    },
+    {
+      "file": "A045-PS7-d71d06e573404772951605c86c8d60e2-human.json",
+      "sha256": "6544fd71854340c64f2254d823e8b062daa84a68aa882acc3c9e524710944aa9"
+    },
+    {
+      "file": "A045-PS7-ready.json",
+      "sha256": "f3f519ffdd450997f1852bdfacd27b08219e3d75272fc80590b2cf6087ad4852"
+    },
+    {
+      "file": "sandbox-ready.json",
+      "sha256": "ed7214214a69579f6af2b0cb8b0ee5f5f57c415cf895e8143ccb5a64c6de8dcc"
+    }
+  ],
+  "recordingPython": "3.12.14"
+}

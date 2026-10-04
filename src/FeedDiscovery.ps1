@@ -138,10 +138,10 @@ function Test-PodcastHtmlSource {
 
 function Resolve-PodcastSource {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Uri, $Response)
+    param([Parameter(Mandatory)][string]$Uri, $Response, $Policy = (New-PodcastTransportPolicy))
 
     $original = Get-PodcastRequestUri -Uri $Uri
-    if ($null -eq $Response) { $Response = Invoke-PodcastWebRequest -Uri $Uri }
+    if ($null -eq $Response) { $Response = Invoke-PodcastWebRequest -Uri $Uri -Policy $Policy }
     if ($null -eq $Response -or $null -eq $Response.PSObject.Properties['Content'] -or
         $null -eq $Response.Content -or $Response.Content -isnot [string]) {
         throw 'The metadata response does not contain supported source text.'

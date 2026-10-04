@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in ACCEPTANCE_CASES.json. A001-A047 passed; A048-A060 remain NOT RUN. Saved-show/batch A046/A047 use real DPAPI/protected ACL/loopback/media/checkpoint evidence in [UPD-0304](evidence/UPD-0304.md). A044/A045 use actual Windows ConsoleHost/native API observations with catchable typed cancellation; physical keyboard Ctrl+C and hard-kill restoration remain unclaimed. See [progress/power evidence](evidence/UPD-0303.md) and [Windows observations](evidence/UPD-0303-WINDOWS.md). Helper results and historical defect characterizations are separate from downloader acceptance. See [UPD-0302 evidence](evidence/UPD-0302.md), [UPD-0301 evidence](evidence/UPD-0301.md) and [actual launcher observations](evidence/UPD-0301-LAUNCHER.md).
+Canonical statuses are in [ACCEPTANCE_CASES.json](ACCEPTANCE_CASES.json): **59 passed / 1 not_run**. Direct human Windows Sandbox observations resolved A041 Explorer double-click and A045 physical Ctrl+C under native PowerShell5.1.26100.9444 and PowerShell7.6.5 on exact unreleased candidate `ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8`; see [manual evidence](evidence/UPD-0502-MANUAL.md). Native power scope is the guest, current Explorer numeric exit is unavailable, and preserved uncheckpointed cancellation tails require conservative review rather than a claimed automatic resume. A057/A058 retain completed reconciliation/refusal-policy evidence; A059 has the gate-qualified owner handoff. **59 of59 mandatory cases are ready_for_owner_review**, with A060 canonical not_run/reviewed owner_gate for separate exact action authority and outcome. See [UPD-0502 evidence](evidence/UPD-0502.md), [owner review](OWNER_REVIEW.md) and [readiness reconciliation](RELEASE_READINESS.md). A055 remains portable content/capture instructions only; no screenshot, physical display/accessibility approval or deployment is claimed. Historical helper/workflow/CI checks remain distinct from product/manual observations.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -51,16 +51,16 @@ Canonical statuses are in ACCEPTANCE_CASES.json. A001-A047 passed; A048-A060 rem
 | A045 | UPD-0303 | manual | passed | Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented. |
 | A046 | UPD-0304 | integration | passed | Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported. |
 | A047 | UPD-0304 | integration | passed | Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show. |
-| A048 | UPD-0401 | workflow | not_run | No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks. |
-| A049 | UPD-0402 | manual | not_run | Commands work, functions/parameters exist, capabilities match tests, no promised unreleased feature or machine-wide security bypass. |
-| A050 | UPD-0402 | manual | not_run | All scope is explicit; legacy unverified files not presented as verified; repair procedure avoids deleting originals. |
-| A051 | UPD-0403 | workflow | not_run | Deterministic file inventory and version; checksums validate; includes imported modules/license/help; excludes logs, media, secrets, test fixtures and handoff history. |
-| A052 | UPD-0403 | manual | not_run | No hidden checkout dependency; source version traceable; original MIT license retained. |
-| A053 | UPD-0404 | workflow | not_run | Minimal job permissions, reviewed SHA-pinned actions, no pull_request_target execution of untrusted code, secret-safe artifacts; no automatic public release. |
-| A054 | UPD-0404 | workflow | not_run | Draft/artifacts ready; no tag push, release publication, merge, branch deletion, visibility/settings change or purchase occurs. |
-| A055 | UPD-0405 | manual | not_run | Current-version placeholder not falsely advertised as released; features/limitations/privacy/license/support accurate; real UI not generated imagery. |
-| A056 | UPD-0405 | workflow | not_run | Portable static content/metadata only; no domain, hosting, DNS or live site changes. |
-| A057 | UPD-0501 | manual | not_run | All mandatory cases have concrete evidence; user archive untouched; unrun/manual cases remain clearly outstanding. |
-| A058 | UPD-0501 | workflow | not_run | Gate fails; bundle/server validation never substitutes for downloader acceptance. |
-| A059 | UPD-0502 | workflow | not_run | Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable. |
+| A048 | UPD-0401 | workflow | passed | No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks. |
+| A049 | UPD-0402 | manual | passed | Commands work, functions/parameters exist, capabilities match tests, no promised unreleased feature or machine-wide security bypass. |
+| A050 | UPD-0402 | manual | passed | All scope is explicit; legacy unverified files not presented as verified; repair procedure avoids deleting originals. |
+| A051 | UPD-0403 | workflow | passed | Deterministic file inventory and version; checksums validate; includes imported modules/license/help; excludes logs, media, secrets, test fixtures and handoff history. |
+| A052 | UPD-0403 | manual | passed | No hidden checkout dependency; source version traceable; original MIT license retained. |
+| A053 | UPD-0404 | workflow | passed | Minimal job permissions, reviewed SHA-pinned actions, no pull_request_target execution of untrusted code, secret-safe artifacts; no automatic public release. |
+| A054 | UPD-0404 | workflow | passed | Draft/artifacts ready; no tag push, release publication, merge, branch deletion, visibility/settings change or purchase occurs. |
+| A055 | UPD-0405 | manual | passed | Current-version placeholder not falsely advertised as released; features/limitations/privacy/license/support accurate; real UI not generated imagery. |
+| A056 | UPD-0405 | workflow | passed | Portable static content/metadata only; no domain, hosting, DNS or live site changes. |
+| A057 | UPD-0501 | manual | passed | All mandatory cases have concrete evidence; user archive untouched; unrun/manual cases remain clearly outstanding. |
+| A058 | UPD-0501 | workflow | passed | Gate fails; bundle/server validation never substitutes for downloader acceptance. |
+| A059 | UPD-0502 | workflow | passed | Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable. |
 | A060 | UPD-0502 | workflow | not_run | No inferred authority for other destructive/publication operations; audit trail records scope and resulting identifiers. |

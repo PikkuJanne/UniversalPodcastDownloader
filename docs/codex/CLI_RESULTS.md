@@ -1,6 +1,6 @@
 # Implemented CLI, result and launcher policy
 
-UPD-0301 and UPD-0304, 3 October 2026. The Windows script and batch entry points remain portable and use no runtime package.
+UPD-0301, UPD-0304 and the UPD-0401 boundary audit, 3 October 2026. The Windows script and batch entry points remain portable and use no runtime package.
 
 ## Arguments and interactive input
 
@@ -20,6 +20,8 @@ These are syntax examples using a reserved test domain. `-WhatIf` may retrieve b
 Animated progress is limited to an interactive ConsoleHost with unredirected output, `-NonInteractive` absent and the caller's progress preference set to Continue. Validated response totals drive percentages; unknown totals show received bytes. An episode reaches 100% only after verified media and completion history, and the run reaches 100% only when all selected work is verified without catalogue gaps. See [progress and power policy](PROGRESS_AND_POWER.md).
 
 ## Callable API and script boundary
+
+UPD-0401 removes hidden script transport/page defaults. Each run owns one explicit policy; standalone resolver helpers use independent defaults (three attempts/20 pages) unless supplied Policy/MaxPages. Imports and completed/failed/cancelled runs preserve caller preferences, transport/page variables and LASTEXITCODE. The internal Write-Log compatibility wrapper is removed in favor of the existing Write-PodcastDiagnostic helper, avoiding a built-in cmdlet collision. A typed cancellation while guided feed resolution is in progress propagates to the ordinary 130 result instead of asking for another URL.
 
 Dot-sourcing the root script loads import-safe helpers, including `Invoke-PodcastRun`. Calling that function returns a `Podcast.RunResult` object and never exits its caller's host. The executable script emits the result only with `-PassThru`, then exits with its `ExitCode`. Native `-PassThru` output is PowerShell's textual formatting alongside console messages; it is not a JSON protocol. In-process callers can use the returned object directly.
 

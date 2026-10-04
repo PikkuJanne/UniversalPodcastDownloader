@@ -7,8 +7,11 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
+
+env:
+  # Test and package the same immutable event source, including pull request heads.
+  UPD_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
   group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,6 +22,8 @@ jobs:
     name: Windows / ${{ matrix.engine }}
     runs-on: windows-2022
     timeout-minutes: 40
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -35,8 +40,20 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.UPD_SOURCE_COMMIT }}
           persist-credentials: false
           clean: false
+          fetch-depth: 1
+          fetch-tags: false
+          submodules: false
+          lfs: false
+          set-safe-directory: false
+
+      - name: Verify exact tested source
+        run: |
+          if ($env:UPD_SOURCE_COMMIT -cnotmatch '^[0-9a-f]{40}$') { throw 'Expected a full lowercase event commit.' }
+          $actual = (& git --no-replace-objects rev-parse HEAD)
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:UPD_SOURCE_COMMIT) { throw 'Checkout differs from the tested event source.' }
 
       - name: Set up fixture Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -84,3 +101,45 @@ jobs:
           $lines += ''
           $lines += 'Test and analysis steps report their actual counts separately. Runtime inventory is not a test result.'
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+
+  candidate:
+    name: Unpublished portable candidate
+    needs: windows
+    if: ${{ success() && needs.windows.result == 'success' }}
+    runs-on: windows-2022
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out the exact tested source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.UPD_SOURCE_COMMIT }}
+          persist-credentials: false
+          clean: false
+          fetch-depth: 1
+          fetch-tags: false
+          submodules: false
+          lfs: false
+          set-safe-directory: false
+
+      - name: Build and validate the candidate upload allowlist
+        id: prepared
+        run: ./scripts/Prepare-ReleaseCandidate.ps1 -SourceCommit $env:UPD_SOURCE_COMMIT -OutputDirectory ./artifacts/releases -GitHubOutput $env:GITHUB_OUTPUT
+
+      - name: Upload only the three unpublished candidate files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: candidate-${{ env.UPD_SOURCE_COMMIT }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ steps.prepared.outputs.zipPath }}
+            ${{ steps.prepared.outputs.manifestPath }}
+            ${{ steps.prepared.outputs.checksumPath }}
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
+          overwrite: false
+          compression-level: 0

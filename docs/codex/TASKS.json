@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0401",
+  "current_task": "UPD-0502",
   "status_values": [
     "todo",
     "ready",
@@ -615,7 +615,7 @@
       "id": "UPD-0401",
       "milestone": "M4",
       "title": "Complete maintainability and compatibility audit",
-      "status": "ready",
+      "status": "done",
       "dependencies": [
         "UPD-0304"
       ],
@@ -636,15 +636,17 @@
       "acceptance_ids": [
         "A048"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0401.md"
+      ],
+      "implementation_commit": "8abe0505995dc0c38cc111155f4e0080dc6d39b9",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0402",
       "milestone": "M4",
       "title": "Write verified help and user documentation",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0401"
       ],
@@ -665,15 +667,17 @@
         "A049",
         "A050"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0402.md"
+      ],
+      "implementation_commit": "66fb8b426b3a47b4ebc1f24c4b11be7c4ff3f29a",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0403",
       "milestone": "M4",
       "title": "Build traceable release ZIPs and checksums",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0402"
       ],
@@ -694,15 +698,18 @@
         "A051",
         "A052"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0403.md"
+      ],
+      "implementation_commit": "6bcb7c64bdfbc64d6489dad622e70443b1a3464f",
+      "verification_followup": "Unit-only native diagnostic whitespace correction and stronger dirty/missing-license output-absence checks after historical CI37133849561; final rebuilt source and full CI require separate verification in PR before handoff.",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0404",
       "milestone": "M4",
       "title": "Prepare secure GitHub release workflow",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0403"
       ],
@@ -724,15 +731,17 @@
         "A053",
         "A054"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0404.md"
+      ],
+      "implementation_commit": "f9d18f94027bb102d2fdb757783b10f46a995d1d",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0405",
       "milestone": "M4",
       "title": "Prepare website-ready distribution content",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0404"
       ],
@@ -752,15 +761,17 @@
         "A055",
         "A056"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0405.md"
+      ],
+      "implementation_commit": "1e4a794193d94c118062cbc9f59d4c9bb7c0f9e1",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/5"
     },
     {
       "id": "UPD-0501",
       "milestone": "M5",
       "title": "Run release-candidate acceptance from a clean clone",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0405"
       ],
@@ -803,15 +814,19 @@
         "A057",
         "A058"
       ],
-      "evidence": [],
-      "implementation_commit": null,
-      "pr": null
+      "evidence": [
+        "docs/codex/evidence/UPD-0501.md",
+        "docs/codex/RELEASE_ACCEPTANCE.json",
+        "docs/codex/RELEASE_READINESS.md"
+      ],
+      "implementation_commit": "7cdd085b2866d911e8e70e34a4fcf0ac1b40cca2",
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/6"
     },
     {
       "id": "UPD-0502",
       "milestone": "M5",
       "title": "Owner-review handoff and publication gate",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "UPD-0501"
       ],
@@ -833,9 +848,15 @@
         "A059",
         "A060"
       ],
-      "evidence": [],
+      "evidence": [
+        "docs/codex/evidence/UPD-0502.md",
+        "docs/codex/evidence/UPD-0502-MANUAL.md",
+        "docs/codex/OWNER_REVIEW.md",
+        "docs/releases/APPROVAL_CHECKLIST.md"
+      ],
       "implementation_commit": null,
-      "pr": null
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/6",
+      "verification_followup": "Owner-review preparation complete after actual A041 Explorer and both-engine A045 physical Ctrl+C observations; all59 mandatory cases supported and readiness ready_for_owner_review. Final documentation head/tree/CI/artifact are independently recorded in PR #6 after verification. A060 remains canonical not_run/reviewed owner_gate; no exact publication action was authorized or performed."
     }
   ]
 }

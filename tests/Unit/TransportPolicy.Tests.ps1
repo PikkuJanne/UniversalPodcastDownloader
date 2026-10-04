@@ -136,19 +136,28 @@ Describe 'A025: bounded transport retry decisions' -Tag 'Unit', 'A025' {
 
     It 'does not start an attempt after scheduler oversleep exhausts the budget' {
         $script:Policy.Delay = { param($Milliseconds) $null = $Milliseconds; $script:Now = $script:Now.AddSeconds(121) }
-        {
+        $caught = $null
+        try {
             Invoke-PodcastTransportOperation -Policy $script:Policy -Operation {
                 $script:Calls++
                 throw (New-PodcastTransportException -Kind Connection -Message 'Retry later.' -Retryable $true)
             }
-        } | Should -Throw '*budget expired*'
+        }
+        catch { $caught = Get-PodcastTransportFailure -ErrorObject $_ }
+        $caught.Message | Should -BeLike '*budget expired*'
+        $caught.Data['Kind'] | Should -Be 'Deferred'
+        $caught.Data['Attempts'] | Should -Be 1
         $script:Calls | Should -Be 1
     }
 
     It 'fails safely if the injected clock does not advance instead of retrying early' {
         $script:Policy.Delay = { param($Milliseconds) $null = $Milliseconds }
-        { Invoke-PodcastTransportOperation -Policy $script:Policy -Operation { throw (New-PodcastTransportException -Kind Connection -Message 'Retry later.' -Retryable $true) } } |
-            Should -Throw '*clock did not advance*'
+        $caught = $null
+        try { Invoke-PodcastTransportOperation -Policy $script:Policy -Operation { throw (New-PodcastTransportException -Kind Connection -Message 'Retry later.' -Retryable $true) } }
+        catch { $caught = Get-PodcastTransportFailure -ErrorObject $_ }
+        $caught.Message | Should -BeLike '*clock did not advance*'
+        $caught.Data['Kind'] | Should -Be 'Deferred'
+        $caught.Data['Attempts'] | Should -Be 1
     }
 
     It 'allows a successful active operation to outlast the retry budget' {
