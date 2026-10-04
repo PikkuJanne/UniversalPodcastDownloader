@@ -1,16 +1,20 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-  "sourceTree": "f609d23918e840119d9fb3aee22a85e7dd9e1a48",
+  "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+  "sourceTree": "86cbb1c5907aa37b5db1af56bbbfd7913fe326af",
   "candidateVersion": "0.1.0-rc.1",
   "candidateStatus": "UNRELEASED_CANDIDATE",
-  "assessmentStatus": "NOT_READY",
+  "assessmentStatus": "READY_FOR_OWNER_REVIEW",
   "verification": {
     "testedSourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
     "candidateRuntimeFingerprint": "709367285219c0ac0f4f1b8be2d346d6b91d5d6885b3b3afc27372352f745ca1",
     "testedRuntimeFingerprint": "709367285219c0ac0f4f1b8be2d346d6b91d5d6885b3b3afc27372352f745ca1",
-    "sourceBinding": "exact",
-    "equivalenceEvidence": null,
+    "sourceBinding": "reviewed_equivalent",
+    "equivalenceEvidence": {
+      "path": "docs/codex/evidence/UPD-0502-MANUAL.md",
+      "line": 5,
+      "scope": "Exact ed3/tree86c candidate identity is preserved with independently verified all29-runtime/all36-payload raw-Git byte equivalence to immutable tested6a; equal runtime fingerprint709367285219c0ac0f4f1b8be2d346d6b91d5d6885b3b3afc27372352f745ca1. Historical local both-engine All1791/analysis116 retain tested6a identities; exact ed3 CI37180637487 All1862/analysis118 and artifact11295685474 are separately recorded."
+    },
     "engines": [
       {
         "name": "PS51",
@@ -73,7 +77,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -106,7 +110,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -135,7 +139,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -178,8 +182,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual import is guarded against prompt/network/file/progress activity and caller preference changes; later runtime-only copied imports test real import/isolated caller state too."
@@ -210,7 +214,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -253,8 +257,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Zero/one/many selection, array shapes, positive counts and every Latest/Custom/All combination have direct units plus actual loopback entry-point behavior."
@@ -296,8 +300,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Real noninteractive Windows request paths no longer require legacy DOM/security confirmation; later centralized bounded HttpClient metadata/media adapters retain the same no-DOM contract."
@@ -339,8 +343,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Pure naming regressions retain full identifiers and deterministic Windows-safe components, Unicode boundaries and clear path-budget refusal; real near-limit entry paths are exercised."
@@ -382,8 +386,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Real junction/dangling-junction and late boundary injection plus hostile metadata verify output containment, reparse refusal and preserved existing bytes."
@@ -425,8 +429,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Identity/case-insensitive collision planning and real competing placements preserve separate files/original hashes without accidental overwrite."
@@ -468,8 +472,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual killed/disconnected owned workers leave no false completed final; reruns preserve abandoned evidence and obtain original bytes. Later durable resume tests add exact checkpoint/range recovery."
@@ -511,8 +515,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual invalid/truncated/empty/text bodies fail; valid lengthless and generic media can complete; measured framing/signatures and advisory enclosure sizes are asserted."
@@ -554,8 +558,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Same-directory temporary placement, real competing final bytes and exclusive reopening prove no-overwrite finalization and exercised stream cleanup."
@@ -597,8 +601,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "RSS GUID/Atom ID/exact URL identity, explicit feed aliases and retained recorded paths survive title/date/signature changes where durable evidence permits."
@@ -640,8 +644,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Strict history, held locks, actual child-process crashes around replacement/placement and conservative prepared evidence preserve valid prior state and corrupt evidence."
@@ -683,8 +687,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Real repeat runs check recorded size/hash; missing files recover safely, while same-size edits/changed/unknown media remain preserved conflicts."
@@ -737,8 +741,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Owned copied/synthetic legacy inventory, preview/adoption/separate redownload/metadata rollback assert unchanged original names, bytes and hashes with explicit evidence classifications."
@@ -791,8 +795,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Explicit reviewed file/digest adoption remains transfer-unverified through reruns/remote changes; no blanket download, deletion or implicit confidence upgrade occurs."
@@ -834,8 +838,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual early discovery failure initializes unique local startup diagnostics or safe fallback/stderr without replacing the primary error."
@@ -877,8 +881,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Synthetic secret-bearing URLs/headers/errors are checked across routine output/log/export projections; fixed allowlists exclude private runtime/state objects."
@@ -920,8 +924,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual Unicode/concurrent-run/unwritable-sink processes verify UTF-8, unique run IDs, fixed fallback and original-error precedence."
@@ -974,8 +978,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual WhatIf and real ShouldProcess No via a test PSHost perform metadata reads only, preserving trees and making zero planned media/config/log/state/lock/power mutations."
@@ -1017,8 +1021,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "HTTP(S)/redirect/handler policy units plus loopback cross-host behavior retain TLS verification and prohibit unsafe targets/cookies/default credential propagation."
@@ -1060,8 +1064,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual bounded RSS/Atom/DTD/oversize/malformed parsing rejects expansion and entity HTTP fetches; an exclusively held sentinel plus explicit Prohibit/null resolvers supports no file resolution."
@@ -1103,8 +1107,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Injected clocks/waits and real loopback transient/permanent/Retry-After/truncation responses establish bounded attempts, no early retries and deferred over-budget work."
@@ -1146,8 +1150,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual delayed-header/idle-body/continuously progressing streams and unit cancellation probes verify distinct header/idle budgets without an inappropriate short total-body timeout."
@@ -1189,8 +1193,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual killed/caught transfer recovery validates partial bytes/hash, strong ETag, exact Range/If-Range/206 totals and complete original final bytes."
@@ -1232,8 +1236,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual ignored/inconsistent ranges and weak/missing/changed representation evidence never blindly append; bounded fresh attempts preserve old partial/sidecar evidence with safe diagnostics."
@@ -1275,8 +1279,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual 416/corrupt/cross-episode sidecar/partial cases preserve unknown evidence and reject false completion/concatenation/deletion."
@@ -1318,8 +1322,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual direct/show-page TUI and CLI resolver processes share candidates and reuse fetched metadata once; only selected direct candidates are fetched."
@@ -1361,8 +1365,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Synthetic pure discovery units cover redirected/base-relative URLs, entities, whitespace/order, inert markup, deduplication and ambiguity policies."
@@ -1404,8 +1408,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Root-aware RSS/Atom/HTML/empty/malformed classification and useful distinct private diagnostics have direct units and actual resolution support."
@@ -1447,8 +1451,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Pure invariant Gregorian UTC/date-order tests across en-US/de-DE/fi-FI plus actual midnight/history boundaries prove deterministic ordering and naming without locale mutation."
@@ -1490,8 +1494,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Desired Atom published-before-updated selection and ID regressions replaced the old characterization; actual Latest/history cases preserve identity/paths."
@@ -1533,8 +1537,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Desired supported-audio selection, extensionless/canonical naming and bounded structured container units replace first-video characterization and preserve original bytes/history ownership."
@@ -1576,8 +1580,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual loopback generic MIME/HTML/video/ambiguous container transfers assert accepted original bytes or conservative failure and no falsely accepted history."
@@ -1619,8 +1623,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual two-page All, duplicates, cycle, ambiguity and configured ceilings fetch bounded supported chains once, preserve bytes and report incomplete scope."
@@ -1662,8 +1666,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual Latest/Custom fetch later pages before UTC selection; unavailable/malformed/HTML continuation gaps remain incomplete; preview makes metadata-only requests."
@@ -1716,8 +1720,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual script processes infer CustomCount, reject conflicts/invalid/noninteractive missing inputs before prompting, and preserve binding-aware WhatIf/Confirm semantics."
@@ -1770,8 +1774,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual script/import/launcher result boundaries preserve 0/2/1 and catchable typed130, private outcomes, honest incomplete summaries and host survival; synthetic launcher child130 proves forwarding separately."
@@ -1781,7 +1785,7 @@
       "id": "A041",
       "task": "UPD-0301",
       "type": "manual",
-      "status": "not_run",
+      "status": "passed",
       "canonicalStatusAtAudit": "passed",
       "evidence": [
         {
@@ -1816,21 +1820,42 @@
             "PS7"
           ],
           "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502-MANUAL.md",
+          "line": 5,
+          "kind": "actual_windows_gui",
+          "scope": "Direct human Explorer double-click of the unchanged extracted argument-free batch in C:\\UPD manual ä\\Podcast test ü, guided synthetic feed/count input, Summary Downloaded1/Skipped0/Adopted0/Failed0, retained Press Enter to close and confirmed original-window close. Guest package/hash/history/MP3 checks preserve the exact candidate. Numeric exit for this Explorer process was unavailable and is not invented.",
+          "engines": [
+            "PS51"
+          ],
+          "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+          "observation": "explorer_double_click"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502-MANUAL.md",
+          "line": 5,
+          "kind": "actual_windows_console",
+          "scope": "Actual native5.1.26100.9444 ConsoleHost guided input, successful synthetic summary, closing pause and human-confirmed close supplement historical both-engine argument/quiet/missing-script/numeric-exit component observations on unchanged runtime bytes.",
+          "engines": [
+            "PS51"
+          ],
+          "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8"
         }
       ],
-      "requiredUnrun": [
-        "Explorer double-click from a space/Unicode extraction path with real guided launcher flow."
-      ],
+      "requiredUnrun": [],
       "limits": [
-        "Explorer double-click visual/association behavior is explicitly untested; accessibility/layout and physical Ctrl+C are also not claimed."
+        "One actual Windows Sandbox Explorer launch and its guided/closing behavior were observed; physical accessibility/layout, screenshots and every file-association configuration are outside this observation.",
+        "The current Explorer-launched numeric exit code is unavailable. Historical exact process invocation/argument/exit checks remain separate component evidence; no current numeric exit was inferred."
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "current_manual_review"
       },
       "proven": [
-        "Real Windows batch plumbing, quoted space/Unicode paths, literal data and actual terminal feed/count/closing prompts are recorded; no-argument/parameterized/missing-script paths return observed codes."
+        "Real Windows batch plumbing, quoted space/Unicode paths, literal data and actual terminal feed/count/closing prompts are recorded; no-argument/parameterized/missing-script paths return observed codes.",
+        "Actual human Explorer double-click and guided pause/close behavior now observed on the exact unchanged ed3 candidate; trusted synthetic MP3 and transfer_verified history preserved."
       ]
     },
     {
@@ -1869,8 +1894,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual owned competing/same-show/independent-show processes and persistent lock handles verify exclusion, safe recovery, no second media request and original state/hash preservation."
@@ -1912,8 +1937,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Real owned ACL denial/restoration, actual streamed bytes/closed guards/cancelled checkpoints and validated-size capacity probes preserve originals and produce useful safe errors."
@@ -1955,7 +1980,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -1966,7 +1991,7 @@
       "id": "A045",
       "task": "UPD-0303",
       "type": "manual",
-      "status": "not_run",
+      "status": "passed",
       "canonicalStatusAtAudit": "passed",
       "evidence": [
         {
@@ -1990,22 +2015,46 @@
             "PS7"
           ],
           "sourceCommit": null
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502-MANUAL.md",
+          "line": 5,
+          "kind": "actual_windows_console",
+          "scope": "Direct human keyboard Ctrl+C during real receiving bytes in nativePS51.26100.9444 and PS7.6.5 ConsoleHost, with product progress closed, exclusively reopened archive files, no final MP3/verified history, and preserved correct synthetic partials483328/139264bytes. Durable checkpoints remain65536bytes with exact prefix hashes; whole partial/checkpoint mismatch requires documented conservative review, and automatic resume was not verified. No callable result or numeric downloader exit was invented.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+          "observation": "physical_ctrl_c"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502-MANUAL.md",
+          "line": 5,
+          "kind": "actual_native_api",
+          "scope": "Actual opt-in SetThreadExecutionState leases activated in each Windows Sandbox guest run and restored previous0x80000000 on their own activation/restoration native threads; each lease inactive, Restored=true, IsAlive=false after physical Ctrl+C. Audit did not perform cleanup or change persistent power settings.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+          "observation": "physical_ctrl_c"
         }
       ],
-      "requiredUnrun": [
-        "Actual Ctrl+C/control-signal interruption of the opted-in keep-awake run and observation of its claimed cleanup behavior."
-      ],
+      "requiredUnrun": [],
       "limits": [
-        "The required Ctrl+C condition was replaced by a typed exception in recorded probes; actual keyboard/control-signal cancellation is unrun.",
-        "Physical sleep/lid prevention, hard-kill/power-loss cleanup and arbitrary native restoration failure remain explicitly outside guarantees."
+        "Native API and physical keyboard observations cover the Windows Sandbox guest only; physical host sleep/lid prevention, hard-kill/power-loss and arbitrary native restoration failure remain outside guarantees.",
+        "Both physical interruptions returned no callable result. Last native child status is not the downloader exit; no130 or0 result was inferred.",
+        "Preserved483328/139264-byte partials are trusted fixture prefixes, but their durable65536-byte sidecars do not match whole partial length/hash. Current strict resume refuses uncheckpointed tails without truncating or guessing; automatic resume after these physical interruptions was not verified."
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "reviewed_unchanged_source"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "current_manual_review"
       },
       "proven": [
-        "Actual native SetThreadExecutionState requests/default-off/success/failure/typed cancellation restore prior flags on the owning thread, preserving another thread's request; no persistent power setting is changed."
+        "Actual native SetThreadExecutionState requests/default-off/success/failure/typed cancellation restore prior flags on the owning thread, preserving another thread's request; no persistent power setting is changed.",
+        "Physical keyboard Ctrl+C in both supported Windows engines now confirms the exercised guest native lease restoration, progress/handle cleanup and preserved uncompleted evidence."
       ]
     },
     {
@@ -2044,8 +2093,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual Windows DPAPI CurrentUser, secure ACLs, strict malformed/schema/config preservation and sanitized projections are exercised in real owned dispatcher/entry processes."
@@ -2087,8 +2136,8 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
-        "basis": "current_product_rerun"
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
+        "basis": "reviewed_unchanged_source"
       },
       "proven": [
         "Actual sequential run/request order, failure isolation, repeated hashes, combined counts/exit, untouched preview and retained partial/cancelled next-show state are asserted."
@@ -2130,7 +2179,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2184,7 +2233,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2238,7 +2287,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2281,7 +2330,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2346,7 +2395,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2378,7 +2427,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2407,7 +2456,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2436,7 +2485,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2465,7 +2514,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "reviewed_unchanged_source"
       },
       "proven": [
@@ -2500,16 +2549,27 @@
             "PS7"
           ],
           "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9"
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502-MANUAL.md",
+          "line": 5,
+          "kind": "manual_source_review",
+          "scope": "Current exact-candidate review reconciles all60 cases against new direct human Explorer/Ctrl+C reports, preserved package/media/history/native cleanup evidence and unchanged-source tests;59 mandatory cases satisfied within recorded limits, A060 action authority separate, real archive/private subscriptions untouched.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8"
         }
       ],
       "requiredUnrun": [],
       "limits": [
-        "This is the completed acceptance review required by UPD-0501; it deliberately reports NOT_READY while A041/A045/A059 remain unresolved.",
+        "Historical UPD-0501 completed the acceptance review and correctly reported NOT_READY with A041/A045/A059 unresolved at that time; current UPD-0502 actual manual evidence and qualified handoff are recorded separately.",
         "Synthetic loopback/copied-original and process observations are not physical Explorer/Ctrl+C, live publisher, physical accessibility or publication evidence."
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "current_manual_review"
       },
       "proven": [
@@ -2542,7 +2602,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "current_manual_review"
       },
       "proven": [
@@ -2553,39 +2613,49 @@
       "id": "A059",
       "task": "UPD-0502",
       "type": "workflow",
-      "status": "not_run",
+      "status": "passed",
       "canonicalStatusAtAudit": "not_run",
       "evidence": [
         {
           "path": "docs/codex/evidence/UPD-0501.md",
           "line": 80,
           "kind": "workflow",
-          "scope": "The later UPD-0502 handoff has not run and its all-mandatory-gates-met precondition is unmet while A041/A045 remain outstanding; this is concrete reconciliation of an unrun case, not pass evidence.",
+          "scope": "Historical refusal/preparation record before actual manual observations: The later UPD-0502 handoff has not run and its all-mandatory-gates-met precondition is unmet while A041/A045 remain outstanding; this is concrete reconciliation of an unrun case, not pass evidence.",
           "engines": [],
           "sourceCommit": null
         },
         {
           "path": "docs/codex/evidence/UPD-0502.md",
-          "line": 13,
+          "line": 55,
           "kind": "workflow",
-          "scope": "Concrete UPD-0502 review package, exact predecessor identities, approval checklist and continuation prepared. A041/A045 remain unrun; all-mandatory-gates-met precondition unmet. This is partial handoff/refusal evidence, not a passed final readiness handoff.",
+          "scope": "Historical refusal/preparation record before actual manual observations: Concrete UPD-0502 review package, exact predecessor identities, approval checklist and continuation prepared. A041/A045 remain unrun; all-mandatory-gates-met precondition unmet. This is partial handoff/refusal evidence, not a passed final readiness handoff.",
           "engines": [],
           "sourceCommit": null
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502.md",
+          "line": 5,
+          "kind": "workflow",
+          "scope": "Final UPD-0502 owner-review handoff binds the qualified review to exact unreleased ed3/tree86c candidate0.1.0-rc.1, branchcodex/upd-m5-acceptance, draftPR6, successful exact-source CI37180637487 and verified artifact11295685474; A041/A045 literal conditions resolved, mandatory59of59 ready_for_owner_review, publication authority/published false and A060 separate.",
+          "engines": [
+            "PS51",
+            "PS7"
+          ],
+          "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8"
         }
       ],
-      "requiredUnrun": [
-        "Final gate-qualified UPD-0502 handoff after A041 Explorer double-click and A045 physical Ctrl+C conditions are resolved."
-      ],
+      "requiredUnrun": [],
       "limits": [
-        "A059 precondition remains unmet; no ready_for_owner_review or pass claim while mandatory conditions remain unresolved."
+        "Readiness qualifies the exact reviewed unreleased ed3 candidate for owner review only; a later source/artifact needs its own explicit source-equivalence, current synchronization and validation records.",
+        "A060 remains canonical not_run/reviewed owner_gate. No merge, tag, release publication, settings change or deployment authority is inferred."
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "current_manual_review"
       },
       "proven": [
-        "Owner-review preparation is complete with explicit unresolved conditions; readiness remains not_ready and task blocked."
+        "Gate-qualified owner-review package and exact candidate/branch/PR/CI/artifact/version identifiers prepared after required direct manual observations; mandatory59of59 satisfied within recorded limits."
       ]
     },
     {
@@ -2605,7 +2675,7 @@
         },
         {
           "path": "docs/codex/evidence/UPD-0502.md",
-          "line": 19,
+          "line": 39,
           "kind": "workflow",
           "scope": "Task requested preparation. Normal feature-branch push/draft PR update are within implementation scope; no exact publication action was authorized/performed. Action-specific approval and verified resulting identifiers remain outstanding.",
           "engines": [],
@@ -2618,7 +2688,7 @@
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
-        "sourceCommit": "6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9",
+        "sourceCommit": "ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8",
         "basis": "current_manual_review"
       },
       "proven": [

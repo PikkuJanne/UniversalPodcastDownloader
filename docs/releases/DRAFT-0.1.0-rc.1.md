@@ -1,6 +1,6 @@
 # 0.1.0-rc.1 — draft release notes
 
-Status: **UNRELEASED_CANDIDATE / NOT_READY**. These are local review material. Tags and releases were empty on the fresh 4 October 2026 inspection (Europe/Berlin). Required Explorer double-click and physical Ctrl+C observations, the final gate-qualified handoff and exact publication authority remain outstanding. See the [owner-review package](../codex/OWNER_REVIEW.md) and [approval checklist](APPROVAL_CHECKLIST.md) before any distribution decision.
+Status: **UNRELEASED_CANDIDATE / ready_for_owner_review**. These are local review material. Tags and releases were empty on the4October2026 inspection (Europe/Berlin). Actual human Explorer double-click and both-engine physical Ctrl+C observations resolve the former manual gaps; all59 mandatory cases and the UPD-0502 preparation handoff are supported. Canonical59 passed/1 not_run. A060 remains a separate owner action gate, with releaseAuthorized=false and published=false. See the [owner-review package](../codex/OWNER_REVIEW.md) and [approval checklist](APPROVAL_CHECKLIST.md) before any distribution decision.
 
 ## What the candidate contains
 
@@ -12,7 +12,7 @@ The portable ZIP includes both entry points, all 27 runtime helpers, original MI
 
 ## Compatibility and recovery
 
-Both supported Windows engines have concrete automated and fresh-extraction evidence. Exact versions, selected counts, failures and unrun cases are in [clean-clone evidence](../codex/evidence/UPD-0501.md), [handoff evidence](../codex/evidence/UPD-0502.md) and the final draft PR. CI also records its hosted Windows Server image and installed engine versions. These observations do not certify all Windows builds, podcast providers or audio files.
+Both supported Windows engines have concrete automated and extraction evidence. [Manual completion evidence](../codex/evidence/UPD-0502-MANUAL.md) adds human Explorer-guided download/Enter-to-close and physical Ctrl+C during receiving under nativePS5.1.26100.9444 and PS7.6.5 ConsoleHosts in Windows Sandbox, using unchanged extracted sourceed3cd45ddbc5f3d485ad29062420b11d3fc02fd8/tree86cbb1c5907aa37b5db1af56bbbfd7913fe326af. Numeric current Explorer child exit was unavailable. The real guest native leases restored and ended; progress closed, handles reopened and incomplete synthetic bytes/history were preserved. These observations do not claim physical host sleep/lid prevention. Exact versions, selected counts, dated failures and source boundaries are in [clean-clone evidence](../codex/evidence/UPD-0501.md), [handoff evidence](../codex/evidence/UPD-0502.md) and the final draft PR. CI records its separate hosted Windows Server image and engine versions. These observations do not certify all Windows builds, providers or recordings.
 
 Extract a candidate into a new directory, keep `src` with the launchers, and read the packaged README before choosing an archive. Keep older ZIPs/manifests/checksums separately. Application-code rollback does not restore archive or saved-configuration schemas. Preserve media, history/backups, partials and resume sidecars; test rollback with explicit synthetic copies. Completed or unknown media must never be overwritten to force a migration.
 
@@ -22,7 +22,7 @@ Extract a candidate into a new directory, keep `src` with the launchers, and rea
 - Media checks recognize supported containers conservatively; they do not decode the entire audio recording. No transcoding changes the original bytes.
 - Requests go to user-selected feed/media hosts, which may log them. The product adds no telemetry. Share redacted diagnostics, and avoid pasting private URLs into shell history or transcripts.
 - DPAPI protects credentials at rest for the current Windows user; it does not protect against compromise of that user/admin account, live memory access, or already-recorded input/transcripts.
-- Physical Ctrl+C, sleep/lid/hard termination, failed cleanup, hardware power loss and network-share durability retain the limitations described in the README. Catchable cancellation tests do not establish guarantees for those events.
+- Physical Ctrl+C was observed in both supported Sandbox engines with real guest native restoration. Retained partials483328/139264 bytes match the known synthetic prefixes, while each saved65536-byte sidecar mismatches the longer partial's full size/hash. Strict resume would refuse and preserve those pairs for review. These physical ConsoleHost interruptions do not establish a successful resume, terminal-checkpoint guarantee or callable exit130. Sleep/lid/hard termination, failed cleanup, hardware power loss and network-share durability retain the README's limitations.
 - The script is unsigned. The batch launcher applies process-only execution policy to its child; it does not weaken machine/user policy. Authenticode, certificate purchase and trust-store changes require a separate owner decision.
 - Checksums establish byte equality against a trusted expected value; they alone do not authenticate the publisher. Repeated ZIP bytes are checked within one compression implementation; equal bytes across engines are not promised.
 
@@ -40,6 +40,6 @@ Use the exact final-head candidate report and successful workflow run, never a m
 | Artifact | Exact run ID/name; CI retention is 7 days |
 | ZIP and manifest hashes | Values independently checked against `SHA256SUMS` and source |
 | Intended tag/action | Owner-selected exact tag and separately authorized action |
-| Final readiness | NOT_READY: A041/A045/A059 unresolved; A060 separately owner-gated. Any explicit scope change requires a deliberate review of claims and policy |
+| Final readiness | ready_for_owner_review: all59 mandatory cases supported; A060 canonical not_run/reviewed owner_gate. No acceptance waiver/policy change or publication authority inferred. |
 
 No release download link or tag is invented here. The final PR records concrete candidate identifiers without embedding a document's own commit hash into itself. A CI candidate upload is review storage, not approval to create a GitHub release.

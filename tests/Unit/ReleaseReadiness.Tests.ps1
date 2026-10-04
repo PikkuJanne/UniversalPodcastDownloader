@@ -80,10 +80,18 @@ Describe 'A058 release-readiness reviewed-input policy' -Tag 'Unit', 'A058' {
         (Invoke-UpdReadyAssessment $script:ReadinessFixture).assessment | Should -BeExactly 'ready_for_owner_review'
     }
 
-    It 'keeps the current reviewed A041 A045 and A059 gaps outstanding' {
-        $review = [IO.File]::ReadAllText((Join-Path $script:ReadinessRepo 'docs/codex/RELEASE_ACCEPTANCE.json')) | ConvertFrom-Json
-        $canonical = $script:ReadinessCanonicalText | ConvertFrom-Json
-        $report = Test-UpdReleaseReadiness -Review $review -Canonical $canonical -RepositoryRoot $script:ReadinessRepo
+    It 'keeps explicitly unrun A041 A045 and A059 conditions outstanding' {
+        # Acceptance records can advance after real observations. Keep this
+        # refusal regression independent of their current reviewed status.
+        foreach ($id in @('A041', 'A045', 'A059')) {
+            $row = @($script:ReadinessFixture.Review.cases | Where-Object { $_.id -eq $id })[0]
+            $row.status = 'not_run'
+            $row.requiredUnrun = @('Explicitly unrun acceptance condition in this synthetic policy fixture.')
+            @($script:ReadinessFixture.Canonical.cases | Where-Object { $_.id -eq $id })[0].status = 'not_run'
+        }
+        $script:ReadinessFixture.Review.cases[40].evidence = @($script:ReadinessFixture.Review.cases[40].evidence | Where-Object { $_.kind -ne 'actual_windows_gui' })
+        $script:ReadinessFixture.Review.cases[44].evidence[0].PSObject.Properties.Remove('observation')
+        $report = Invoke-UpdReadyAssessment $script:ReadinessFixture
         $report.assessment | Should -BeExactly 'not_ready'
         foreach ($id in @('A041', 'A045', 'A059')) {
             @($report.issues | Where-Object { $_.caseId -eq $id }).Count | Should -BeGreaterThan 0

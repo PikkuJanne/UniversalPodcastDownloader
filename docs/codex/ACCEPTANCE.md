@@ -1,6 +1,6 @@
 # Acceptance matrix
 
-Canonical statuses are in [ACCEPTANCE_CASES.json](ACCEPTANCE_CASES.json): **56 passed / 4 not_run**. A041 Explorer double-click and A045 physical Ctrl+C remain unrun despite retained terminal/native API/catchable-cancellation component evidence. A057/A058 passed the completed acceptance reconciliation and negative-readiness protocol in [UPD-0501](evidence/UPD-0501.md). The [UPD-0502 package](OWNER_REVIEW.md) is prepared, but A059's all-mandatory-gates-met precondition is unmet; A060 remains canonical not_run/reviewed owner_gate with no exact authorized/performed action. See [UPD-0502 evidence](evidence/UPD-0502.md) and [readiness reconciliation](RELEASE_READINESS.md). A055 is portable content and accurate real-UI capture instructions only; no screenshot, physical display/accessibility approval or deployment is claimed. Historical helper/workflow checks do not replace product/manual observations.
+Canonical statuses are in [ACCEPTANCE_CASES.json](ACCEPTANCE_CASES.json): **59 passed / 1 not_run**. Direct human Windows Sandbox observations resolved A041 Explorer double-click and A045 physical Ctrl+C under native PowerShell5.1.26100.9444 and PowerShell7.6.5 on exact unreleased candidate `ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8`; see [manual evidence](evidence/UPD-0502-MANUAL.md). Native power scope is the guest, current Explorer numeric exit is unavailable, and preserved uncheckpointed cancellation tails require conservative review rather than a claimed automatic resume. A057/A058 retain completed reconciliation/refusal-policy evidence; A059 has the gate-qualified owner handoff. **59 of59 mandatory cases are ready_for_owner_review**, with A060 canonical not_run/reviewed owner_gate for separate exact action authority and outcome. See [UPD-0502 evidence](evidence/UPD-0502.md), [owner review](OWNER_REVIEW.md) and [readiness reconciliation](RELEASE_READINESS.md). A055 remains portable content/capture instructions only; no screenshot, physical display/accessibility approval or deployment is claimed. Historical helper/workflow/CI checks remain distinct from product/manual observations.
 
 | ID | Task | Type | Status | Expected result |
 |---|---|---|---|---|
@@ -44,11 +44,11 @@ Canonical statuses are in [ACCEPTANCE_CASES.json](ACCEPTANCE_CASES.json): **56 p
 | A038 | UPD-0206 | integration | passed | Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success. |
 | A039 | UPD-0301 | integration | passed | Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive. |
 | A040 | UPD-0301 | integration | passed | Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host. |
-| A041 | UPD-0301 | manual | not_run | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |
+| A041 | UPD-0301 | manual | passed | Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible. |
 | A042 | UPD-0302 | integration | passed | Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented. |
 | A043 | UPD-0302 | integration | passed | Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed. |
 | A044 | UPD-0303 | manual | passed | Progress never reports misleading 100% before success; episode/byte information honest; readable noninteractive summary. |
-| A045 | UPD-0303 | manual | not_run | Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented. |
+| A045 | UPD-0303 | manual | passed | Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented. |
 | A046 | UPD-0304 | integration | passed | Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported. |
 | A047 | UPD-0304 | integration | passed | Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show. |
 | A048 | UPD-0401 | workflow | passed | No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks. |
@@ -62,5 +62,5 @@ Canonical statuses are in [ACCEPTANCE_CASES.json](ACCEPTANCE_CASES.json): **56 p
 | A056 | UPD-0405 | workflow | passed | Portable static content/metadata only; no domain, hosting, DNS or live site changes. |
 | A057 | UPD-0501 | manual | passed | All mandatory cases have concrete evidence; user archive untouched; unrun/manual cases remain clearly outstanding. |
 | A058 | UPD-0501 | workflow | passed | Gate fails; bundle/server validation never substitutes for downloader acceptance. |
-| A059 | UPD-0502 | workflow | not_run | Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable. |
+| A059 | UPD-0502 | workflow | passed | Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable. |
 | A060 | UPD-0502 | workflow | not_run | No inferred authority for other destructive/publication operations; audit trail records scope and resulting identifiers. |

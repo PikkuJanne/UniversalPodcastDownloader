@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and downloader acceptance. UPD-0501 reconciles evidence with literal preconditions: A041 Explorer double-click and A045 physical Ctrl+C remain not_run despite passing components; A057/A058 acceptance review/refusal passed. UPD-0502 prepares the owner-review package while A059 all-mandatory-gates-met precondition remains unmet and A060 action authority/outcome remains separately owner-gated. A055 is content/capture-instructions review, without screenshot or physical display approval. Helper checks and green CI never substitute for downloader acceptance; no publication authority inferred.",
+  "meaning": "Workflow and downloader acceptance. UPD-0501 retains its historical refusal/reconciliation evidence. UPD-0502 adds direct human Explorer double-click and physical Ctrl+C observations on the exact ed3 unreleased candidate in Windows Sandbox: A041/A045 passed within recorded guest/native/byte-preservation limits; A059 gate-qualified owner handoff passed. Current canonical counts are 59 passed / 1 not_run; A060 exact publication authority/action/outcome remains separately owner-gated. A055 is content/capture-instructions review without screenshot or physical display approval. Helper checks and green CI never substitute for downloader acceptance; no publication authority inferred.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -454,8 +454,8 @@
       "when": "Launch, including forwarded arguments.",
       "expected": "Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": "docs/codex/evidence/UPD-0501.md"
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0502-MANUAL.md"
     },
     {
       "id": "A042",
@@ -498,8 +498,8 @@
       "when": "Run/stop.",
       "expected": "Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": "docs/codex/evidence/UPD-0501.md"
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0502-MANUAL.md"
     },
     {
       "id": "A046",
@@ -652,7 +652,7 @@
       "when": "Prepare final handoff.",
       "expected": "Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable.",
       "fixture": null,
-      "status": "not_run",
+      "status": "passed",
       "evidence": "docs/codex/evidence/UPD-0502.md"
     },
     {
