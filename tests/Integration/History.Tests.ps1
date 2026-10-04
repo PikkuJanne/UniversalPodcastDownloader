@@ -133,7 +133,9 @@ Describe 'Durable history against actual processes and loopback transfers' {
         $changedHash = (Get-FileHash -LiteralPath $archive.MediaPath -Algorithm SHA256).Hash
         $second = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $second.Result.Succeeded | Should -BeFalse
-        $second.ExitCode | Should -Be 1
+        $second.ExitCode | Should -Be 2
+        $second.Result.RunResult.Conflicts | Should -Be 1
+        $second.Result.RunResult.Failed | Should -Be 0
         $second.Stdout | Should -Match 'Downloaded\s+: 0'
         $second.Stdout | Should -Match 'Skipped\s+: 0'
         $second.Stdout | Should -Match 'Failed\s+: 1'
@@ -189,7 +191,8 @@ Describe 'Durable history against actual processes and loopback transfers' {
         $second = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $second.Result.Succeeded | Should -BeFalse
         $second.ExitCode | Should -Be 1
-        ($second.Stdout + $second.Result.ErrorMessage) | Should -Match 'state|history|schema'
+        $second.Result.RunResult.Status | Should -Be 'fatal'
+        $second.Result.ErrorMessage | Should -Match 'Private error details were omitted'
         (Get-FileHash -LiteralPath $archive.Path -Algorithm SHA256).Hash | Should -Be $damagedHash
         (Get-FileHash -LiteralPath $archive.BackupPath -Algorithm SHA256).Hash | Should -Be $backupHash
         (Get-FileHash -LiteralPath $archive.MediaPath -Algorithm SHA256).Hash | Should -Be $script:historyMediaHash
@@ -212,7 +215,8 @@ Describe 'Durable history against actual processes and loopback transfers' {
         $second = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $second.Result.Succeeded | Should -BeFalse
         $second.ExitCode | Should -Be 1
-        ($second.Stdout + $second.Result.ErrorMessage) | Should -Match 'state|history|backup'
+        $second.Result.RunResult.Status | Should -Be 'fatal'
+        $second.Result.ErrorMessage | Should -Match 'Private error details were omitted'
         if ($Problem -eq 'missing-primary') { Test-Path -LiteralPath $archive.Path | Should -BeFalse }
         else { (Get-FileHash -LiteralPath $archive.Path -Algorithm SHA256).Hash | Should -Be $primaryHash }
         (Get-FileHash -LiteralPath $archive.BackupPath -Algorithm SHA256).Hash | Should -Be $backupHash
@@ -321,7 +325,13 @@ Describe 'Durable history against actual processes and loopback transfers' {
         }
         $blocked = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath '/feeds/history.xml'
         $blocked.Result.Succeeded | Should -BeFalse
-        ($blocked.Stdout + $blocked.Result.ErrorMessage) | Should -Match 'lock|writer|another|use'
+        $blocked.Result.RunResult.Status | Should -Be 'fatal'
+        $expectedMessage = if ($Scope -eq 'Show') {
+            'The podcast archive writer lock is in use. Wait for the current writer to finish, then retry.'
+        } else {
+            'The archive selection lock is in use. Wait for the current writer to finish, then retry.'
+        }
+        $blocked.Result.ErrorMessage | Should -BeExactly $expectedMessage
         (Get-FileHash -LiteralPath $archive.Path -Algorithm SHA256).Hash | Should -Be $stateHash
         (Get-UpdFixtureState -Context $context).'/media/history.mp3' | Should -Be 1
         $holder.Process.Kill()

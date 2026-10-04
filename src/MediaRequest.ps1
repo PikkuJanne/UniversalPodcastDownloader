@@ -18,6 +18,7 @@ function Invoke-PodcastMediaRequest {
     $response = $null
     $source = $null
     $callbackFailure = $null
+    $requestFailed = $false
     $failure = 'Media request or stream failed before completion.'
     try {
         if (-not $DestinationStream.CanWrite) {
@@ -89,7 +90,9 @@ function Invoke-PodcastMediaRequest {
         }
     }
     catch {
+        $requestFailed = $true
         if ($null -ne $callbackFailure) { throw $callbackFailure }
+        if (Test-PodcastCancellation -ErrorObject $_) { throw }
         $transportFailure = Get-PodcastTransportFailure -ErrorObject $_
         if ($null -ne $transportFailure) { throw $transportFailure }
         # Transport exceptions can contain a signed URL, credentials, or body
@@ -104,7 +107,10 @@ function Invoke-PodcastMediaRequest {
                 catch { $cleanupFailed = $true }
             }
         }
-        if ($cleanupFailed) { throw 'Media request resources could not be closed safely.' }
+        if ($cleanupFailed) {
+            if (-not $requestFailed) { throw 'Media request resources could not be closed safely.' }
+            Write-Verbose 'Media request cleanup failed; the primary operation failure is preserved.'
+        }
         # The caller keeps exclusive ownership of DestinationStream and closes it.
     }
 }

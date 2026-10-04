@@ -20,6 +20,7 @@ from urllib.parse import parse_qs, urlsplit
 FIXTURES = Path(__file__).resolve().parent / 'fixtures'
 FEEDS = {
     '/feeds/single.xml': 'rss-single.xml', '/feeds/empty.xml': 'rss-empty.xml',
+    '/feeds/empty-pagination-gap.xml': 'rss-empty-pagination-gap.xml',
     '/feeds/collisions.xml': 'rss-collisions.xml', '/feeds/atom.xml': 'atom-dates.xml',
     '/feeds/dates.xml': 'rss-date-cases.xml', '/feeds/media.xml': 'rss-media.xml',
     '/feeds/page-1.xml': 'rss-page-1.xml', '/feeds/page-2.xml': 'rss-page-2.xml',

@@ -48,7 +48,8 @@ function Resolve-PodcastCatalogue {
         [Parameter(Mandatory)]$InitialResolution,
         [ValidateRange(1, 100)][int]$MaxPages = 20,
         [ValidateRange(1, 10000)][int]$MaxItems = 10000,
-        [ValidateRange(1, 33554432)][int]$MaxCharacters = 33554432
+        [ValidateRange(1, 33554432)][int]$MaxCharacters = 33554432,
+        $Policy = (New-PodcastTransportPolicy)
     )
 
     $first = $InitialResolution
@@ -106,8 +107,9 @@ function Resolve-PodcastCatalogue {
         if ($pagesFetched -ge $MaxPages) { $reason = 'page_limit'; break }
         if ($itemsSeen -ge $MaxItems) { $reason = 'item_limit'; break }
         if ($characters -ge $MaxCharacters) { $reason = 'character_limit'; break }
-        try { $nextPage = Resolve-PodcastSource -Uri $target.AbsoluteUri }
+        try { $nextPage = Resolve-PodcastSource -Uri $target.AbsoluteUri -Policy $Policy }
         catch {
+            if (Test-PodcastCancellation -ErrorObject $_) { throw }
             $reason = if ($null -ne (Get-PodcastTransportFailure -ErrorObject $_)) { 'page_failed' } else { 'invalid_page' }
             break
         }

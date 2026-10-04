@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "packageName": "UniversalPodcastDownloader",
+  "version": "0.1.0-rc.1",
+  "releaseStatus": "UNRELEASED_CANDIDATE",
+  "currentPublishedVersion": null,
+  "sourceRepository": "https://github.com/PikkuJanne/UniversalPodcastDownloader",
+  "sourceCommit": null,
+  "sourceTree": null,
+  "sourceCommitUrl": null,
+  "releaseTag": null,
+  "releaseUrl": null,
+  "publishedAt": null,
+  "assets": {
+    "portableZip": {
+      "fileName": "UniversalPodcastDownloader-0.1.0-rc.1.zip",
+      "url": null,
+      "sha256": null
+    },
+    "manifest": {
+      "fileName": "manifest.json",
+      "url": null,
+      "sha256": null
+    },
+    "checksums": {
+      "fileName": "SHA256SUMS",
+      "url": null
+    }
+  },
+  "releaseNotesUrl": null,
+  "license": "MIT",
+  "supportUrl": "https://github.com/PikkuJanne/UniversalPodcastDownloader/issues",
+  "screenshot": {
+    "status": "CAPTURE_INSTRUCTIONS_ONLY",
+    "fileName": null,
+    "url": null,
+    "sourceCommit": null,
+    "capturedAt": null
+  }
+}

@@ -112,7 +112,7 @@ Describe 'A035/A036 supported audio at real transfer and history boundaries' {
         param($Feed, $Media, $Category)
         $run = Invoke-UpdIntegrationWorker -Context $context -Action Download -FeedPath ('/feeds/format-' + $Feed + '.xml')
         $run.Result.Succeeded | Should -BeFalse
-        $run.ExitCode | Should -Be 1
+        $run.ExitCode | Should -Be 2
         $run.Stdout | Should -Match 'Downloaded\s+: 0'
         $run.Stdout | Should -Match 'Failed\s+: 1'
         $run.Stdout | Should -Match $Category

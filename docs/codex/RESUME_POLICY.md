@@ -2,6 +2,8 @@
 
 Resume is automatic for a recorded episode under the existing archive writer lock and confirmed download operation. It adds no command-line option or runtime dependency. Original media bytes, history schemas 1/2, prepared completion evidence and no-overwrite final placement remain the completion protocol.
 
+UPD-0302 forces an eligible actual-byte checkpoint on catchable cancellation before closing the exclusive partial stream. A failed final checkpoint write preserves cancellation, the prior sidecar and actual partial for review; strict resume rejects any length/hash mismatch. Newly reserved unknown-length or otherwise uncheckpointed partials also survive catchable cancellation, without an invented sidecar. A fresh run preserves those unclaimed files and starts separately. Cleanup failures cannot replace an existing primary cancellation. These checks do not guarantee catchability for every physical Ctrl+C path, forced process kill or power loss. See [cancellation evidence](evidence/UPD-0302.md).
+
 ## Eligibility and response decisions
 
 A fresh HTTP 200 can create resume evidence only with a positive Content-Length, one strong quoted ASCII ETag of at most 1,024 characters, a parsed non-multipart media type and identity content encoding. Weak or absent ETags, Last-Modified alone and unknown total length use ordinary fresh transfers. Accept-Ranges is only advisory and is not required.

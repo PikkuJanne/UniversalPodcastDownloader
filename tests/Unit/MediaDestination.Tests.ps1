@@ -81,8 +81,9 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
         Mock Write-Host {}
         $destinationFeedFixture = [pscustomobject]@{ Content = '<rss><channel><title>Show</title>' + $Items + '</channel></rss>' }
         Mock Invoke-PodcastMetadataRequest { $destinationFeedFixture }
-        { & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All } |
-            Should -Throw $ExpectedMessage
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $script:OutputRoot -Mode All
+        $result.ExitCode | Should -Be 1
+        $result.Message | Should -BeExactly $ExpectedMessage
         @(Get-ChildItem -LiteralPath $script:OutputRoot -Force).Count | Should -Be 0
         Should -Invoke Invoke-PodcastMetadataRequest -Times 1 -Exactly
         Should -Invoke Invoke-PodcastMediaRequest -Times 0 -Exactly
@@ -99,7 +100,8 @@ Describe 'A010: media destination write boundaries' -Tag 'Unit', 'A010' {
             [pscustomobject]@{ Completed = $true; Bytes = $fixtureMedia.Length; ContentLength = $fixtureMedia.Length; ContentType = 'audio/mpeg' }
         }
         $tightRoot = Join-Path $TestDrive ('x' * (120 - $TestDrive.Length - 1))
-        & $script:DownloaderPath -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $tightRoot -Mode All
+        $result = Invoke-PodcastRun -FeedUrl 'https://feed.example.invalid/rss' -OutputPath $tightRoot -Mode All
+        $result.ExitCode | Should -Be 0
         $media = @(Get-ChildItem -LiteralPath $tightRoot -File -Recurse -Filter '*.mp3')
         $media.Count | Should -Be 1
         $media[0].FullName.Length | Should -BeLessOrEqual 259
