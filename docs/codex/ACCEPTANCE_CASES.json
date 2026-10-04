@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and planned downloader acceptance. A001-A005 passed during bootstrap and test foundations; A006-A060 not_run. Helper checks and defect characterizations do not prove future downloader correctness.",
+  "meaning": "Workflow and downloader acceptance. UPD-0501 retains its historical refusal/reconciliation evidence. UPD-0502 adds direct human Explorer double-click and physical Ctrl+C observations on the exact ed3 unreleased candidate in Windows Sandbox: A041/A045 passed within recorded guest/native/byte-preservation limits; A059 gate-qualified owner handoff passed. Current canonical counts are 59 passed / 1 not_run; A060 exact publication authority/action/outcome remains separately owner-gated. A055 is content/capture-instructions review without screenshot or physical display approval. Helper checks and green CI never substitute for downloader acceptance; no publication authority inferred.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -69,8 +69,8 @@
       "when": "Select Latest, Custom=1, Custom=N, All.",
       "expected": "Selections are arrays; valid counts and progress; empty input is handled explicitly; no null/divide-by-zero errors on either Windows engine.",
       "fixture": "rss-single.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0101.md"
     },
     {
       "id": "A007",
@@ -80,8 +80,8 @@
       "when": "Fetch a fixture page/feed through each request code path.",
       "expected": "No legacy DOM parsing or security confirmation prompt; existing system security policy is not changed.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0101.md"
     },
     {
       "id": "A008",
@@ -91,8 +91,8 @@
       "when": "Build feed folders and filenames.",
       "expected": "Valid deterministic components; identifiers retained after shortening; Windows limits handled clearly.",
       "fixture": "names.json",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0102.md"
     },
     {
       "id": "A009",
@@ -102,8 +102,8 @@
       "when": "Plan and attempt writes into these destinations.",
       "expected": "No escape from output root, no metadata-controlled drive/UNC path and no silent traversal through unsafe reparse points.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0102.md"
     },
     {
       "id": "A010",
@@ -113,8 +113,8 @@
       "when": "Generate destinations for distinct episode identities.",
       "expected": "No accidental skip or overwrite; case-insensitive collisions also handled.",
       "fixture": "rss-collisions.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0102.md"
     },
     {
       "id": "A011",
@@ -124,8 +124,8 @@
       "when": "Download, then rerun.",
       "expected": "Only an owned partial file exists after interruption; final name absent until completion; rerun never counts partial as complete.",
       "fixture": "http:/media/truncated.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0103.md"
     },
     {
       "id": "A012",
@@ -135,8 +135,8 @@
       "when": "Download each.",
       "expected": "Invalid bodies fail; valid EOF-terminated audio can succeed; RSS enclosure length mismatch is advisory, not by itself proof of corruption.",
       "fixture": "http:/media/html.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0103.md"
     },
     {
       "id": "A013",
@@ -146,8 +146,8 @@
       "when": "Finalize a new temporary download.",
       "expected": "No existing file is overwritten; temporary file is on destination volume; all streams close on failure.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0103.md"
     },
     {
       "id": "A014",
@@ -157,8 +157,8 @@
       "when": "Refresh the same subscription.",
       "expected": "Identity remains stable where evidence permits; exact media request URLs are not destructively normalized; distinct feeds cannot collide by title.",
       "fixture": "atom-dates.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0104.md"
     },
     {
       "id": "A015",
@@ -168,8 +168,8 @@
       "when": "Restart the run.",
       "expected": "Previous valid state retained; reconciliation is conservative; corrupted history is preserved and reported, not silently reset.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0104.md"
     },
     {
       "id": "A016",
@@ -179,8 +179,8 @@
       "when": "Rerun the feed.",
       "expected": "History is checked against disk; missing/changed media is not blindly skipped; no unknown file is deleted.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0104.md"
     },
     {
       "id": "A017",
@@ -190,8 +190,8 @@
       "when": "Preview migration and then apply only explicitly approved adoption.",
       "expected": "Existing file hashes remain unchanged; verified/adopted/unverified/conflict states are distinguishable; no blanket redownload or deletion.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0105.md"
     },
     {
       "id": "A018",
@@ -201,8 +201,8 @@
       "when": "Assess migration confidence.",
       "expected": "No claim of cryptographically verified completeness; adoption requires an explicit policy/owner choice; remote content changes do not trigger overwrites.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0105.md"
     },
     {
       "id": "A019",
@@ -212,8 +212,8 @@
       "when": "Start a normal run and trigger failure.",
       "expected": "A startup diagnostic exists in a writable fallback location or stderr reports why logging is unavailable; original failure is preserved.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0106.md"
     },
     {
       "id": "A020",
@@ -223,8 +223,8 @@
       "when": "Write console, verbose, logs and a diagnostic export.",
       "expected": "Shareable output contains no raw secret-bearing URL/header; use host plus opaque ID by default; runtime state containing secrets is excluded from exports.",
       "fixture": "privacy-cases.json",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0106.md"
     },
     {
       "id": "A021",
@@ -234,8 +234,8 @@
       "when": "Run and terminate.",
       "expected": "Consistent UTF-8, unique run IDs; log failure never replaces the primary error; best-effort console fallback is clear.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0106.md"
     },
     {
       "id": "A022",
@@ -245,8 +245,8 @@
       "when": "Run -WhatIf and decline -Confirm.",
       "expected": "Feed-only reads allowed as documented; no media request, folder/file/history/config/log/lock creation or keep-awake mutation; no subsequent false completion.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0107.md"
     },
     {
       "id": "A023",
@@ -256,8 +256,8 @@
       "when": "Validate initial input and each redirect/discovery target.",
       "expected": "Only policy-approved HTTP(S) requests; TLS verification preserved; cross-origin credentials not forwarded; private local tests remain possible.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0107.md"
     },
     {
       "id": "A024",
@@ -267,8 +267,8 @@
       "when": "Parse under bounded XML settings.",
       "expected": "DTD rejected before expansion; no entity HTTP/file access; bounded response and parser resources; valid feeds parse.",
       "fixture": "xml-with-dtd.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0107.md"
     },
     {
       "id": "A025",
@@ -278,8 +278,8 @@
       "when": "Run retry policy with test-injected delay/clock.",
       "expected": "Attempts bounded; transient retries differ from permanent failures; Retry-After does not cause an early retry; wait beyond configured budget becomes deferred/failed.",
       "fixture": "http:/retry/once.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0201.md"
     },
     {
       "id": "A026",
@@ -289,8 +289,8 @@
       "when": "Download using configured timeouts.",
       "expected": "Connection/header and idle-body limits work; active long downloads are not killed by an inappropriate short overall timeout.",
       "fixture": "http:/media/stall.mp3",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0201.md"
     },
     {
       "id": "A027",
@@ -299,9 +299,9 @@
       "given": "Owned partial plus matching strong validator.",
       "when": "Request remaining bytes and receive consistent 206.",
       "expected": "Result equals original media byte-for-byte; offset, total and validator checked; state belongs to this transfer.",
-      "fixture": "http:/media/ok.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/valid",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A028",
@@ -310,9 +310,9 @@
       "given": "Server ignores Range, changes entity, uses only weak validator, omits validator or returns inconsistent range.",
       "when": "Try resume.",
       "expected": "Never blindly append; safely restart with explicit logging or leave partial for review.",
-      "fixture": "http:/media/ignore-range.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/ignore-range",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A029",
@@ -321,9 +321,9 @@
       "given": "416, corrupted resume sidecar, or local partial belongs to another episode.",
       "when": "Recover.",
       "expected": "No false completion, cross-episode concatenation or unsafe deletion; validated recovery/fresh transfer only.",
-      "fixture": "http:/media/always-416.mp3",
-      "status": "not_run",
-      "evidence": null
+      "fixture": "http:/resume/media/always-416",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0202.md"
     },
     {
       "id": "A030",
@@ -333,8 +333,8 @@
       "when": "Use TUI and command-line inputs.",
       "expected": "Shared resolution rules produce same candidates; already fetched feed response reused.",
       "fixture": "show-multiple.html",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A031",
@@ -344,8 +344,8 @@
       "when": "Discover and resolve candidates.",
       "expected": "Correct final base URI; all candidates deduplicated; interactive choice or clear deterministic/noninteractive policy.",
       "fixture": "show-multiple.html",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A032",
@@ -355,8 +355,8 @@
       "when": "Resolve.",
       "expected": "Root-aware classification and useful distinct diagnostics; substring matches alone do not prove a feed.",
       "fixture": "rss-empty.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0203.md"
     },
     {
       "id": "A033",
@@ -366,8 +366,8 @@
       "when": "Parse and sort.",
       "expected": "Culture-independent chronological ordering; deterministic ties/missing dates; documented filename-date convention.",
       "fixture": "rss-date-cases.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0204.md"
     },
     {
       "id": "A034",
@@ -377,8 +377,8 @@
       "when": "Select Latest.",
       "expected": "Use published when available; updated only a fallback; Atom ID collected.",
       "fixture": "atom-dates.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0204.md"
     },
     {
       "id": "A035",
@@ -388,8 +388,8 @@
       "when": "Choose enclosure and name final file.",
       "expected": "Deterministic supported-audio choice; correct extension; no transcode; unsupported/ambiguous content explained.",
       "fixture": "rss-media.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0205.md"
     },
     {
       "id": "A036",
@@ -399,8 +399,8 @@
       "when": "Validate downloaded content.",
       "expected": "Header alone neither guarantees validity nor rejects all generic audio; bounded sniffing, no promise of full decode/integrity validation.",
       "fixture": "http:/media/octet-stream",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0205.md"
     },
     {
       "id": "A037",
@@ -410,8 +410,8 @@
       "when": "Run All.",
       "expected": "Deduplicated accessible entries only; cycle/budget stop visible; no silent claim of complete historical catalogue.",
       "fixture": "rss-page-1.xml",
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0206.md"
     },
     {
       "id": "A038",
@@ -421,8 +421,8 @@
       "when": "Select episodes.",
       "expected": "Documented bounded selection; page-order assumptions explicit; retrieval gap yields incomplete result rather than false success.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0206.md"
     },
     {
       "id": "A039",
@@ -432,8 +432,8 @@
       "when": "Invoke entry point.",
       "expected": "Infer Custom when count alone; reject conflicting explicit mode/count; fail without Read-Host when noninteractive.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0301.md"
     },
     {
       "id": "A040",
@@ -443,8 +443,8 @@
       "when": "Run script and launcher.",
       "expected": "Documented 0/2/1/130 outcomes where cancellation is catchable; launcher preserves code; no [OK] after partial failure; module does not exit host.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0301.md"
     },
     {
       "id": "A041",
@@ -454,8 +454,8 @@
       "when": "Launch, including forwarded arguments.",
       "expected": "Simple interactive flow retained; arguments not evaluated as code; quiet/noninteractive path does not pause; missing script error visible.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0502-MANUAL.md"
     },
     {
       "id": "A042",
@@ -464,9 +464,9 @@
       "given": "Two processes target same show plus another independent show.",
       "when": "Start together, then cancel first.",
       "expected": "Exclusive writer protection for same archive; safe lock release/recovery; no crash-corrupt manifest; independent destination policy documented.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Integration/RunSafety.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0302.md"
     },
     {
       "id": "A043",
@@ -475,9 +475,9 @@
       "given": "Insufficient disk or write permission and cancellation mid-stream.",
       "when": "Preflight/start/stop.",
       "expected": "Useful early errors; no existing files changed; handles closed; partial state preserved safely; no unknown PID killed.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Integration/RunSafety.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0302.md"
     },
     {
       "id": "A044",
@@ -487,8 +487,8 @@
       "when": "Download.",
       "expected": "Progress never reports misleading 100% before success; episode/byte information honest; readable noninteractive summary.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0303-WINDOWS.md"
     },
     {
       "id": "A045",
@@ -498,8 +498,8 @@
       "when": "Run/stop.",
       "expected": "Off by default; temporary and restored in finally; no machine-wide power setting change; limitations on hard kill documented.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0502-MANUAL.md"
     },
     {
       "id": "A046",
@@ -509,8 +509,8 @@
       "when": "Load saved-show configuration.",
       "expected": "Versioned validated config with safe permissions; clear failure on malformed input; no execution of strings; no plaintext secrets exported.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0304.md"
     },
     {
       "id": "A047",
@@ -520,8 +520,8 @@
       "when": "Run batch and preview batch.",
       "expected": "Sequential bounded downloads, failure isolation, combined honest counts/exit; WhatIf does not mutate any show.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0304.md"
     },
     {
       "id": "A048",
@@ -531,8 +531,8 @@
       "when": "Run final structural/compatibility review and both engine suites.",
       "expected": "No new runtime packages, syntax incompatible with 5.1, destructive defaults, duplicated untested engines or global state leaks.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0401.md"
     },
     {
       "id": "A049",
@@ -542,8 +542,8 @@
       "when": "Copy/paste each advertised example on Windows.",
       "expected": "Commands work, functions/parameters exist, capabilities match tests, no promised unreleased feature or machine-wide security bypass.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0402.md"
     },
     {
       "id": "A050",
@@ -553,8 +553,8 @@
       "when": "Read limitations and recovery instructions.",
       "expected": "All scope is explicit; legacy unverified files not presented as verified; repair procedure avoids deleting originals.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0402.md"
     },
     {
       "id": "A051",
@@ -564,8 +564,8 @@
       "when": "Build ZIP twice with declared tooling.",
       "expected": "Deterministic file inventory and version; checksums validate; includes imported modules/license/help; excludes logs, media, secrets, test fixtures and handoff history.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0403.md"
     },
     {
       "id": "A052",
@@ -575,8 +575,8 @@
       "when": "Run supported smoke scenarios.",
       "expected": "No hidden checkout dependency; source version traceable; original MIT license retained.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0403.md"
     },
     {
       "id": "A053",
@@ -586,8 +586,8 @@
       "when": "Review CI and draft release.",
       "expected": "Minimal job permissions, reviewed SHA-pinned actions, no pull_request_target execution of untrusted code, secret-safe artifacts; no automatic public release.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0404.md"
     },
     {
       "id": "A054",
@@ -597,19 +597,19 @@
       "when": "Complete release preparation.",
       "expected": "Draft/artifacts ready; no tag push, release publication, merge, branch deletion, visibility/settings change or purchase occurs.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0404.md"
     },
     {
       "id": "A055",
       "task": "UPD-0405",
       "type": "manual",
-      "given": "Draft website content and real screenshot captured locally.",
-      "when": "Review against stable candidate.",
+      "given": "Draft website content and a real local screenshot or accurate capture instructions, as permitted by UPD-0405.",
+      "when": "Review against committed candidate source, current evidence and actual publication status.",
       "expected": "Current-version placeholder not falsely advertised as released; features/limitations/privacy/license/support accurate; real UI not generated imagery.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0405.md"
     },
     {
       "id": "A056",
@@ -619,8 +619,8 @@
       "when": "Prepare website material.",
       "expected": "Portable static content/metadata only; no domain, hosting, DNS or live site changes.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0405.md"
     },
     {
       "id": "A057",
@@ -630,8 +630,8 @@
       "when": "Run end-to-end acceptance under both engines and release ZIP.",
       "expected": "All mandatory cases have concrete evidence; user archive untouched; unrun/manual cases remain clearly outstanding.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A058",
@@ -640,9 +640,9 @@
       "given": "Mandatory cases pending, skipped, failed, or docs-only checks green.",
       "when": "Evaluate release readiness.",
       "expected": "Gate fails; bundle/server validation never substitutes for downloader acceptance.",
-      "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "fixture": "tests/Unit/ReleaseReadiness.Tests.ps1",
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0501.md"
     },
     {
       "id": "A059",
@@ -652,8 +652,8 @@
       "when": "Prepare final handoff.",
       "expected": "Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable.",
       "fixture": null,
-      "status": "not_run",
-      "evidence": null
+      "status": "passed",
+      "evidence": "docs/codex/evidence/UPD-0502.md"
     },
     {
       "id": "A060",
@@ -664,7 +664,7 @@
       "expected": "No inferred authority for other destructive/publication operations; audit trail records scope and resulting identifiers.",
       "fixture": null,
       "status": "not_run",
-      "evidence": null
+      "evidence": "docs/codex/evidence/UPD-0502.md"
     }
   ]
 }

@@ -1,13 +1,17 @@
 @echo off
-setlocal
+setlocal EnableExtensions DisableDelayedExpansion
 
-REM Folder where this .bat lives
-set "SCRIPT_DIR=%~dp0"
+REM The script owns the argument-free guided pause without reparsing arguments.
+set "UPD_LAUNCHER=1"
+set "UPD_LAUNCHER_SCRIPT=%~dp0UniversalPodcastDownloader.ps1"
+if not exist "%UPD_LAUNCHER_SCRIPT%" goto missing_script
 
-REM Run the PowerShell script with relaxed execution policy
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%UniversalPodcastDownloader.ps1"
+REM Remove an inherited shadow so ERRORLEVEL reports the actual child status.
+set "ERRORLEVEL="
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%UPD_LAUNCHER_SCRIPT%" %*
+set "UPD_LAUNCHER_EXIT=%ERRORLEVEL%"
+endlocal & exit /b %UPD_LAUNCHER_EXIT%
 
-echo.
-echo Done. You can close this window.
-pause
-endlocal
+:missing_script
+>&2 echo ERROR: UniversalPodcastDownloader.ps1 is missing next to the launcher.
+endlocal & exit /b 1

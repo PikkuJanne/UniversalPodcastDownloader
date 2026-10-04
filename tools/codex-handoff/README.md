@@ -26,16 +26,36 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/feeds/atom.xml`, `/feeds/dates.xml`, `/feeds/media.xml` | Atom/date/enclosure fixtures |
 | `/feeds/page-1.xml`, `/feeds/page-2.xml` | Duplicate across pages, with a next-link cycle |
 | `/feeds/dtd.xml`, `/feeds/malformed.xml` | Rejected XML cases |
+| `/feeds/external-http.xml`, `/feeds/external-file.xml?file=<encoded file URI>` | DTD entity declarations; HTTP references `/entity/never`, file URI is reflected into XML only and never read by the server |
+| `/feeds/internal-dtd.xml`, `/entity/never` | Internal entity expansion fixture; countable external-entity sentinel response |
+| `/feeds/oversized.xml`, `/feeds/oversized-no-length.xml` | Finite valid XML just above 8 MiB, with Content-Length or connection-close framing |
+| `/feeds/deep.xml`, `/feeds/many-nodes.xml` | Valid XML exceeding the proposed depth 64 / node 100,000 parser budgets |
+| `/feeds/redirect-media.xml`, `/feeds/redirect-file-media.xml` | Feeds pointing to a valid or forbidden media redirect |
 | `/show`, `/show/not-feed` | Multiple candidates/base/relative links; false feed substring |
+| `/discovery/redirect`, `/discovery/final/show.html` | Redirect to a deeper page with a relative feed link, proving final-response URI resolution |
+| `/discovery/base.html`, `/discovery/single.html` | Relative HTML base, entity-encoded query and duplicate candidates |
+| `/discovery/nonfeed-link.html` | Advertises an HTML page as an RSS target |
+| `/feeds/empty-atom.xml`, `/feeds/wrong-root.xml`, `/feeds/wrong-atom-namespace.xml` | Valid empty Atom, nested RSS under an unsupported root and incorrect Atom namespace |
+| `/feeds/publication-order.xml`, `/feeds/publication-midnight.xml` | Equal UTC instants mixed with missing/malformed dates; Atom publication crosses the UTC calendar-day boundary |
+| `/feeds/publication-history-rss.xml`, `/feeds/publication-history-atom.xml` | Stable IDs, titles and media; `POST /__recover` changes only publication date |
+| `/feeds/format-<scenario>.xml` | Named RSS/Atom enclosure choices, conflicting labels, generic response types and rejected container/text scenarios |
+| `/feeds/format-identity-selection.xml` | No publisher ID; URL-only MP3 first, with a later typed M4A alternative added by `POST /__recover` |
+| `/feeds/pagination-<scenario>.xml` | Finite RSS/Atom next chains, exact duplicate IDs/metadata, a newer entry on page two, explicit prev-archive, missing/malformed/HTML continuations and unsafe/ambiguous/ignored links |
+| `/feeds/pagination-relative.xml`, `/pagination/redirected/*` | Redirected effective URI plus inherited root/channel/link xml:base values resolve a named continuation |
+| `/media/pagination.mp3` | Original silent MP3, known framing and strong synthetic validator; query IDs distinguish entries without being logged |
+| `/media/format-*` | Original silent MP3 or deterministic M4A/isom/WAVE/FLAC/Ogg structural probes, audio-labelled HTML, video/unknown container evidence |
 | `/redirect/show` | Redirect to the show page |
 | `/redirect/loop` | Same-URL redirect loop |
+| `/redirect/feed`, `/redirect/file`, `/redirect/userinfo` | Relative valid feed target, forbidden file scheme, or synthetic embedded credentials |
+| `/redirect/cookie`, `/feeds/no-cookie.xml` | Set a synthetic cookie then redirect from IPv4 to localhost; records only a `/credential-received` counter if cookie/authorization headers reach the destination |
+| `/media/redirect.mp3`, `/media/redirect-file.mp3` | Relative media redirect or forbidden file target |
 | `/media/ok.mp3` | Silent MP3; strong ETag; correct single byte-range handling |
 | `/media/ignore-range.mp3` | Ignores Range and returns full body |
 | `/media/changed.mp3` | Changed entity and different strong ETag; stale If-Range produces full body |
 | `/media/weak.mp3`, `/media/no-validator.mp3` | Weak/absent validation evidence |
 | `/media/bad-range.mp3` | Intentionally inconsistent Content-Range |
 | `/media/always-416.mp3` | Always 416, including a Content-Range total |
-| `/media/truncated.mp3` | Disconnects after one third of declared body |
+| `/media/truncated.mp3` | Disconnects after one third of declared body; deliberately omits a validator to retain failed-attempt cleanup coverage |
 | `/media/empty.mp3`, `/media/html.mp3` | Empty or HTML masquerading as audio |
 | `/media/octet-stream` | Valid MP3 with generic Content-Type, no filename extension |
 | `/media/no-length.mp3` | Valid close-delimited media without Content-Length |
@@ -44,8 +64,19 @@ Feed placeholders `{{BASE_URL}}` and `{{AUDIO_BYTES}}` are replaced when served.
 | `/retry/once.mp3` | First request 503 with Retry-After: 1, then successful media |
 | `/status/403`, `/status/404`, `/status/429`, `/status/503` | Status tests; transient codes include Retry-After |
 | `/__stats` | Loopback-only path request counters (no query values) |
+| `/transport/feed/<scenario>` | RSS pointing to the same named media scenario; ordinary successful metadata |
+| `/transport/metadata/<scenario>`, `/transport/media/<scenario>` | Bounded transient/permanent status, Retry-After delta/date, header/idle stall, active progress and one-time truncated response fixtures |
+| `/transport/{metadata,media}/redirect-wait`, `/transport/{metadata,media}/redirect-defer` | Relative redirects with a one-second or five-second Retry-After; named `redirect-target` returns complete content |
+| `/__transport` | Fixed transport route names, request arrival timestamps and advertised earliest retry times; no query/header values |
+| `/resume/feed/<scenario>`, `/resume/media/<scenario>` | Stable synthetic RSS plus a 64-copy silent MP3; first response pauses after 64 KiB until the owned test releases `POST /__recover`. Named scenarios cover strong/weak/absent validators, missing length, ignored/changed/invalid ranges, 416 and renewed synthetic signatures |
+| `/__resume` | Fixed resume route names, bounded numeric Range and known synthetic If-Range values, presence flags and an original/renewed enum; no raw query or arbitrary header values |
+| `/resume/media/fresh-truncated-once`, `/resume/media/range-truncated-once` | A short first 200 body or short second-request 206 tail, followed by valid range handling, exercises durable checkpoints after caught failures |
 | `POST /__reset` | Resets test counters; unsupported otherwise |
 
 The fixed short delay exists to make tests quick. Configure a suitably smaller idle timeout only in the integration test. Inject clocks/delays for unit tests rather than waiting real long intervals. HEAD returns headers without a media body. The server handles HTTP/1.0 close-delimited responses intentionally; it is not a full production HTTP implementation.
 
+The legacy `/media/recover.mp3` and `/media/interrupt.mp3` routes also omit ETag. Their tests continue to cover safe fresh restart and preservation of unknown crash partials. Validator-bearing durable resume is exercised separately by the `/resume/` scenarios.
+
 Self-tests verify helper semantics and readiness-file safety. They do not exercise the PowerShell tool, interrupted archive recovery, TLS/proxy behavior, Windows file APIs or PowerShell versions. Codex must add those product tests in the planned tasks.
+
+`build_format_fixtures()` defines deterministic format probes. The checked-in `format-audio.*` and `format-isom-audio.m4a` assets match those exact byte arrays. WAVE contains small PCM silence; M4A/isom track handlers, FLAC metadata/frame prefix and Ogg identification pages exercise bounded structural recognition. The latter probes do not claim playable codec data, full decoding, CRC validation or complete audio integrity. They carry no real podcast content and the downloader must preserve their original bytes.

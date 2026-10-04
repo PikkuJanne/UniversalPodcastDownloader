@@ -1,155 +1,209 @@
-<#
-UniversalPodcastDownloader.ps1
-Minimal Win11 podcast downloader for personal offline archiving
+﻿<#
+.SYNOPSIS
+Downloads supported podcast audio from RSS or Atom feeds on Windows.
 
-Author: Janne Vuorela
-Target OS: Windows 11
-Dependencies: PowerShell 5.1+ or PowerShell 7+, Internet access
+.DESCRIPTION
+Run without arguments for guided feed discovery and episode selection, or supply
+an explicit feed/show-page URL. Latest selects one episode; Custom selects a
+positive count; All selects the accessible entries in the bounded feed catalogue.
+Ordering uses UTC publication dates, with source order for ties and undated items.
+Feed pagination gaps remain incomplete even when the requested count is reached.
+All does not guarantee a publisher's complete historical archive.
 
-SYNOPSIS
-    One-preset, no-frills podcast downloader intended for my own workflow:
-    archiving favorite shows from any RSS/Atom feed into a clean folder structure,
-    with a log file per run for later inspection.
+Original audio bytes are retained. Recognized media uses MP3, M4A, Ogg, WAVE or
+FLAC extensions. Stable identities and recorded paths support repeat runs;
+verified skips require matching recorded size and SHA-256. Unknown originals and
+partials are preserved. Owned resume checkpoints require matching local bytes
+and HTTP representation evidence. Legacy adoption remains transfer-unverified.
 
-WHAT THIS IS (AND ISN’T)
-    - Personal, purpose-built tool for my specific use case.
-      It trades advanced features for predictability, robustness, and a simple TUI.
-    - Text-UI when launched via the .bat wrapper (double-click).
-      Also supports direct PowerShell use with parameters.
-    - Universal RSS/Atom client:
-        - Can use a direct feed URL (ends in .xml, /feed, etc.)
-        - Or a normal “show page” URL and TRY to auto-detect the RSS feed.
-    - Focused on reliable downloads and traceability via log files,
-      not on fancy post-processing, tagging, or re-encoding.
+Saved-show operations are opt-in. Ordinary startup and one-off runs do not read
+configuration. Use one saved selector, except Batch may also use ShowName.
+Saving stores settings without retrieving the feed. Feed URLs use Windows DPAPI
+CurrentUser and protected current-user-only configuration permissions. ExportShows
+is a restricted summary, not a credential backup. Same-user/admin compromise,
+process memory, shell history and transcripts are outside that protection.
 
-FEATURES
-    - Guided TUI workflow:
-        - Explains how to find the RSS feed.
-        - Lets you paste either:
-            - RSS feed URL, or
-            - Show page URL for auto-detection.
-        - Asks how many newest episodes to download:
-            - Enter  = latest only
-            - Number = N newest episodes
-            - all    = whole feed
-    - Per-podcast subfolders based on feed title:
-        - Root:   <OutputPath> (default: %USERPROFILE%\Downloads\Podcasts)
-        - Folder: <FeedTitle> (sanitized)
-        - Files:  YYYY-MM-DD - Episode title.mp3
-    - Robust download loop:
-        - Up to 3 attempts per episode with short delay between tries.
-        - Skips episodes where the target file already exists.
-        - Summarizes downloaded / skipped / failed at the end.
-    - Verbose, per-run log file:
-        - Stored in the podcast folder next to the audio files.
-        - Named: YYYYMMDD_HHMMSS_<FeedTitle>.log
-        - Logs:
-            - Feed URL and resolved feed URL
-            - Mode, output folder, and counts
-            - Each episode download attempt and outcome
-            - Final summary, including failures and error messages
+WhatIf may retrieve bounded metadata and read local evidence, but makes no planned
+enclosure request or downloader write. It creates no configuration, media, locks,
+logs or exports and makes no keep-awake request. Preview is not completed media.
 
-MY INTENDED USAGE
-    - I double-click UniversalPodcastDownloader.bat.
-    - I paste either:
-        - The podcast’s RSS feed URL, or
-        - The public show page URL and let the script auto-detect RSS.
-    - I tell it how many newest episodes I want (often “all” once per show).
-    - I leave it running, in the morning I check:
-        - The per-show folder for MP3s, and
-        - The .log file if something failed mid-run.
+The executable returns 0 for success/preview, 1 for fatal input/setup, 2 for
+incomplete work and 130 for cancellation caught by the application. Batch returns
+2 for isolated child fatal/incomplete results and continues; setup/structural
+failure returns 1. Forced termination cannot guarantee a result or cleanup.
+Dot-source this file to load Invoke-PodcastRun and Invoke-PodcastCommand without
+starting work; callable APIs return objects without exiting their caller.
 
-SETUP
-    1) Place these files together in a folder of your choice:
-         - UniversalPodcastDownloader.ps1
-         - UniversalPodcastDownloader.bat   (wrapper to allow double-click)
-    2) Optional: pin the .bat to Start or Taskbar for quick access.
-    3) Ensure the machine has:
-         - Working Internet connection.
-         - Permission to write to the default output:
-             %USERPROFILE%\Downloads\Podcasts
-           or whichever OutputPath you configure.
-    4) No external binaries required. Relies on Invoke-WebRequest
-       and the built-in XML parser in PowerShell.
+.PARAMETER Mode
+Latest, All or Custom. Noninteractive one-off input defaults to Latest. Custom
+requires CustomCount. Explicit Latest/All with a count is invalid. Named/batch
+Latest/All overrides discard a stored Custom count; Custom can reuse a count only
+from a saved Custom row. Guided input asks for a selection when none is supplied.
 
-USAGE
-    A) Double-click for TUI (default usage)
-        - Double-click UniversalPodcastDownloader.bat.
-        - Follow prompts:
-            1) Paste RSS feed URL or show page URL.
-            2) Confirm or adjust detected feed.
-            3) Choose how many newest episodes to download:
-                 - Enter  = latest only
-                 - Number = N newest
-                 - all    = entire feed
-        - Output:
-            - Audio files under:
-                %USERPROFILE%\Downloads\Podcasts\<FeedTitle>\
-            - Log file:
-                YYYYMMDD_HHMMSS_<FeedTitle>.log
+.PARAMETER CustomCount
+Positive episode count. Supplied alone it selects Custom, including named/batch
+overrides. Selection follows bounded catalogue retrieval and UTC ordering.
 
-    B) Direct PowerShell (interactive TUI still available)
-        - Run without parameters for the same guided TUI:
-            .\UniversalPodcastDownloader.ps1
-        - You can override defaults:
-            .\UniversalPodcastDownloader.ps1 -OutputPath "D:\Podcasts"
+.PARAMETER OutputPath
+Absolute ordinary Windows drive/UNC archive root. Defaults to
+%USERPROFILE%\Downloads\Podcasts. Per-show folders and new media names include
+identity suffixes. Named/batch overrides affect only the current invocation.
 
-    C) Direct PowerShell (non-interactive)
-        - Use when you already know the RSS URL and desired mode:
-            .\UniversalPodcastDownloader.ps1 
-                -FeedUrl "https://example.com/feed.xml" 
-                -Mode All 
-                -OutputPath "D:\Podcasts"
-        - Or: download the 10 newest episodes:
-            .\UniversalPodcastDownloader.ps1 
-                -FeedUrl "https://example.com/feed.xml" 
-                -Mode Custom 
-                -CustomCount 10
+.PARAMETER FeedUrl
+Absolute HTTP(S) RSS/Atom feed or show-page URL. No URL user information is
+accepted. Multiple discovered feeds require a direct feed URL in NonInteractive
+mode. Required for one-off NonInteractive, SaveShow and all legacy operations;
+other saved operations obtain the protected URL from configuration.
 
-NOTES
-    - Episodes are sorted by publication date (PubDate) newest first.
-    - Files are named “YYYY-MM-DD - Title.mp3” when a date is available,
-      otherwise “Title.mp3”.
-    - Filename and folder names are sanitized for Windows (no : * ? " < > | etc.).
-    - The script always logs to the podcast folder for each run, even on failures.
-    - Existing files are never overwritten, they are just skipped and logged as such.
-    - The tool does not transcode or modify audio, it saves whatever the feed serves,
-      but uses the .mp3 extension by default for naming.
+.PARAMETER NonInteractive
+Suppresses input and confirmation prompts. Requires FeedUrl for one-off runs;
+named/batch operations resolve saved URLs. Cannot combine with enabled Confirm.
+Batch children always run noninteractively.
 
-LIMITATIONS
-    - No resume of partially downloaded files, failed downloads are retried from scratch.
-    - No built-in scheduler, this is a manual “run when needed” tool.
-    - Assumes feeds expose downloadable audio URLs, video-only or exotic feeds may fail.
-    - Uses one fixed naming pattern and folder structure.
-    - No content-based deduplication across different feeds or folder names.
+.PARAMETER KeepAwake
+Opt-in temporary Windows system-sleep request after confirmed work. Does not keep
+the display on or change the power plan. Catchable cleanup attempts to restore
+prior native thread flags; explicit sleep/lid actions and hard kills remain limits.
 
-TROUBLESHOOTING
-    - Script window closes immediately on double-click:
-        - Run the .bat from an existing cmd window to see errors.
-        - Check ExecutionPolicy or corporate restrictions on PowerShell scripts.
-    - “Feed parsed, but no downloadable enclosure URLs were found”:
-        - The feed may not expose direct audio URLs, or uses a non-standard format.
-        - Try locating the real RSS URL from the hosting provider (Podbean, etc.).
-    - “No episodes found in the feed” or XML errors:
-        - Double-check the URL is a valid RSS/Atom feed, not just a random web page.
-        - Some providers require HTTPS and modern TLS, ensure the system is up to date.
-    - Only part of the episodes downloaded:
-        - Check the .log file in the podcast folder for:
-            - Per-episode errors
-            - Timeouts or connectivity issues
-            - HTTP status codes from the host
+.PARAMETER PassThru
+Emits the command result before script exit: Podcast.RunResult,
+Podcast.ConfigResult or Podcast.BatchResult. Native output is PowerShell text,
+not a JSON protocol. Ordinary results omit raw URLs and paths; LegacyResult can
+contain sensitive local filenames/titles/identities and should stay local.
 
-LICENSE / WARRANTY
-    - Personal tool, provided as-is, without warranty. Use at your own risk.
-#>
+.PARAMETER SaveShow
+Saves or replaces a named row using explicit FeedUrl and selection/output options,
+without network retrieval. Names are 1-64 ASCII letters/digits/underscores/hyphens and
+start with a letter/digit; names are unique ignoring case. At most 100 rows.
 
-<#
-UniversalPodcastDownloader.ps1
-Minimal Win11 podcast downloader for personal offline archiving
+.PARAMETER ListShows
+Lists Name, Mode, CustomCount and FeedConfigured without exposing URLs or paths.
 
-Author: Janne Vuorela
-Target OS: Windows 11
-Dependencies: PowerShell 5.1+ or PowerShell 7+, Internet access, optional .bat wrapper
+.PARAMETER RemoveShow
+Removes one saved row. Archive media, history, checkpoints and logs are preserved.
+
+.PARAMETER ExportShows
+Creates a new protected summary file in an existing ordinary parent directory.
+Omits URL, ciphertext and output path; refuses overwrite. It cannot restore
+credentials/configuration. A failed export may leave its owned partial file.
+
+.PARAMETER ShowName
+Runs one saved show, or selects an ordered Batch subset. Several names require
+an in-process PowerShell array; the native Windows PowerShell -File boundary and
+batch launcher cannot pass a multi-element array. Rejects duplicate/unknown names.
+
+.PARAMETER Batch
+Runs at most 100 selected saved shows sequentially, in stored order or explicit
+ShowName array order. Children finish cleanup attempts before the next starts.
+Catchable cancellation stops with retained counts and unstarted names; an empty
+configuration succeeds with no selected shows.
+
+.PARAMETER ConfigPath
+Absolute protected saved-show configuration path. Requires a saved operation.
+Defaults to %LOCALAPPDATA%\UniversalPodcastDownloader\saved-shows\shows.json.
+Use a dedicated private parent; malformed data/unsafe permissions are preserved
+and refused, with no automatic reset, import, backup restore or ACL repair.
+
+.PARAMETER LegacyPath
+Existing immediate show directory under OutputPath, supplied as its folder name
+or absolute path. Requires explicit FeedUrl. Reviews the current accessible feed
+snapshot independently of Latest/Custom selection; unsafe/reparse paths fail.
+
+.PARAMETER LegacyAction
+Preview (default) reads inventory without writes. Adopt records explicit local
+signature/digest evidence as transfer-unverified. Redownload retrieves only the
+selected episode into a new filename. Rollback restores checkpoint metadata in a
+new generation. Actions preserve all original media; rollback does not restore,
+rename or delete media. Changing actions save a metadata checkpoint first.
+
+.PARAMETER LegacyEpisodeId
+Full current episode identity selected from LegacyResult for Adopt or Redownload.
+
+.PARAMETER LegacyFile
+Exact reviewed file basename for Adopt; never a wildcard or guessed partial.
+
+.PARAMETER LegacySha256
+Reviewed local SHA-256 for Adopt. The action rechecks it under writer protection.
+
+.PARAMETER LegacyCheckpoint
+Metadata checkpoint basename for Rollback, belonging to the same feed/aliases.
+Rollback is not a bypass around corrupt current history or its backup.
+
+.PARAMETER DiagnosticExportPath
+Optional new restricted diagnostic JSON file in an existing safe parent.
+Best effort and no overwrite; omitted for WhatIf/legacy Preview/declined work.
+Contains bounded event metadata, not URLs, message text or archive inventory.
+
+.PARAMETER MaxFeedPages
+Catalogue page limit, 1-100; default 20. Follows supported feed-level pagination
+before episode selection. Other metadata/entry bounds also apply.
+
+.PARAMETER MaxAttempts
+Initial attempt plus retries per metadata retrieval/episode transfer, 1-10;
+default 3. The same per-run policy follows metadata and media requests.
+
+.PARAMETER HeaderTimeoutSeconds
+Connection/header timeout per redirect hop, 0.001-86400 seconds; default 30.
+
+.PARAMETER IdleTimeoutSeconds
+Timeout per pending body read, 0.001-86400 seconds; default 30. A healthy transfer
+can continue beyond the retry budget while it keeps producing bytes.
+
+.PARAMETER RetryBudgetSeconds
+Elapsed window for starting another attempt or delayed redirect, 0-86400 seconds;
+default 120. Zero permits the initial attempt and prevents retries. It is not a
+total download deadline.
+
+.PARAMETER BaseDelaySeconds
+Initial exponential retry delay, 0-3600 seconds; default 1.
+
+.PARAMETER MaxDelaySeconds
+Maximum locally chosen retry delay, 0-3600 seconds; default 30. A valid server
+Retry-After can require a longer wait; waits beyond the budget are deferred.
+
+.PARAMETER WhatIf
+Plans the requested operation with bounded metadata/local reads, without planned
+media retrieval or persistent downloader writes. Explicit WhatIf overrides
+inherited preview state for saved named/batch operations.
+
+.PARAMETER Confirm
+Requests confirmation before changes. Do not enable it with NonInteractive.
+Declined work is preview; it does not count as downloaded media.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+& .\UniversalPodcastDownloader.ps1 -FeedUrl $feed -OutputPath $archive -NonInteractive -WhatIf
+
+Preview the latest episode using an explicit example archive root. Metadata
+requests are possible; the downloader creates no files.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+& .\UniversalPodcastDownloader.ps1 -FeedUrl $feed -OutputPath $archive -CustomCount 5 -NonInteractive -PassThru
+
+Download up to five newest accessible episodes and emit the structured result.
+Repeat runs preserve originals and verify recorded files before skipping.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+$config = Join-Path $root 'Private settings\shows.json'
+& .\UniversalPodcastDownloader.ps1 -SaveShow demo -FeedUrl $feed -OutputPath $archive -Mode Latest -ConfigPath $config -NonInteractive
+& .\UniversalPodcastDownloader.ps1 -ListShows -ConfigPath $config -NonInteractive
+
+Save and list settings in a dedicated protected example directory. These commands
+do not retrieve the feed. Reusing demo explicitly replaces that row.
+
+.NOTES
+Requires Windows PowerShell 5.1 or PowerShell 7 on Windows and the complete
+colocated src directory. No application runtime packages are installed.
+See README.md for launcher usage, verified compatibility and safe recovery.
+See docs/codex/CLI_RESULTS.md and SAVED_SHOWS.md for result/override contracts.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -161,79 +215,87 @@ param(
 
     [string]$OutputPath = "$env:USERPROFILE\Downloads\Podcasts",
 
-    [string]$FeedUrl
+    [string]$FeedUrl,
+
+    [switch]$NonInteractive,
+
+    [switch]$KeepAwake,
+
+    [switch]$PassThru,
+
+    [string]$SaveShow,
+    [switch]$ListShows,
+    [string]$RemoveShow,
+    [string]$ExportShows,
+    [string[]]$ShowName,
+    [switch]$Batch,
+    [string]$ConfigPath,
+
+    [string]$LegacyPath,
+
+    [ValidateSet('Preview','Adopt','Redownload','Rollback')]
+    [string]$LegacyAction = 'Preview',
+
+    [string]$LegacyEpisodeId,
+
+    [string]$LegacyFile,
+
+    [string]$LegacySha256,
+
+    [string]$LegacyCheckpoint,
+
+    [string]$DiagnosticExportPath,
+
+    [ValidateRange(1, 100)][int]$MaxFeedPages = 20,
+    [ValidateRange(1, 10)][int]$MaxAttempts = 3,
+    [ValidateRange(0.001, 86400)][double]$HeaderTimeoutSeconds = 30,
+    [ValidateRange(0.001, 86400)][double]$IdleTimeoutSeconds = 30,
+    [ValidateRange(0, 86400)][double]$RetryBudgetSeconds = 120,
+    [ValidateRange(0, 3600)][double]$BaseDelaySeconds = 1,
+    [ValidateRange(0, 3600)][double]$MaxDelaySeconds = 30
 )
 
-function Write-Log {
-    param(
-        [Parameter(Mandatory)][string]$Message,
-        [ValidateSet('INFO','WARN','ERROR')]
-        [string]$Level = 'INFO'
-    )
+. (Join-Path $PSScriptRoot 'src/PublicationDate.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaSelection.ps1')
+. (Join-Path $PSScriptRoot 'src/Naming.ps1')
+. (Join-Path $PSScriptRoot 'src/PathSafety.ps1')
+. (Join-Path $PSScriptRoot 'src/Diagnostics.ps1')
+. (Join-Path $PSScriptRoot 'src/RunResult.ps1')
+. (Join-Path $PSScriptRoot 'src/Progress.ps1')
+. (Join-Path $PSScriptRoot 'src/KeepAwake.ps1')
+. (Join-Path $PSScriptRoot 'src/HistoryStore.ps1')
+. (Join-Path $PSScriptRoot 'src/SavedShows.ps1')
+. (Join-Path $PSScriptRoot 'src/Batch.ps1')
+. (Join-Path $PSScriptRoot 'src/Commands.ps1')
+. (Join-Path $PSScriptRoot 'src/HistoryIdentity.ps1')
+. (Join-Path $PSScriptRoot 'src/HistoryWorkflow.ps1')
+. (Join-Path $PSScriptRoot 'src/NetworkPolicy.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedXml.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedDiscovery.ps1')
+. (Join-Path $PSScriptRoot 'src/FeedPagination.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaRequest.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaValidation.ps1')
+. (Join-Path $PSScriptRoot 'src/ResumeStore.ps1')
+. (Join-Path $PSScriptRoot 'src/MediaTransfer.ps1')
+. (Join-Path $PSScriptRoot 'src/LegacyInventory.ps1')
+. (Join-Path $PSScriptRoot 'src/LegacyMigration.ps1')
 
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $line = "[{0}] [{1}] {2}" -f $timestamp, $Level, $Message
+function Invoke-PodcastWebRequest {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Uri, $Policy = (New-PodcastTransportPolicy))
 
-    if ($script:LogFile) {
-        Add-Content -LiteralPath $script:LogFile -Value $line
-    }
+    # Metadata stays in memory. Media writes use the confirmed transfer path.
+    Invoke-PodcastMetadataRequest -Uri $Uri -Policy $Policy
 }
 
-function Sanitize-ForWindowsName {
-    param([string]$Name)
-
-    if ([string]::IsNullOrWhiteSpace($Name)) { return $null }
-    $safe = ($Name -replace '[\\\/\:\*\?\"<>\|]', '_').Trim()
-    if ([string]::IsNullOrWhiteSpace($safe)) { return $null }
-    return $safe
-}
-
-# --- RSS autodetect helpers ---
-function Find-RssInHtml {
-    param(
-        [Parameter(Mandatory)][string]$Html,
-        [Parameter(Mandatory)][string]$BaseUrl
-    )
-
-    $pattern = '<link[^>]+type=["'']application/(rss|atom)\+xml["''][^>]*>'
-    $matches = [System.Text.RegularExpressions.Regex]::Matches(
-        $Html,
-        $pattern,
-        [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
-    )
-
-    foreach ($m in $matches) {
-        $hrefMatch = [System.Text.RegularExpressions.Regex]::Match(
-            $m.Value,
-            'href=["''](?<url>[^"\'']+)["'']',
-            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
-        )
-
-        if ($hrefMatch.Success) {
-            $href = $hrefMatch.Groups['url'].Value
-            try {
-                $base = [Uri]$BaseUrl
-                $uri  = [Uri]::new($base, $href)
-                return $uri.AbsoluteUri
-            } catch {
-                return $href
-            }
-        }
-    }
-
-    return $null
-}
-
+# --- Shared RSS/Atom resolution and guided input ---
 function Get-FeedUrlInteractive {
+    param($Policy = (New-PodcastTransportPolicy), [ValidateRange(1, 100)][int]$MaxPages = 20)
+
     Write-Host "==== Universal Podcast Downloader ====" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "How to find the RSS feed for your podcast:" -ForegroundColor Yellow
-    Write-Host "  1. Open the podcast's main page in your browser."
-    Write-Host "  2. Look for an icon or link labelled 'RSS', 'Feed', or 'Subscribe'."
-    Write-Host "  3. Copy that link (often ends with .xml or /feed)."
-    Write-Host ""
-    Write-Host "You can also paste a normal podcast web page URL (show page),"
-    Write-Host "and I'll TRY to auto-detect the RSS feed from there."
+    Write-Host "Paste a direct RSS/Atom feed URL or a podcast show page URL." -ForegroundColor Yellow
+    Write-Host "For pages with several feeds, choose the feed number shown below."
     Write-Host ""
 
     while ($true) {
@@ -242,64 +304,95 @@ function Get-FeedUrlInteractive {
             Write-Host "Please paste a URL (or press Ctrl+C to quit)." -ForegroundColor Red
             continue
         }
-
-        if ($inputUrl -notmatch '^https?://') {
-            Write-Host "Note: URLs usually start with http:// or https://. Continuing anyway..." -ForegroundColor DarkYellow
-        }
-
         try {
             Write-Host "  Fetching URL..." -ForegroundColor DarkCyan
-            $resp = Invoke-WebRequest -Uri $inputUrl
-            $html = $resp.Content
-
-            if ($html -match '<rss' -or $html -match '<feed') {
-                Write-Host "  This looks like a direct RSS/Atom feed." -ForegroundColor Green
-                return $inputUrl
-            }
-
-            $rssUrl = Find-RssInHtml -Html $html -BaseUrl $inputUrl
-            if ($rssUrl) {
-                Write-Host "  Found RSS candidate: $rssUrl" -ForegroundColor Green
-                $ans = Read-Host "Use this feed? (Y/n)"
-                if ($ans -match '^(n|no)$') {
-                    Write-Host "  Okay, let's try another URL." -ForegroundColor Yellow
-                    continue
-                }
-                return $rssUrl
-            }
-
-            Write-Host "  Could not auto-detect an RSS feed on that page." -ForegroundColor Red
-            Write-Host "  Try a different URL or copy a direct 'RSS' link." -ForegroundColor Yellow
+            return (Resolve-PodcastItems -Feeds @($inputUrl) -Interactive -Policy $Policy -MaxPages $MaxPages)
         } catch {
-            Write-Host "  Failed to fetch URL: $($_.Exception.Message)" -ForegroundColor Red
+            if (Test-PodcastCancellation -ErrorObject $_) { throw }
+            Write-Host ("  Could not resolve the feed: " + (Get-PodcastDiagnosticError -Error $_)) -ForegroundColor Red
         }
     }
 }
 
-# --- Feed parsing ---
 function Resolve-PodcastItems {
-    param([string[]]$Feeds)
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Retains the established import-safe helper name for existing callers.')]
+    [CmdletBinding()]
+    param([string[]]$Feeds, [switch]$Interactive, [AllowNull()]$InitialResolution,
+        [ValidateRange(1, 100)][int]$MaxPages = 20, $Policy = (New-PodcastTransportPolicy))
 
+    $lastFailure = 'No RSS or Atom feed links were found on the page.'
+    $initial = $InitialResolution
     foreach ($u in $Feeds) {
-        Write-Verbose "Trying feed: $u"
+        Write-Verbose ("Trying feed: " + (Get-PodcastSafeUrl -Url $u))
         try {
-            $resp = Invoke-WebRequest -Uri $u
-            $xml  = [xml]$resp.Content
-
-            $items = $xml.SelectNodes('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="item"]')
-            if (-not $items -or $items.Count -eq 0) {
-                $items = $xml.SelectNodes('//*[local-name()="feed"]/*[local-name()="entry"]')
+            if ($null -ne $initial) {
+                $source = $initial
+                $initial = $null
+                if (-not [StringComparer]::Ordinal.Equals([string]$source.Url, $u)) {
+                    throw 'The initial feed resolution does not belong to the supplied URL.'
+                }
+                if ($null -ne $source.PSObject.Properties['Catalogue']) { return $source }
+            } else {
+                $source = Resolve-PodcastSource -Uri $u -Policy $Policy
             }
-
-            if ($items -and $items.Count -gt 0) {
-                return [PSCustomObject]@{ Url = $u; Xml = $xml; Items = $items }
+            $candidates = @($source.Candidates)
+            if ($source.Kind -eq 'Html') {
+                if ($candidates.Count -eq 0) { throw 'No RSS or Atom feed links were found on the page.' }
+                if ($candidates.Count -gt 1 -and -not $Interactive) {
+                    throw 'Multiple feed links were found. Supply a direct feed URL with -FeedUrl.'
+                }
+                $index = 0
+                if ($candidates.Count -gt 1) {
+                    Write-Host 'Multiple feeds found:' -ForegroundColor Yellow
+                    for ($i = 0; $i -lt $candidates.Count; $i++) {
+                        Write-Host ("  {0}. {1}" -f ($i + 1), (Get-PodcastSafeUrl -Url $candidates[$i]))
+                    }
+                    while ($true) {
+                        $choice = Read-Host ("Choose feed number (1-{0})" -f $candidates.Count)
+                        $number = 0
+                        if ([int]::TryParse($choice, [ref]$number) -and $number -ge 1 -and $number -le $candidates.Count) {
+                            $index = $number - 1
+                            break
+                        }
+                        Write-Host 'Enter one of the listed feed numbers.' -ForegroundColor Red
+                    }
+                }
+                # A page can discover one selected feed, never a recursive crawl.
+                $feed = Resolve-PodcastSource -Uri $candidates[$index] -Policy $Policy
+                if ($feed.Kind -eq 'Html') { throw 'The discovered URL did not return an RSS or Atom feed.' }
+            } else {
+                $feed = $source
+            }
+            $catalogue = Resolve-PodcastCatalogue -InitialResolution $feed -MaxPages $MaxPages -Policy $Policy
+            if (@($catalogue.Items).Count -eq 0) {
+                if (-not $catalogue.Catalogue.Complete) {
+                    $gap = [InvalidOperationException]::new('Feed catalogue incomplete; no accessible episodes were found.')
+                    $gap.Data['PodcastCatalogue'] = $catalogue.Catalogue
+                    throw $gap
+                }
+                throw 'The RSS or Atom feed is valid but contains no episodes.'
+            }
+            return [pscustomobject]@{
+                Url = $feed.Url
+                Xml = $feed.Xml
+                Items = @($catalogue.Items)
+                Kind = $feed.Kind
+                FinalUri = $feed.FinalUri
+                Content = $feed.Content
+                Candidates = $candidates
+                SourceUrl = $source.Url
+                Catalogue = $catalogue.Catalogue
             }
         } catch {
-            Write-Verbose "Feed failed: $u  ($($_.Exception.Message))"
+            if (Test-PodcastCancellation -ErrorObject $_) { throw }
+            if ($null -ne $_.Exception.Data['PodcastCatalogue']) { throw }
+            $transportFailure = Get-PodcastTransportFailure -ErrorObject $_
+            if ($null -ne $transportFailure) { throw $transportFailure }
+            $lastFailure = $_
+            Write-Verbose ("Feed resolution stopped: {0} ({1})" -f (Get-PodcastSafeUrl -Url $u), (Get-PodcastDiagnosticError -Error $_))
         }
     }
-
-    throw "No episodes found in the feed. Double-check the RSS URL."
+    throw $lastFailure
 }
 
 # --- Robust episode extraction + collision-proof filenames ---
@@ -329,31 +422,46 @@ function Get-EpisodeData {
     $title = Get-XPathText -Node $XmlItem -XPath './*[local-name()="title"][1]'
     if (-not $title) { $title = Get-FirstText $XmlItem.title }
 
-    $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="pubDate"][1]'
-    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="updated"][1]' }
-    if (-not $dateStr) { $dateStr = Get-XPathText -Node $XmlItem -XPath './*[local-name()="published"][1]' }
-    if (-not $dateStr) { $dateStr = Get-FirstText $XmlItem.pubDate }
+    $isAtom = $XmlItem.LocalName -ceq 'entry' -and $XmlItem.NamespaceURI -ceq 'http://www.w3.org/2005/Atom'
+    $dateStr = $null
+    $dateSource = $null
+    $dateFields = if ($isAtom) { @('published', 'updated') } else { @('pubDate') }
+    $dateNamespace = if ($isAtom) { 'http://www.w3.org/2005/Atom' } else { '' }
+    foreach ($field in $dateFields) {
+        $candidate = Get-XPathText -Node $XmlItem -XPath ('./*[local-name()="{0}" and namespace-uri()="{1}"][1]' -f $field, $dateNamespace)
+        if (-not [string]::IsNullOrWhiteSpace($candidate)) {
+            $dateStr = $candidate
+            $dateSource = $field
+            break
+        }
+    }
+    $pubDate = ConvertTo-PodcastPublicationDate -Value $dateStr
 
-    $pubDate = $null
-    if ($dateStr) { try { $pubDate = [datetime]::Parse($dateStr) } catch {} }
+    # Preserve old date priority only for historical filename review hints.
+    $legacyDateStr = $null
+    foreach ($field in @('pubDate', 'updated', 'published')) {
+        $legacyCandidate = Get-XPathText -Node $XmlItem -XPath ('./*[local-name()="{0}"][1]' -f $field)
+        if (-not [string]::IsNullOrWhiteSpace($legacyCandidate)) { $legacyDateStr = $legacyCandidate; break }
+    }
+    $legacyPubDate = Get-PodcastLegacyPublicationDate -Value $legacyDateStr
 
     $guid = Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
     if (-not $guid) { $guid = Get-FirstText $XmlItem.guid }
+    # Retain the established ID lookup so date normalization cannot rebind history.
+    $atomId = Get-XPathText -Node $XmlItem -XPath './*[local-name()="id"][1]'
 
-    $url = $null
-    $enc = $XmlItem.SelectSingleNode('./*[local-name()="enclosure"][1]')
-    if ($enc) {
-        $attr = $enc.Attributes["url"]
-        if ($attr) { $url = $attr.Value }
-        if (-not $url) { $url = $enc.GetAttribute("url") }
+    $candidates = [Collections.Generic.List[object]]::new()
+    foreach ($node in $XmlItem.SelectNodes('./*[local-name()="enclosure" or (local-name()="link" and @rel="enclosure")]')) {
+        $candidateUrl = if ($node.LocalName -ceq 'enclosure') { $node.GetAttribute('url') } else { $node.GetAttribute('href') }
+        if ([string]::IsNullOrWhiteSpace($candidateUrl)) { continue }
+        $length = $null
+        $parsedLength = 0L
+        if ([long]::TryParse($node.GetAttribute('length'), [Globalization.NumberStyles]::None,
+                [Globalization.CultureInfo]::InvariantCulture, [ref]$parsedLength)) { $length = $parsedLength }
+        $candidates.Add([pscustomobject]@{ Url = $candidateUrl; ContentType = $node.GetAttribute('type'); Length = $length })
     }
 
-    if (-not $url) {
-        $ln = $XmlItem.SelectSingleNode('./*[local-name()="link" and @rel="enclosure"][1]')
-        if ($ln) { $url = $ln.GetAttribute("href") }
-    }
-
-    if (-not $url) {
+    if ($candidates.Count -eq 0) {
         $cands = @(
             Get-XPathText -Node $XmlItem -XPath './*[local-name()="guid"][1]'
             Get-XPathText -Node $XmlItem -XPath './*[local-name()="link"][1]'
@@ -362,286 +470,721 @@ function Get-EpisodeData {
         ) | Where-Object { $_ }
 
         foreach ($cand in $cands) {
-            if ($cand -match '\.(mp3|m4a)($|\?)') { $url = "$cand"; break }
+            if ($cand -match '\.(mp3|m4a|ogg|opus|wav|flac)(?:$|[?#])') {
+                $candidates.Add([pscustomobject]@{ Url = [string]$cand; ContentType = ''; Length = $null })
+                break
+            }
         }
     }
+
+    $media = Select-PodcastAudioCandidate -Candidates $candidates.ToArray()
 
     [PSCustomObject]@{
         Title   = ($title -as [string])
         PubDate = $pubDate
-        Url     = $url
+        PubDateOriginal = $dateStr
+        PubDateSource = $dateSource
+        LegacyPubDate = $legacyPubDate
+        Url     = $(if ($null -ne $media) { $media.Url } else { $null })
         Guid    = ($guid -as [string])
+        AtomId  = ($atomId -as [string])
+        EnclosureLength = $(if ($null -ne $media) { $media.Length } else { $null })
+        Candidates = @($candidates.ToArray())
+        MediaContentType = $(if ($null -ne $media) { $media.ContentType } else { $null })
+        MediaExtension = $(if ($null -ne $media) { $media.Extension } else { $null })
+        MediaSelectionReason = $(if ($null -ne $media) { $media.Reason } else { 'no_supported_audio_candidate' })
     }
 }
 
-function New-EpisodeFileName {
+function Select-PodcastEpisode {
     param(
-        [Parameter(Mandatory)]$Episode,
-        [Parameter(Mandatory)][int]$Index
+        [AllowNull()][AllowEmptyCollection()][object[]]$Episodes,
+        [ValidateSet('Latest','All','Custom')][string]$Mode = 'Latest',
+        [int]$CustomCount
     )
 
-    $ext = 'mp3'
-    if ($Episode.Url -match '\.(mp3|m4a)($|\?)') { $ext = $Matches[1] }
-
-    $titleRaw  = if ([string]::IsNullOrWhiteSpace($Episode.Title)) { 'Episode' } else { $Episode.Title }
-    $safeTitle = (Sanitize-ForWindowsName $titleRaw)
-    if (-not $safeTitle) { $safeTitle = 'Episode' }
-
-    $prefix = ''
-    if ($Episode.PubDate) { $prefix = '{0:yyyy-MM-dd} - ' -f $Episode.PubDate }
-
-    $name = "$prefix$safeTitle.$ext"
-
-    if ($safeTitle -eq 'Episode' -or [string]::IsNullOrWhiteSpace($prefix)) {
-        $id = if ($Episode.Guid) { $Episode.Guid } elseif ($Episode.Url) { $Episode.Url } else { "$Index" }
-        $bytes = [Text.Encoding]::UTF8.GetBytes($id)
-
-        $sha = [Security.Cryptography.SHA1]::Create()
-        try {
-            $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
-        } finally {
-            $sha.Dispose()
-        }
-
-        $hash = $hash.Substring(0,8)
-        $name = "$prefix$safeTitle-$hash.$ext"
-    }
-
-    return $name
-}
-
-# Dot-sourcing exposes helpers for tests without starting the downloader.
-if ($MyInvocation.InvocationName -eq '.') { return }
-
-# --- Global config ---
-$ErrorActionPreference = 'Stop'
-$prevProgress = $global:ProgressPreference
-$global:ProgressPreference = 'Continue'
-
-# Log file path, set later once we know the podcast folder
-$script:LogFile = $null
-
-# --- Main ---
-try {
-    $needFeed  = -not $PSBoundParameters.ContainsKey('FeedUrl')
-    $needCount = -not $PSBoundParameters.ContainsKey('Mode') -and -not $PSBoundParameters.ContainsKey('CustomCount')
-
-    if ($needFeed) {
-        $FeedUrl = Get-FeedUrlInteractive
-    }
-
-    if ($needCount) {
-        Write-Host ""
-        Write-Host "How many episodes to download (newest first)?" -ForegroundColor Yellow
-        Write-Host "  - Press Enter for only the latest episode."
-        Write-Host "  - Enter a number like 5 to download the 5 newest."
-        Write-Host "  - Type 'all' to download everything from the feed."
-        Write-Host ""
-
-        while ($true) {
-            $inputCount = Read-Host "Episodes to download (number / 'all' / Enter = 1)"
-            if ([string]::IsNullOrWhiteSpace($inputCount)) {
-                $Mode = 'Latest'
-                break
-            }
-
-            $trimmed = $inputCount.Trim()
-
-            if ($trimmed.ToLower() -eq 'all') {
-                $Mode = 'All'
-                break
-            }
-
-            $n = 0
-            if ([int]::TryParse($trimmed, [ref]$n) -and $n -gt 0) {
-                $Mode        = 'Custom'
-                $CustomCount = $n
-                break
-            }
-
-            Write-Host "Invalid input. Enter 'all', a positive number, or just Enter." -ForegroundColor Red
-        }
-    }
-
-    if (-not $FeedUrl) {
-        throw "No feed URL specified. Use -FeedUrl or paste it via the TUI."
-    }
-
-    if ($Mode -eq 'Custom' -and (-not $CustomCount -or $CustomCount -lt 1)) {
+    if ($Mode -eq 'Custom' -and $CustomCount -lt 1) {
         throw "Mode 'Custom' requires -CustomCount with a value >= 1."
     }
 
-    $baseOutputPath = $OutputPath
-    if (-not (Test-Path -LiteralPath $baseOutputPath)) {
-        Write-Host "[*] Creating base output directory: $baseOutputPath"
-        New-Item -ItemType Directory -Path $baseOutputPath -Force | Out-Null
-    }
-
-    $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
-
-    Write-Host "[*] Fetching podcast feed..."
-    $resolved = Resolve-PodcastItems -Feeds $candidateFeeds
-    Write-Host "    Using feed: $($resolved.Url)"
-
-    # Feed title, PS5.1-safe
-    $feedTitle = $null
-    try {
-        $node1 = $resolved.Xml.SelectSingleNode('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="title"][1]')
-        if ($node1) { $feedTitle = $node1.InnerText }
-        if (-not $feedTitle) {
-            $node2 = $resolved.Xml.SelectSingleNode('//*[local-name()="feed"]/*[local-name()="title"][1]')
-            if ($node2) { $feedTitle = $node2.InnerText }
-        }
-    } catch {}
-
-    if ($feedTitle) {
-        Write-Host "    Feed title: $feedTitle"
-    } else {
-        Write-Host "    Feed title: (unknown)"
-    }
-
-    $safeFeedTitle = (Sanitize-ForWindowsName $feedTitle)
-    if (-not $safeFeedTitle) { $safeFeedTitle = 'UnknownPodcast' }
-
-    $OutputPath = Join-Path $baseOutputPath $safeFeedTitle
-    if (-not (Test-Path -LiteralPath $OutputPath)) {
-        Write-Host "[*] Creating podcast folder: $OutputPath"
-        New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
-    }
-
-    $dateStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $script:LogFile = Join-Path $OutputPath ("{0}_{1}.log" -f $dateStamp, $safeFeedTitle)
-
-    Set-Content -LiteralPath $script:LogFile -Value "UniversalPodcastDownloader log"
-    Write-Log ("Feed URL     : {0}" -f $FeedUrl)
-    Write-Log ("Resolved URL : {0}" -f $resolved.Url)
-    Write-Log ("Feed title   : {0}" -f ($feedTitle -as [string]))
-    Write-Log ("Mode         : {0}" -f $Mode)
-    Write-Log ("CustomCount  : {0}" -f ($CustomCount -as [string]))
-    Write-Log ("Output folder: {0}" -f $OutputPath)
-
-    $episodes = foreach ($it in $resolved.Items) { Get-EpisodeData $it }
-    $episodes = $episodes | Where-Object { $_.Url }
-
-    Write-Log ("Feed items with valid URLs: {0}" -f $episodes.Count)
-
-    if (-not $episodes -or $episodes.Count -eq 0) {
-        throw "Feed parsed, but no downloadable enclosure URLs were found."
-    }
-
-    $episodes = $episodes | Sort-Object PubDate -Descending
-
+    $selected = Get-OrderedPodcastEpisode -Episodes $Episodes
     switch ($Mode) {
-        'Latest' { $episodes = $episodes | Select-Object -First 1 }
-        'All'    { }
-        'Custom' { $episodes = $episodes | Select-Object -First $CustomCount }
+        'Latest' { $selected = @($selected | Select-Object -First 1) }
+        'Custom' { $selected = @($selected | Select-Object -First $CustomCount) }
     }
 
-    $total = $episodes.Count
-    Write-Host "[*] Episodes to download: $total"
-    Write-Log ("Episodes to download (after mode/filter): {0}" -f $total)
+    # Preserve an array for zero/one/many results when assigned by the caller.
+    return ,$selected
+}
 
-    $downloaded = @()
-    $skipped    = @()
-    $failed     = @()
-    $maxRetries = 3
+<#
+.SYNOPSIS
+Runs one podcast download or explicit legacy operation and returns its result.
 
-    $index = 0
-    foreach ($ep in $episodes) {
-        $index++
+.DESCRIPTION
+Import this function by dot-sourcing UniversalPodcastDownloader.ps1. It returns
+one Podcast.RunResult without exiting the host. It does not select saved shows;
+Invoke-PodcastCommand dispatches saved operations. Latest/Custom/All use the
+bounded accessible catalogue, not a guaranteed complete historical archive.
 
-        $fileName = New-EpisodeFileName -Episode $ep -Index $index
-        $destFile = Join-Path $OutputPath $fileName
+Original media is preserved. Verified skips require recorded size and SHA-256;
+legacy adoption remains transfer-unverified. WhatIf permits bounded metadata and
+local reads without planned media retrieval, writes, logs, locks or keep-awake.
 
-        if (Test-Path -LiteralPath $destFile) {
-            Write-Progress -Activity "Podcast downloads" -Status "Skipping (exists): $fileName" `
-                -PercentComplete ([int](($index/$total)*100)) -CurrentOperation "Episode $index of $total"
-            Write-Host "[-] Skipping (already exists): $fileName"
-            $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
-            Write-Log ("Skipping existing file: {0}" -f $destFile)
-            continue
+ExitCode is 0 for success/preview, 1 for fatal, 2 for incomplete and 130 for caught
+cancellation. Ordinary result fields omit raw URLs/paths; LegacyResult contains
+sensitive local inventory. Forced termination cannot guarantee cleanup/results.
+
+.PARAMETER Mode
+Latest selects one, Custom selects CustomCount and All selects bounded accessible
+entries. Defaults to Latest for NonInteractive; guided input may ask for selection.
+
+.PARAMETER CustomCount
+Positive count. Alone selects Custom; conflicts with explicit Latest/All.
+
+.PARAMETER OutputPath
+Absolute ordinary Windows drive/UNC archive root. Defaults to
+%USERPROFILE%\Downloads\Podcasts. Existing recorded names remain authoritative.
+
+.PARAMETER FeedUrl
+Absolute HTTP(S) feed/show-page URL without user information. Required with
+NonInteractive or LegacyPath. Multiple HTML feeds require a direct URL in
+NonInteractive mode.
+
+.PARAMETER NonInteractive
+Suppresses input and confirmation prompts. Requires explicit FeedUrl and cannot
+combine with enabled Confirm.
+
+.PARAMETER KeepAwake
+Requests temporary Windows system wakefulness only after confirmed work.
+Off by default; no display/power-plan change. Catchable cleanup restores native
+thread flags when possible; hard kill/explicit sleep/lid behavior is unclaimed.
+
+.PARAMETER LegacyPath
+Existing immediate show directory under OutputPath; requires explicit FeedUrl.
+Legacy review uses the current accessible feed snapshot, independent of selection.
+
+.PARAMETER LegacyAction
+Preview (default) is read-only. Adopt records explicit local evidence as
+transfer-unverified. Redownload downloads only the selected episode to a new name.
+Rollback restores selected checkpoint metadata, never media bytes.
+
+.PARAMETER LegacyEpisodeId
+Full current episode identity from reviewed inventory for Adopt/Redownload.
+
+.PARAMETER LegacyFile
+Exact reviewed file basename for Adopt.
+
+.PARAMETER LegacySha256
+Reviewed SHA-256 for Adopt, rechecked under writer protection.
+
+.PARAMETER LegacyCheckpoint
+Same-feed metadata checkpoint basename for Rollback. Corrupt current history or
+backup still fails closed; preserve metadata and originals for inspection.
+
+.PARAMETER DiagnosticExportPath
+Optional new restricted JSON summary in an existing safe parent. Best effort;
+no overwrite or export during WhatIf/legacy Preview/declined work.
+
+.PARAMETER MaxFeedPages
+Supported catalogue page limit, 1-100; default 20. Gaps/limits remain incomplete.
+
+.PARAMETER MaxAttempts
+Initial attempt plus retries per metadata retrieval/episode transfer, 1-10;
+default 3. One explicit policy follows all requests in this run.
+
+.PARAMETER HeaderTimeoutSeconds
+Connection/header timeout per redirect hop, 0.001-86400 seconds; default 30.
+
+.PARAMETER IdleTimeoutSeconds
+Timeout per pending body read, 0.001-86400 seconds; default 30.
+
+.PARAMETER RetryBudgetSeconds
+Elapsed retry/delayed-redirect start window, 0-86400 seconds; default 120.
+Zero permits only the initial attempt. Not a total transfer deadline.
+
+.PARAMETER BaseDelaySeconds
+Initial exponential retry delay, 0-3600 seconds; default 1.
+
+.PARAMETER MaxDelaySeconds
+Local retry-delay cap, 0-3600 seconds; default 30. Does not shorten Retry-After;
+a required wait beyond the remaining budget is deferred.
+
+.PARAMETER WhatIf
+Plans with bounded metadata/local reads and no persistent downloader writes,
+planned enclosure request or native keep-awake activation.
+
+.PARAMETER Confirm
+Asks before changes. Cannot be enabled with NonInteractive.
+
+.EXAMPLE
+$feed = Read-Host 'Podcast RSS or show-page URL'
+$root = Join-Path $env:TEMP 'UPD example – ää'
+$archive = Join-Path $root 'Archive'
+. .\UniversalPodcastDownloader.ps1
+$result = Invoke-PodcastRun -FeedUrl $feed -OutputPath $archive -NonInteractive -WhatIf
+$result.ExitCode
+
+Load the callable API and inspect an in-process preview result. No work starts
+when the file is dot-sourced.
+#>
+
+function Invoke-PodcastRun {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [ValidateSet('Latest','All','Custom')]
+        [string]$Mode = 'Latest',
+
+        [int]$CustomCount,
+
+        [string]$OutputPath = "$env:USERPROFILE\Downloads\Podcasts",
+
+        [string]$FeedUrl,
+
+        [switch]$NonInteractive,
+
+        [switch]$KeepAwake,
+
+        [string]$LegacyPath,
+
+        [ValidateSet('Preview','Adopt','Redownload','Rollback')]
+        [string]$LegacyAction = 'Preview',
+
+        [string]$LegacyEpisodeId,
+
+        [string]$LegacyFile,
+
+        [string]$LegacySha256,
+
+        [string]$LegacyCheckpoint,
+
+        [string]$DiagnosticExportPath,
+
+        [ValidateRange(1, 100)][int]$MaxFeedPages = 20,
+        [ValidateRange(1, 10)][int]$MaxAttempts = 3,
+        [ValidateRange(0.001, 86400)][double]$HeaderTimeoutSeconds = 30,
+        [ValidateRange(0.001, 86400)][double]$IdleTimeoutSeconds = 30,
+        [ValidateRange(0, 86400)][double]$RetryBudgetSeconds = 120,
+        [ValidateRange(0, 3600)][double]$BaseDelaySeconds = 1,
+        [ValidateRange(0, 3600)][double]$MaxDelaySeconds = 30
+    )
+
+
+    # Per-invocation preferences do not replace the caller's progress policy.
+    $ErrorActionPreference = 'Stop'
+    if ($NonInteractive) { $ConfirmPreference = 'None' }
+    $episodeResults = @()
+    $destinationPlan = @()
+    $planned = $null
+    $resolved = $null
+    $total = 0
+    $transportPolicy = New-PodcastTransportPolicy -MaxAttempts $MaxAttempts `
+        -HeaderTimeoutSeconds $HeaderTimeoutSeconds -IdleTimeoutSeconds $IdleTimeoutSeconds `
+        -RetryBudgetSeconds $RetryBudgetSeconds -BaseDelaySeconds $BaseDelaySeconds -MaxDelaySeconds $MaxDelaySeconds
+
+    $historyLock = $null
+    $archiveLock = $null
+    $runResources = [pscustomobject]@{ Power = $null; Progress = $null; Result = $null }
+    $onConfirmed = {
+        if ($KeepAwake -and $null -eq $runResources.Power) {
+            $runResources.Power = Start-PodcastKeepAwake -Enabled
+            Write-Host ('[*] ' + $runResources.Power.Message)
+            Write-PodcastDiagnostic -Message $runResources.Power.Message
+        }
+        if ($legacyRequested -and $LegacyAction -eq 'Redownload') {
+            $runResources.Progress = New-PodcastProgressContext -TotalEpisodes 1 -NonInteractive:$NonInteractive
+            Start-PodcastEpisodeProgress -Context $runResources.Progress -Index 1
+        }
+    }
+    $onTransferProgress = {
+        param($ProgressEvent)
+        if ($ProgressEvent.Stage -eq 'response') {
+            Start-PodcastTransferProgress -Context $runResources.Progress -Offset $ProgressEvent.Bytes `
+                -TotalBytes $ProgressEvent.TotalBytes -Attempt $ProgressEvent.Attempt
+        }
+        else {
+            Update-PodcastTransferProgress -Context $runResources.Progress -Bytes $ProgressEvent.Bytes -Stage $ProgressEvent.Stage
+        }
+    }
+    $legacyRequested = $PSBoundParameters.ContainsKey('LegacyPath')
+    $diagnosticPreview = $WhatIfPreference -or ($legacyRequested -and $LegacyAction -eq 'Preview')
+    $diagnosticConfirmation = $ConfirmPreference -in @('Low', 'Medium')
+
+    # --- Main ---
+    try {
+        # Each invocation owns a fresh in-memory context even when CLI validation fails.
+        $null = Initialize-PodcastDiagnostics -Preview
+        $cli = Resolve-PodcastCliOptions -BoundParameters $PSBoundParameters -Mode $Mode -CustomCount $CustomCount `
+            -FeedUrl $FeedUrl -NonInteractive:$NonInteractive -LegacyRequested:$legacyRequested
+        $Mode = $cli.Mode
+        $CustomCount = $cli.CustomCount
+        $null = Initialize-PodcastDiagnostics -Preview:($diagnosticPreview -or $diagnosticConfirmation)
+        foreach ($option in @('LegacyAction', 'LegacyEpisodeId', 'LegacyFile', 'LegacySha256', 'LegacyCheckpoint')) {
+            if ($PSBoundParameters.ContainsKey($option) -and -not $legacyRequested) {
+                throw 'Legacy options require -LegacyPath and an explicit -FeedUrl.'
+            }
+        }
+        if ($legacyRequested -and ([string]::IsNullOrWhiteSpace($LegacyPath) -or
+                -not $PSBoundParameters.ContainsKey('FeedUrl') -or [string]::IsNullOrWhiteSpace($FeedUrl))) {
+            throw 'Legacy review requires an existing -LegacyPath and an explicit -FeedUrl.'
+        }
+        $needFeed = $cli.NeedFeed
+        $needCount = $cli.NeedCount
+
+        $resolved = $null
+        if ($needFeed) {
+            $resolved = Get-FeedUrlInteractive -Policy $transportPolicy -MaxPages $MaxFeedPages
+            $FeedUrl = $resolved.Url
         }
 
-        $pct = [int](($index/$total)*100)
-        Write-Progress -Activity "Podcast downloads" -Status "Preparing: $fileName" -PercentComplete $pct `
-            -CurrentOperation "Episode $index of $total"
+        if ($needCount) {
+            Write-Host ""
+            Write-Host "How many episodes to download (newest first)?" -ForegroundColor Yellow
+            Write-Host "  - Press Enter for only the latest episode."
+            Write-Host "  - Enter a number like 5 to download the 5 newest."
+            Write-Host "  - Type 'all' to download all accessible entries within the feed limits."
+            Write-Host ""
 
-        Write-Host "[+] Downloading ($index/$total): $($ep.Title)"
-        Write-Verbose "    URL: $($ep.Url)"
-        Write-Verbose "    OUT: $destFile"
+            while ($true) {
+                $inputCount = Read-Host "Episodes to download (number / 'all' / Enter = 1)"
+                if ([string]::IsNullOrWhiteSpace($inputCount)) {
+                    $Mode = 'Latest'
+                    break
+                }
 
-        Write-Log ("Starting download {0}/{1}: {2}" -f $index, $total, ($ep.Title -as [string]))
-        Write-Log ("Target file: {0}" -f $destFile)
-        Write-Log ("Source URL : {0}" -f $ep.Url)
-        if ($ep.Guid) { Write-Log ("GUID      : {0}" -f $ep.Guid) }
-        if ($ep.PubDate) { Write-Log ("PubDate   : {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
+                $trimmed = $inputCount.Trim()
 
-        $success   = $false
-        $attempt   = 0
-        $lastError = $null
+                if ($trimmed.ToLower() -eq 'all') {
+                    $Mode = 'All'
+                    break
+                }
 
-        while (-not $success -and $attempt -lt $maxRetries) {
-            $attempt++
-            Write-Log ("Attempt {0} of {1}" -f $attempt, $maxRetries)
+                $n = 0
+                if ([int]::TryParse($trimmed, [ref]$n) -and $n -gt 0) {
+                    $Mode        = 'Custom'
+                    $CustomCount = $n
+                    break
+                }
 
-            try {
-                Invoke-WebRequest -Uri $ep.Url -OutFile $destFile
-                $success = $true
-            } catch {
-                $lastError = $_
-                $msg = $lastError.Exception.Message
-                Write-Warning ("    Attempt {0} of {1} failed: {2}" -f $attempt, $maxRetries, $msg)
-                Write-Log ("Attempt failed: {0}" -f $msg) 'WARN'
-                if ($attempt -lt $maxRetries) { Start-Sleep -Seconds 3 }
+                Write-Host "Invalid input. Enter 'all', a positive number, or just Enter." -ForegroundColor Red
             }
         }
 
-        if ($success) {
-            $size = $null
-            try { $size = (Get-Item -LiteralPath $destFile).Length } catch {}
-            Write-Host "    Saved: $fileName"
-            $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
-            Write-Log ("Download succeeded: {0}" -f $destFile)
-            if ($size -ne $null) { Write-Log ("File size: {0} bytes" -f $size) }
+        if (-not $FeedUrl) {
+            throw "No feed URL specified. Use -FeedUrl or paste it via the TUI."
+        }
+
+        if (-not $legacyRequested -and $Mode -eq 'Custom' -and (-not $CustomCount -or $CustomCount -lt 1)) {
+            throw "Mode 'Custom' requires -CustomCount with a value >= 1."
+        }
+
+        # Resolve a user-selected relative root once; metadata is never resolved as a path.
+        $rootInput = $OutputPath
+        if (-not [IO.Path]::IsPathRooted($rootInput)) {
+            $rootInput = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($rootInput)
+        }
+        $baseOutputPath = Assert-PodcastDestination -Root $rootInput -Directory
+        $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
+
+        Write-Host "[*] Fetching podcast feed..."
+        if ($null -eq $resolved) { $resolved = Resolve-PodcastItems -Feeds $candidateFeeds -Policy $transportPolicy -MaxPages $MaxFeedPages }
+        Write-Host ("    Using feed: " + (Get-PodcastSafeUrl -Url $resolved.Url))
+        Write-Host ('    Feed pages retrieved: {0}; repeated entries removed: {1}.' -f $resolved.Catalogue.PagesFetched, $resolved.Catalogue.DuplicateCount)
+        Write-Host '    Selection uses accessible entries; a complete historical catalogue is not guaranteed.'
+        if (-not $resolved.Catalogue.Complete) {
+            $catalogueMessage = Get-PodcastCatalogueMessage -Catalogue $resolved.Catalogue
+            Write-Warning $catalogueMessage
+            Write-PodcastDiagnostic $catalogueMessage 'WARN'
+        }
+
+        # Feed title, PS5.1-safe
+        $feedTitle = $null
+        try {
+            $node1 = $resolved.Xml.SelectSingleNode('//*[local-name()="rss"]/*[local-name()="channel"]/*[local-name()="title"][1]')
+            if ($node1) { $feedTitle = $node1.InnerText }
+            if (-not $feedTitle) {
+                $node2 = $resolved.Xml.SelectSingleNode('//*[local-name()="feed"]/*[local-name()="title"][1]')
+                if ($node2) { $feedTitle = $node2.InnerText }
+            }
+        } catch {
+            if (Test-PodcastCancellation -ErrorObject $_) { throw }
+            Write-Verbose 'Feed title lookup was unavailable; the established unnamed-show fallback is retained.'
+        }
+
+        if ($feedTitle) {
+            Write-Host '    Feed title available (kept in local archive metadata).'
         } else {
-            Write-Warning ("    Giving up after {0} attempts." -f $maxRetries)
-            $errMsg = if ($lastError) { $lastError.Exception.Message } else { "Unknown error" }
-            $failed += [PSCustomObject]@{ Title = $ep.Title; File = $destFile; Error = $errMsg }
-            Write-Log ("Giving up after {0} attempts: {1}" -f $maxRetries, ($ep.Title -as [string])) 'ERROR'
-            Write-Log ("Last error: {0}" -f $errMsg) 'ERROR'
+            Write-Host "    Feed title: (unknown)"
         }
-    }
 
-    Write-Progress -Activity "Podcast downloads" -Completed
+        $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
+        $unsupportedCount = @($episodes | Where-Object { -not $_.Url }).Count
+        if ($unsupportedCount -gt 0) {
+            Write-Warning ("Feed entries without a supported audio candidate: {0}." -f $unsupportedCount)
+            Write-PodcastDiagnostic ("Feed entries without a supported audio candidate: {0}." -f $unsupportedCount) 'WARN'
+        }
+        $episodes = @($episodes | Where-Object { $_.Url })
+        $episodeCount = $episodes.Count
+        if ($episodeCount -eq 0) {
+            throw 'Feed parsed, but no downloadable enclosure URLs were found. No supported audio candidate was declared.'
+        }
+        # Validate enclosure targets during planning, before any archive write or
+        # media request. The transport validates the original target and every hop again.
+        foreach ($episode in $episodes) { $null = Get-PodcastRequestUri -Uri $episode.Url }
+        $allEpisodes = $episodes
+        if ($legacyRequested) {
+            $legacyResult = Invoke-PodcastLegacyMigration -Root $baseOutputPath -LegacyRoot $LegacyPath -FeedUrl $resolved.Url `
+                -Episodes $allEpisodes -Action $LegacyAction -EpisodeId $LegacyEpisodeId -FileName $LegacyFile `
+                -Sha256 $LegacySha256 -Checkpoint $LegacyCheckpoint -Policy $transportPolicy `
+                -OnConfirmed $onConfirmed -OnProgress $onTransferProgress
+            $legacyPreview = $WhatIfPreference -or $LegacyAction -eq 'Preview' -or $null -eq $legacyResult.Outcome
+            if ($legacyResult.Outcome -eq 'transfer_verified') {
+                $episodeResults += New-PodcastEpisodeResult -EpisodeId $legacyResult.EpisodeId -Outcome downloaded `
+                    -Message 'Explicit legacy redownload completed; original media preserved.'
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome downloaded
+            }
+            $legacyRunResult = New-PodcastRunResult -Mode $Mode -Preview:$legacyPreview -EpisodeResults $episodeResults `
+                -Planned $(if ($legacyPreview) { @($legacyResult.Episodes).Count } else { 1 }) `
+                -Catalogue $resolved.Catalogue -LegacyResult $legacyResult -Message 'Explicit legacy review or action completed.'
+            $runResources.Result = $legacyRunResult
+            Complete-PodcastRunProgress -Context $runResources.Progress -Verified:$legacyRunResult.Complete
+            return $legacyRunResult
+        }
 
-    Write-Host ""
-    Write-Host "Summary" -ForegroundColor Cyan
-    Write-Host "-------"
-    Write-Host ("Downloaded : {0}" -f $downloaded.Count)
-    Write-Host ("Skipped    : {0}" -f $skipped.Count)
-    Write-Host ("Failed     : {0}" -f $failed.Count)
+        # Reserve room for both identifiers, separators and an episode's date/extension.
+        $folderBudget = [Math]::Min(100, 259 - $baseOutputPath.TrimEnd('\').Length - 2 - 84)
+        if ($folderBudget -lt 66) {
+            $folderBudget = [Math]::Min(100, 259 - $baseOutputPath.TrimEnd('\').Length - 2 - 70)
+        }
+        if ($folderBudget -lt 66) { throw 'Output root is too long to retain safe identifiers. Choose a shorter output path.' }
+        $archive = Resolve-PodcastArchive -Root $baseOutputPath -FeedTitle $feedTitle -FeedUrl $resolved.Url -MaxFolderLength $folderBudget
+        $safeFeedTitle = $archive.FolderName
 
-    Write-Log ("Summary: Downloaded={0}, Skipped={1}, Failed={2}" -f $downloaded.Count, $skipped.Count, $failed.Count)
+        $OutputPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
+        $episodes = Select-PodcastEpisode -Episodes $allEpisodes -Mode $Mode -CustomCount $CustomCount
+        $fileBudget = [Math]::Min(180, 259 - $OutputPath.Length - 1)
+        $historyState = $archive.State
+        if ($null -eq $historyState) {
+            $historyState = New-PodcastHistory -FeedId $archive.FeedId -FeedAliasFingerprint (Get-PodcastNameHash -IdentityKey ('feed:' + $resolved.Url))
+        }
+        $null = New-PodcastHistoryPlan -Episodes $allEpisodes -State $historyState -MaxFileNameLength $fileBudget
+        $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
 
-    if ($failed.Count -gt 0) {
+        $legacyReview = Find-PodcastLegacyReview -Root $baseOutputPath -ArchiveRoot $OutputPath -FeedTitle $feedTitle `
+            -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+        if ($null -ne $legacyReview) {
+            if ($WhatIfPreference) {
+                return New-PodcastRunResult -Mode $Mode -Preview -Planned $destinationPlan.Count `
+                    -Catalogue $resolved.Catalogue -LegacyResult $legacyReview -Message 'Local legacy inventory requires review.'
+            }
+            throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.'
+        }
+        if (-not $PSCmdlet.ShouldProcess('Selected podcast archive', 'Update archive history and logs; download selected missing episodes')) {
+            # Runtime plan items hold request credentials and mutable history. Return
+            # a diagnostic projection instead of serializing those internal objects.
+            $publicPlan = @($destinationPlan | ForEach-Object {
+                [pscustomobject]@{
+                    EpisodeId = $_.EpisodeId
+                    IdentitySource = $_.IdentitySource
+                    Source = Get-PodcastSafeUrl -Url $_.Episode.Url
+                    Recorded = ($null -ne $_.StateRecord)
+                }
+            })
+            return New-PodcastRunResult -Mode $Mode -Preview -Planned $destinationPlan.Count `
+                -Catalogue $resolved.Catalogue -Plan $publicPlan -Message 'Archive plan completed without changes.'
+        }
+        if ($diagnosticConfirmation) { $null = Initialize-PodcastDiagnostics }
+        $null = & $onConfirmed
+        $null = Invoke-PodcastDestinationPreflight -Root $baseOutputPath
+        if (-not (Test-Path -LiteralPath $baseOutputPath)) {
+            Write-Host '[*] Creating selected base output directory.'
+            $null = Assert-PodcastDestination -Root $baseOutputPath -Directory
+            try { $null = [IO.Directory]::CreateDirectory($baseOutputPath) }
+            catch {
+                if (Test-PodcastCancellation -ErrorObject $_) { throw }
+                throw 'The destination is not writable. Check output-folder permissions and retry.'
+            }
+        }
+
+        # Serialize discovery and first state creation across title changes. This
+        # short root lock is released before media transfer; the show lock remains.
+        $archiveLock = Enter-PodcastArchiveLock -Root $baseOutputPath
+        $archive = Resolve-PodcastArchive -Root $baseOutputPath -FeedTitle $feedTitle -FeedUrl $resolved.Url -MaxFolderLength $folderBudget
+        $safeFeedTitle = $archive.FolderName
+        $OutputPath = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
+        $fileBudget = [Math]::Min(180, 259 - $OutputPath.Length - 1)
+        $historyState = $archive.State
+        if ($null -eq $historyState) {
+            $historyState = New-PodcastHistory -FeedId $archive.FeedId -FeedAliasFingerprint (Get-PodcastNameHash -IdentityKey ('feed:' + $resolved.Url))
+        }
+        $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+        $legacyReview = Find-PodcastLegacyReview -Root $baseOutputPath -ArchiveRoot $OutputPath -FeedTitle $feedTitle `
+            -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+        if ($null -ne $legacyReview) { throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.' }
+        if (-not (Test-Path -LiteralPath $OutputPath)) {
+            Write-Host '[*] Creating podcast folder.'
+            $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
+            try { $null = [IO.Directory]::CreateDirectory($OutputPath) }
+            catch {
+                if (Test-PodcastCancellation -ErrorObject $_) { throw }
+                throw 'The destination is not writable. Check output-folder permissions and retry.'
+            }
+        }
+
+        # Lock the established show before logs, ownership or history changes, then
+        # reload and replan in case another completed run changed its history.
+        $historyLock = Enter-PodcastHistoryLock -Root $OutputPath
+        $lockedState = Read-PodcastHistory -Root $OutputPath
+        if ($null -ne $lockedState) { $historyState = $lockedState }
+        $feedAlias = Get-PodcastNameHash -IdentityKey ('feed:' + $resolved.Url)
+        if ($historyState.feed_id -cne $archive.FeedId -or $feedAlias -cnotin $historyState.feed_alias_fingerprints) {
+            throw 'Feed identity changed while acquiring archive writer protection; preserving history.'
+        }
+        $destinationPlan = New-PodcastHistoryPlan -Episodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+        $legacyReview = Find-PodcastLegacyReview -Root $baseOutputPath -ArchiveRoot $OutputPath -FeedTitle $feedTitle `
+            -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
+        if ($null -ne $legacyReview) { throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.' }
+        $null = Invoke-PodcastDestinationPreflight -Root $OutputPath
+        if ($historyState.generation -eq 0) {
+            $historyState.generation = 1
+            $historyState = Write-PodcastHistory -Lock $historyLock -State $historyState
+        }
+        $historyContext = @{ Lock = $historyLock; State = $historyState }
+        $archiveLock.Dispose()
+        $archiveLock = $null
+
+        Set-PodcastDiagnosticArchive -Root $OutputPath
+        Write-PodcastDiagnostic 'UniversalPodcastDownloader log'
+        Write-PodcastDiagnostic ("Feed URL     : {0}" -f (Get-PodcastSafeUrl -Url $FeedUrl))
+        Write-PodcastDiagnostic ("Resolved URL : {0}" -f (Get-PodcastSafeUrl -Url $resolved.Url))
+        Write-PodcastDiagnostic ("Mode         : {0}" -f $Mode)
+        Write-PodcastDiagnostic ("CustomCount  : {0}" -f ($CustomCount -as [string]))
+        if (-not $resolved.Catalogue.Complete) { Write-PodcastDiagnostic (Get-PodcastCatalogueMessage -Catalogue $resolved.Catalogue) 'WARN' }
+
+        Write-PodcastDiagnostic ("Feed items with valid URLs: {0}" -f $episodeCount)
+
+        $total = $destinationPlan.Count
+        $runResources.Progress = New-PodcastProgressContext -TotalEpisodes $total -NonInteractive:$NonInteractive
+        Write-Host "[*] Episodes to download: $total"
+        Write-PodcastDiagnostic ("Episodes to download (after mode/filter): {0}" -f $total)
+
+        $downloaded = @()
+        $skipped    = @()
+        $adopted    = @()
+        $failed     = @()
+
+        $index = 0
+        foreach ($planned in $destinationPlan) {
+            $index++
+            $ep = $planned.Episode
+            Start-PodcastEpisodeProgress -Context $runResources.Progress -Index $index
+
+            $fileName = $planned.FileName
+            $relativeDestination = [IO.Path]::Combine($safeFeedTitle, $fileName)
+            $destFile = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
+
+            $historyAction = Resolve-PodcastHistoryItem -Context $historyContext -Planned $planned
+            if ($historyAction -eq 'verified_skip') {
+                Write-Host "[-] Skipping (verified history): episode $index"
+                $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
+                $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome verified_skip `
+                    -Bytes $planned.StateRecord.bytes -Verification 'local-size-sha256' -Message 'Recorded media verified on disk.'
+                Write-PodcastDiagnostic ("Verified history and on-disk SHA-256: {0}" -f $planned.EpisodeId)
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome verified_skip
+                continue
+            }
+            if ($historyAction -eq 'adopted_skip') {
+                Write-Host "[-] Skipping (owner-adopted local file): episode $index"
+                $adopted += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
+                $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome legacy_unverified `
+                    -Message 'Owner-adopted local media is unchanged; transfer completeness remains unverified.'
+                Write-PodcastDiagnostic ("Owner-adopted local file is unchanged: {0}; transfer completeness remains unverified." -f $planned.EpisodeId)
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome legacy_unverified
+                continue
+            }
+            if ($historyAction -eq 'conflict') {
+                $message = 'Existing media is unknown or changed; preserved for review.'
+                Write-Warning $message
+                $failed += [PSCustomObject]@{ EpisodeId = $planned.EpisodeId; Error = $message }
+                $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome conflict -Message $message
+                Write-PodcastDiagnostic $message 'ERROR'
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome conflict
+                continue
+            }
+
+            Write-Host "[+] Downloading episode $index of $total"
+            Write-Verbose ("    URL: " + (Get-PodcastSafeUrl -Url $ep.Url))
+            Write-Verbose ("    Episode ID: " + $planned.EpisodeId)
+
+            Write-PodcastDiagnostic ("Starting download {0}/{1}: {2}" -f $index, $total, $planned.EpisodeId)
+            Write-PodcastDiagnostic ("Source URL : {0}" -f (Get-PodcastSafeUrl -Url $ep.Url))
+            if ($ep.PubDate) { Write-PodcastDiagnostic ("PubDate UTC: {0:yyyy-MM-dd HH:mm:ss}" -f $ep.PubDate) }
+
+            $success   = $false
+            $attempt   = 1
+            $lastError = $null
+
+            try {
+                $transferResult = Invoke-PodcastRecordedTransfer -Context $historyContext -Planned $planned `
+                    -Policy $transportPolicy -OnProgress $onTransferProgress
+                $success = $true
+                $attempt = $transferResult.Attempts
+            } catch {
+                if (Test-PodcastCancellation -ErrorObject $_) { throw }
+                $lastError = $_
+                # Revalidate paths before recording failure. Prepared evidence for
+                # an already placed final file remains for the next run to reconcile.
+                $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $relativeDestination
+                $transportFailure = Get-PodcastTransportFailure -ErrorObject $lastError
+                if ($null -ne $transportFailure -and $transportFailure.Data.Contains('Attempts')) {
+                    $attempt = [int]$transportFailure.Data['Attempts']
+                }
+                elseif ($lastError.Exception.Data.Contains('PodcastAttempts')) {
+                    $attempt = [int]$lastError.Exception.Data['PodcastAttempts']
+                }
+                $msg = Get-PodcastDiagnosticError -Error $lastError
+                Write-Warning ("    Transfer failed: {0}" -f $msg)
+                Write-PodcastDiagnostic ("Transfer failed: {0}" -f $msg) 'WARN'
+            }
+
+            if ($success) {
+                Write-Host "    Saved episode $index."
+                $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $transferResult.File }
+                $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome downloaded `
+                    -Bytes $transferResult.Bytes -Verification $transferResult.Verification -Attempts $attempt -Message 'Media transfer validated and recorded.'
+                Write-PodcastDiagnostic ("Download succeeded: {0}" -f $planned.EpisodeId)
+                Write-PodcastDiagnostic ("File size: {0} bytes; validation: {1}" -f $transferResult.Bytes, $transferResult.Verification)
+                foreach ($validationWarning in $transferResult.Warnings) {
+                    Write-Warning $validationWarning
+                    Write-PodcastDiagnostic $validationWarning 'WARN'
+                }
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome downloaded
+            } else {
+                $retainedEvidence = @($historyContext.State.episodes | Where-Object {
+                    $_.episode_id -ceq $planned.EpisodeId -and $null -ne $_.local_sha256 -and $null -ne $_.bytes
+                })
+                if ($retainedEvidence.Count -eq 0 -and -not (Test-Path -LiteralPath $destFile)) {
+                    $failureRecord = New-PodcastEpisodeRecord -Planned $planned
+                    Save-PodcastEpisodeRecord -Context $historyContext -Record $failureRecord
+                }
+                Write-Warning ("    Giving up after {0} attempts." -f $attempt)
+                $errMsg = if ($lastError) { Get-PodcastDiagnosticError -Error $lastError } else { "Unknown error" }
+                $failed += [PSCustomObject]@{ EpisodeId = $planned.EpisodeId; Error = $errMsg }
+                $outcome = if ($null -ne $transportFailure -and $transportFailure.Data['Kind'] -eq 'Deferred') { 'deferred' } else { 'failed' }
+                $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome $outcome -Attempts $attempt -Message $errMsg
+                Write-PodcastDiagnostic ("Giving up after {0} attempts: {1}" -f $attempt, $planned.EpisodeId) 'ERROR'
+                Write-PodcastDiagnostic ("Last error: {0}" -f $errMsg) 'ERROR'
+                Complete-PodcastEpisodeProgress -Context $runResources.Progress -Outcome $outcome
+            }
+        }
+
         Write-Host ""
-        Write-Host "Failed episodes:" -ForegroundColor Yellow
-        foreach ($f in $failed) {
-            Write-Host (" - {0}  ({1})" -f $f.Title, $f.Error)
-            Write-Log ("Failed: {0} ({1})" -f ($f.Title -as [string]), $f.Error) 'ERROR'
+        Write-Host "Summary" -ForegroundColor Cyan
+        Write-Host "-------"
+        Write-Host ("Downloaded : {0}" -f $downloaded.Count)
+        Write-Host ("Skipped    : {0}" -f $skipped.Count)
+        Write-Host ("Adopted    : {0}" -f $adopted.Count)
+        Write-Host ("Failed     : {0}" -f $failed.Count)
+
+        Write-PodcastDiagnostic ("Summary: Downloaded={0}, Skipped={1}, Failed={2}, Adopted={3}" -f $downloaded.Count, $skipped.Count, $failed.Count, $adopted.Count)
+
+        if ($failed.Count -gt 0) {
+            Write-Host ""
+            Write-Host "Failed episodes:" -ForegroundColor Yellow
+            foreach ($f in $failed) {
+                Write-Host (" - {0}  ({1})" -f $f.EpisodeId, $f.Error)
+                Write-PodcastDiagnostic ("Failed: {0} ({1})" -f $f.EpisodeId, $f.Error) 'ERROR'
+            }
+            # Return the full summary below; episode failures are incomplete, not setup errors.
         }
+
+        $runResult = New-PodcastRunResult -Mode $Mode -Planned $total -EpisodeResults $episodeResults -Catalogue $resolved.Catalogue
+        $runResources.Result = $runResult
+        Complete-PodcastRunProgress -Context $runResources.Progress -Verified:$runResult.Complete
+        if ($runResult.Complete) {
+            $runResult.Message = 'Run completed.'
+            Write-PodcastDiagnostic 'Run completed.' 'INFO'
+            Write-Host ''
+            Write-Host '[OK] Done. Files are in the selected podcast archive.'
+        }
+        else {
+            $runResult.Message = 'Run incomplete; failed, deferred, conflicting or unverified media, or unresolved feed pages remain.'
+            Write-Warning $runResult.Message
+            Write-PodcastDiagnostic $runResult.Message 'WARN'
+        }
+        return $runResult
     }
+    catch {
+        $primaryError = $_
+        $cancelled = Test-PodcastCancellation -ErrorObject $primaryError
+        $safeFailure = if ($cancelled) { 'Run cancelled; retained media and recovery evidence were preserved.' } else { Get-PodcastDiagnosticError -Error $primaryError }
+        if ($cancelled -and $null -ne $planned -and
+            $planned.EpisodeId -cnotin @($episodeResults | ForEach-Object { $_.EpisodeId })) {
+            $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome cancelled -Message $safeFailure
+        }
+        foreach ($remaining in $destinationPlan) {
+            if ($remaining.EpisodeId -cnotin @($episodeResults | ForEach-Object { $_.EpisodeId })) {
+                $episodeResults += New-PodcastEpisodeResult -EpisodeId $remaining.EpisodeId -Outcome deferred -Message 'Episode was not processed because the run stopped.'
+            }
+        }
+        Write-Host ("ERROR: {0}" -f $safeFailure) -ForegroundColor Red
+        Write-PodcastDiagnostic $safeFailure 'ERROR'
+        $catalogue = if ($null -ne $resolved) { $resolved.Catalogue } else { $null }
+        $catalogueGap = $primaryError.Exception.Data['PodcastCatalogue']
+        if ($null -ne $catalogueGap) { $catalogue = $catalogueGap }
+        $failureRunResult = New-PodcastRunResult -Mode $Mode -Preview:$diagnosticPreview -Planned $destinationPlan.Count `
+            -EpisodeResults $episodeResults -Catalogue $catalogue -Fatal:($null -eq $catalogueGap -and -not $cancelled) `
+            -Cancelled:$cancelled -Message $safeFailure
+        $runResources.Result = $failureRunResult
+        return $failureRunResult
+    }
+    finally {
+        try { Close-PodcastProgress -Context $runResources.Progress }
+        catch {
+            if ((Test-PodcastCancellation -ErrorObject $_) -and $null -ne $runResources.Result -and
+                $runResources.Result.ExitCode -eq 0 -and -not $runResources.Result.Preview) {
+                # All owned display IDs have been attempted. Keep committed
+                # episode evidence and continue power/lock cleanup, but expose
+                # a new catchable cancellation after otherwise successful work.
+                $runResources.Result.ExitCode = 130
+                $runResources.Result.Status = 'cancelled'
+                $runResources.Result.Complete = $false
+                $runResources.Result.Message = 'Run cancelled while clearing progress; completed media was preserved.'
+                Write-PodcastDiagnosticFallback -Message $runResources.Result.Message
+            }
+            else { Write-PodcastDiagnosticFallback -Message 'Progress display cleanup failed; the operation result is preserved.' }
+        }
+        try {
+            $powerCleanup = Stop-PodcastKeepAwake -Context $runResources.Power
+            if ($null -ne $runResources.Power -and -not $powerCleanup.Restored) {
+                Write-PodcastDiagnosticFallback -Message $powerCleanup.Message
+            }
+        }
+        catch { Write-PodcastDiagnosticFallback -Message 'Temporary keep-awake cleanup failed; the operation result is preserved.' }
+        try { if ($null -ne $historyLock) { $historyLock.Stream.Dispose() } }
+        catch { Write-PodcastDiagnosticFallback -Message 'History lock cleanup failed; the operation result is preserved.' }
+        try { if ($null -ne $archiveLock) { $archiveLock.Dispose() } }
+        catch { Write-PodcastDiagnosticFallback -Message 'Archive lock cleanup failed; the operation result is preserved.' }
+        if ($DiagnosticExportPath) {
+            # Diagnostic export is optional and best effort, including on failure.
+            try { Export-PodcastDiagnostics -Path $DiagnosticExportPath }
+            catch { Write-PodcastDiagnosticFallback -Message 'Diagnostic export is unavailable; the original operation result is preserved.' }
+        }
+        Close-PodcastDiagnostics
+    }
+}
 
-    Write-Log "Run completed." 'INFO'
-
-    Write-Host ""
-    Write-Host "[OK] Done. Files in: $OutputPath"
+# Importing defines the API without prompts, writes, downloads or process exit.
+if ($MyInvocation.InvocationName -eq '.') { return }
+$launcherGuided = $env:UPD_LAUNCHER -eq '1' -and $PSBoundParameters.Count -eq 0
+$runArguments = @{}
+foreach ($key in $PSBoundParameters.Keys) {
+    if ($key -ne 'PassThru') { $runArguments[$key] = $PSBoundParameters[$key] }
 }
-catch {
-    Write-Host ("ERROR: {0}" -f $_.Exception.Message) -ForegroundColor Red
-    Write-Log ("Fatal error: {0}" -f $_.Exception.Message) 'ERROR'
-    throw
+$runResult = Invoke-PodcastCommand -Options $runArguments
+if ($PassThru) { $runResult }
+if ($launcherGuided) {
+    try { $null = Read-Host 'Press Enter to close' }
+    catch { Write-PodcastDiagnosticFallback -Message 'The closing prompt is unavailable; the operation result is preserved.' }
 }
-finally {
-    $global:ProgressPreference = $prevProgress
-}
+exit $runResult.ExitCode

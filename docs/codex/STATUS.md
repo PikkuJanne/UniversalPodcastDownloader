@@ -1,58 +1,21 @@
 # Current implementation status
 
-Updated 2026-10-02 (Europe/Berlin). Scope: **UPD-0002 only**, following completed UPD-0001.
+Updated 4 October 2026 (Europe/Berlin). **UPD-0502 owner-review handoff complete; ready_for_owner_review.** Canonical acceptance is **59 passed / 1 not_run**. A060 remains a separate owner action gate; releaseAuthorized=false and published=false. No publication authority has been received.
 
-- UPD-0001: done; [historical evidence](evidence/UPD-0001.md).
-- UPD-0002: **done**; local and GitHub checks passed, implementation pushed and verified.
-- Next: **UPD-0101 — collections and safe Windows web requests**, ready, not started.
-- Branch/upstream: `codex/upd-m0-foundation` / `origin/codex/upd-m0-foundation`.
-- Reused [draft PR #1](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/1), base `main`.
-- [Commands](DEVELOPMENT.md) and [UPD-0002 evidence](evidence/UPD-0002.md).
+- Actual checkout `D:\projects\UniversalPodcastDownloader`; preserved `UniversalPodcastDownloader-main` snapshot untouched.
+- Reused `codex/upd-m5-acceptance` and [OPEN/DRAFT PR #6](https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/6), stacked on unmerged M4 `codex/upd-m4-release` at `6a34eb60486e30e7a2631dc0bdbb4d69e643c2b9`. Initial clean local/fetched/independent remote/PR head `8725f16a7691e92de4f9db45396d5df6138da571`, tree `298badeb6d83974b056cf93132da8cd8cfdb92ea`, divergence0/0. Main observed `2ac82614493be7196c9ebee116f23fec07368b50`; tags/releases empty. Final pushed head/tree/CI/artifact are independently recorded in PR #6 after verification, avoiding a self-hash loop.
+- [Owner-review package](OWNER_REVIEW.md) supplies exact observed candidate source/branch/base/PR/version/run/artifact/checksum identities, retention, known limitations and action-specific approval boundaries. [Approval checklist](../releases/APPROVAL_CHECKLIST.md) and draft notes are reconciled with current status.
+- **A041 passed:** the human double-clicked the unchanged extracted launcher in Windows Sandbox from `C:\UPD manual ä\Podcast test ü`, completed guided synthetic input, reported Downloaded1/Skipped0/Adopted0/Failed0 and observed closure after Enter. File evidence confirms original synthetic bytes and verified history. The Explorer child’s numeric exit was unavailable; no current numeric exit is inferred.
+- **A045 passed within its stated scope:** the human physically pressed Ctrl+C during receiving in native Windows PowerShell `5.1.26100.9444` and PowerShell `7.6.5` ConsoleHosts in Windows Sandbox. Real guest native leases restored their prior state on activation threads6576/4688, became inactive and ended; progress closed, handles reopened and no completed media/history was invented. Guest native API observations do not supply a physical host sleep/lid claim.
+- Retained partials483328/139264 bytes match expected synthetic prefixes. Each sidecar retains a valid65536-byte saved prefix but differs from the longer partial’s full size/hash. Strict resume would refuse and preserve those pairs for review; no successful-resume, terminal-checkpoint or callable exit130 claim is added. See [manual evidence](evidence/UPD-0502-MANUAL.md).
+- **A059 passed:** all59 mandatory cases have supported evidence and the handoff is prepared. A057/A058 retain their historical review/refusal evidence. **A060** remains canonical not_run/reviewed owner_gate until an exact action is separately authorized, performed and verified. No waiver or policy change was used. Optional signing/live website integration remain owner choices.
 
-## Observed repository state
+The manually observed immutable candidate is source `ed3cd45ddbc5f3d485ad29062420b11d3fc02fd8`, tree `86cbb1c5907aa37b5db1af56bbbfd7913fe326af`, version0.1.0-rc.1/UNRELEASED_CANDIDATE. [CI37180637487](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37180637487), attempt1, passed all three jobs at that exact source: both hosted engines All1862/0/0/0/0 and118-file analysis parse/new/baseline0/0/0. [Artifact11295685474](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37180637487/artifacts/11295685474) has outer6217665 bytes/SHA25679be50ff76513afb8c4faf06a4985cdfdcf136ac3e823d09d1edc9aee54903a3 and portable ZIP SHA2566ddc6c7e3a2b315ada19cd7c298d4c02284bb6177948b55fc2918b6e717d3ff2. API/upload/download, Git36/ZIP37/original MIT/manifest/checksum verification is recorded in [UPD-0502 evidence](evidence/UPD-0502.md). Expiry is11October2026 08:00:23 Europe/Berlin. Hosted PS5.1.20348.5622/PS7 7.6.6, Windows Server2022 image20260927.320.1 and fixture Python3.14.7 remain distinct from the manual guest and local development engines.
 
-Actual root: `D:\projects\UniversalPodcastDownloader`. Original `UniversalPodcastDownloader-main` snapshot remains untouched. Origin fetch/push: `git@github.com:PikkuJanne/UniversalPodcastDownloader.git`.
+Current inventory remains **1862=1524 Unit+338 Integration**, including71 development readiness-policy checks. Historical UPD-0502 focused71/118-file checks and exit2/not_ready56/59 are retained as dated pre-observation results. Fresh completion-input focused checks, analysis and the readiness CLI are recorded separately in [UPD-0502 evidence](evidence/UPD-0502.md) and [DEVELOPMENT](DEVELOPMENT.md); both local engines passed71 focused checks and118-file analysis without failures/findings, and the actual CLI returned exit0/ready_for_owner_review59/59 with no issues and no publication authority. No new full local All run is claimed. One existing negative-readiness unit test now constructs explicit synthetic gaps instead of depending on incomplete live acceptance. Runtime/tools/tracked fixtures/workflow/36-file package allowlist/root README/license/artwork/website content are unchanged; exact new-head CI/artifact verification follows the documentation/test-stabilization commit.
 
-Starting local/remote/PR HEAD: `9fc4c004a55943fe9e099a93247299921bfa8f1e`; clean tree. Verified fetch found 0 ahead/0 behind. Remote main remains `2ac82614493be7196c9ebee116f23fec07368b50`. No newer work or instruction conflict; no reset/stash/merge/rebase.
+The [matrix](RELEASE_ACCEPTANCE.json) and [readiness report](RELEASE_READINESS.md) retain immutable tested6a source/tree and original-source full clean-clone All1791/116-file analyses, four repeat candidate builds and14 extraction observations from [UPD-0501](evidence/UPD-0501.md). New human observations remain bound to ed3. All29 runtime/all36 payload raw Git bytes remain equal; runtime fingerprint709367285219c0ac0f4f1b8be2d346d6b91d5d6885b3b3afc27372352f745ca1. Final source equivalence supports declared inherited observations and never relabels a prior local run. Source-bound manifests and ZIP hashes change with documentation commits.
 
-SSH remains unavailable; use the existing authenticated GitHub CLI HTTPS fallback and command-scoped author settings from UPD-0001 evidence. Saved origin and persistent credential settings stay unchanged.
+Keep original-byte/no-overwrite/history/resume/containment/privacy/DPAPI/catalogue/exit/progress/power invariants and documented physical cancellation/sleep/lid/hard-kill/power-loss/cleanup/decoding/UNC limits. Actual renderer evidence and reviewed capture instructions do not supply a screenshot asset or physical accessibility/display approval. No real archive/private feed/default saved settings or live smoke; no merge/rebase/reset/force push/deletion/tag/release/publication/settings/secrets/signing/trust-store change/purchase/domain/hosting/DNS/deployment.
 
-## Implemented foundation
-
-Dot-sourcing the original script now loads functions without startup preferences or main execution. Its parameter block, nine function bodies and main block remain unchanged. Batch launcher and six other original files are unchanged; no runtime module/dependency added.
-
-Added explicit repository-local setup, Pester 5.7.1/PSScriptAnalyzer 1.24.0 package hash locks, test/analysis runners, synthetic product tests and a Windows 5.1/7 CI matrix. Python is integration tooling only. Runners never install tools and fail on missing dependencies, empty/all-skipped selections and test failures. Analysis retains known warnings and rejects unmatched findings.
-
-## Actual local checks
-
-Windows 10.0.26300.0; Python 3.14.7; Git 2.56.0.windows.1; gh 2.97.0.
-
-| Engine | Pester All | Analysis |
-|---|---|---|
-| PowerShell 7.6.5 | 33 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 10 baseline warnings |
-| Windows PowerShell 5.1.26100.9444 | 33 passed / 0 failed / 0 skipped / 0 not_run | 12 files; 0 parse errors; 0 new findings; 9 baseline warnings |
-
-Each run includes 19 product unit checks (six explicit defect characterizations), ten runner checks and four integration checks. These are not 33 completed acceptance cases. A004/A005 passed locally and in CI; A006-A060 remain not_run. Historical helper evidence stays separate.
-
-## Observed GitHub checks
-
-[Successful implementation run](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/36988718152), head `057e8a2860f3b3f4a062e8cdc31eeb221e5c982b`, completed 2026-10-02 09:16:15 UTC. Windows Server 2022 (10.0.20348.0), Python 3.14.7, Pester 5.7.1 and PSScriptAnalyzer 1.24.0:
-
-- PS7 7.6.6: 33 passed / 0 failed / 0 skipped / 0 not_run; analysis 12 files, 0 parse errors/new findings, 10 baseline warnings.
-- Windows PS5.1.20348.5622: 33 passed / 0 failed / 0 skipped / 0 not_run; analysis 12 files, 0 parse errors/new findings, 9 baseline warnings.
-- Both runtime inventory steps passed. Initial CI failures and corrections are retained in evidence.
-
-## Known limitations
-
-- Unmodified PS5.1 noninteractive entrypoint fails during legacy web parsing/confirmation.
-- Harness-only UseBasicParsing exposes the PS5.1 singleton Count/division-by-zero defect. Successful PS5.1 multi-item transfers use that labeled test default; production requests are unchanged.
-- Filename collisions, reserved/dot names, Atom date/identity and first-enclosure defects remain for assigned later tasks.
-- Analysis retains legacy warnings, including original UTF-8-without-BOM encoding. PS7 reports one additional Write-Log built-in-command-profile warning.
-- Local PS5.1 tests use process-only policy Bypass and a native child module path; no persisted changes. No real archive, private subscriptions or external podcast hosts accessed.
-- Manual launcher, live feeds and broader recovery/security/release acceptance remain unrun.
-
-## Continuity and owner gates
-
-Implementation SHA `057e8a2860f3b3f4a062e8cdc31eeb221e5c982b` independently verified equal to the remote feature branch at 2026-10-02 11:15:14 +02:00. This final documentation checkpoint is pushed and verified separately; its resulting SHA and CI are reported in the draft PR and final handoff, avoiding a self-referential commit hash.
-
-No approval needed for authorized feature-branch work/draft PR updates. Merges, rebases, resets, force pushes, existing branch/issue deletion, settings, release tags/publication, purchases and deployment remain outside scope. Stop after UPD-0002.
+**UPD-0502 remains the current task and is complete within its preparation scope.** [The continuation prompt](NEXT_THREAD_PROMPT.md) awaits an owner’s exact action request; there is no automatic next task or publication action.
