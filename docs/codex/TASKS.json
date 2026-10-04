@@ -1,7 +1,10 @@
 {
   "schema_version": 1,
   "bundle_version": "1.0.0",
-  "current_task": "UPD-0502",
+  "project_status": "closed",
+  "current_task": null,
+  "closed_date": "2026-10-04",
+  "closure_scope": "Implementation, mandatory acceptance and merged source complete; website assets and publication are reserved for a later project.",
   "status_values": [
     "todo",
     "ready",
@@ -851,12 +854,13 @@
       "evidence": [
         "docs/codex/evidence/UPD-0502.md",
         "docs/codex/evidence/UPD-0502-MANUAL.md",
+        "docs/codex/evidence/PROJECT-CLOSURE.md",
         "docs/codex/OWNER_REVIEW.md",
         "docs/releases/APPROVAL_CHECKLIST.md"
       ],
       "implementation_commit": null,
       "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/6",
-      "verification_followup": "Owner-review preparation complete after actual A041 Explorer and both-engine A045 physical Ctrl+C observations; all59 mandatory cases supported and readiness ready_for_owner_review. Final documentation head/tree/CI/artifact are independently recorded in PR #6 after verification. A060 remains canonical not_run/reviewed owner_gate; no exact publication action was authorized or performed."
+      "verification_followup": "Historical pre-merge handoff: owner-review preparation complete after actual A041 Explorer and both-engine A045 physical Ctrl+C observations; all59 mandatory cases supported and readiness ready_for_owner_review. Its final documentation head/tree/CI/artifact are independently recorded in PR #6. Subsequent owner-authorized closure: PRs #1–#6 merged; audited clean main22b9c213d086575ca83c45b014db0142a9ce6733/tree0ec7d9c7606fcbcc22d9843f7c69830fa0541e62 has successful exact CI37212964287 in all three jobs. Project closed for implementation, mandatory acceptance and merged source; website assets and publication belong to a later project. Historical tested/observed source and acceptance records remain unchanged. A060 stays canonical not_run/reviewed owner_gate; no release publication outcome is claimed."
     }
   ]
 }

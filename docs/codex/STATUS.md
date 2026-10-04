@@ -1,4 +1,14 @@
-# Current implementation status
+# Project closure status
+
+Closed 4 October 2026 (Europe/Berlin). **Implementation, mandatory acceptance and the merged source are complete.** All 26 tasks are done; project_status=closed and current_task=null. Website assets and publication are reserved for a later project. See [project closure evidence](evidence/PROJECT-CLOSURE.md).
+
+All implementation PRs #1–#6 are merged. The audited implementation snapshot is local/remote `main` source `22b9c213d086575ca83c45b014db0142a9ce6733`, tree `0ec7d9c7606fcbcc22d9843f7c69830fa0541e62`; synchronization was clean before this closure metadata update. Its exact [main CI 37212964287](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37212964287) succeeded in all three jobs. The documentation-only closure checkpoint is verified after synchronization and identified in the closing response, avoiding a self-referential commit hash. Earlier candidate runs retain their original identities.
+
+Acceptance remains **59 passed / 1 not_run**, with all 59 mandatory cases supported and the observed readiness gate 59/59. A060 remains canonical not_run/reviewed owner_gate; merging and closing the implementation project do not create or publish a release. No publication approval or outcome is claimed. Physical guest-native cancellation, strict partial/checkpoint refusal and the other documented limitations remain unchanged.
+
+## Historical owner-review snapshot
+
+The following record is the 4 October 2026 pre-merge owner-review snapshot. Its OPEN/DRAFT PRs, stacked unmerged base, main identity and current-task wording describe that earlier handoff. The project is now closed and the merges are recorded above and in PROJECT-CLOSURE.md.
 
 Updated 4 October 2026 (Europe/Berlin). **UPD-0502 owner-review handoff complete; ready_for_owner_review.** Canonical acceptance is **59 passed / 1 not_run**. A060 remains a separate owner action gate; releaseAuthorized=false and published=false. No publication authority has been received.
 
@@ -18,4 +28,4 @@ The [matrix](RELEASE_ACCEPTANCE.json) and [readiness report](RELEASE_READINESS.m
 
 Keep original-byte/no-overwrite/history/resume/containment/privacy/DPAPI/catalogue/exit/progress/power invariants and documented physical cancellation/sleep/lid/hard-kill/power-loss/cleanup/decoding/UNC limits. Actual renderer evidence and reviewed capture instructions do not supply a screenshot asset or physical accessibility/display approval. No real archive/private feed/default saved settings or live smoke; no merge/rebase/reset/force push/deletion/tag/release/publication/settings/secrets/signing/trust-store change/purchase/domain/hosting/DNS/deployment.
 
-**UPD-0502 remains the current task and is complete within its preparation scope.** [The continuation prompt](NEXT_THREAD_PROMPT.md) awaits an owner’s exact action request; there is no automatic next task or publication action.
+**At that pre-merge handoff, UPD-0502 was the current task and complete within its preparation scope.** The project now has no active task; [the continuation prompt](NEXT_THREAD_PROMPT.md) records closure and requires a new explicit request before reopening work.

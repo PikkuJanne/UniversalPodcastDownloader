@@ -1,5 +1,9 @@
 # UPD-0502 owner-review package
 
+**Project closed 4 October 2026 (Europe/Berlin).** Implementation, mandatory acceptance and merged source are complete; all 26 tasks are done and no task is active. All PRs #1–#6 have been merged. The audited implementation-main source is `22b9c213d086575ca83c45b014db0142a9ce6733`, tree `0ec7d9c7606fcbcc22d9843f7c69830fa0541e62`, with all three jobs successful in [exact main CI37212964287](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37212964287). [Project closure evidence](evidence/PROJECT-CLOSURE.md) records the merge/synchronization/artifact outcomes. Website assets and publication are reserved for a later project; A060 remains not_run/owner_gate and no publication authority or release outcome is inferred from the merges.
+
+**Historical pre-merge candidate review:** all remaining sections below retain the 4 October 2026 owner-review snapshot, including its original source/run/artifact hashes and limits. OPEN/DRAFT and unmerged-base descriptors and the action record describe that earlier handoff. Their historical merge-authorization entries do not describe the subsequent owner-authorized merges recorded in PROJECT-CLOSURE.md.
+
 Completed 4 October 2026 (Europe/Berlin). **ready_for_owner_review; UPD-0502 preparation complete.** All59 mandatory acceptance cases have supported evidence, including the human Explorer and both-engine physical Ctrl+C observations below. A059's gate-qualified handoff is complete. A060 has no authorized action or publication outcome; releaseAuthorized=false and published=false. No waiver or acceptance-policy change was used.
 
 ## Acceptance and the remaining owner gate
@@ -53,7 +57,7 @@ The matrix preserves historical tested source `6a34eb60486e30e7a2631dc0bdbb4d69e
 - Website material is portable content/metadata and accurate capture instructions. No real screenshot asset, physical accessibility/display approval, selected live site, download release link or deployment is supplied. Optional signing and website integration remain separate owner choices.
 - The MIT license covers the software, not podcast recordings. No runtime Python, Git, Pester, PSScriptAnalyzer, package manager, FFmpeg, cloud account or daemon requirement is introduced.
 
-## Decisions and action record
+## Decisions and action record at the historical handoff
 
 Use the [approval checklist](../releases/APPROVAL_CHECKLIST.md) with [local draft notes](../releases/DRAFT-0.1.0-rc.1.md), [website content](../website/PRODUCT_PAGE.md), [workflow trust boundaries](RELEASE_WORKFLOW.md) and [publication requirements](RELEASE_AND_WEBSITE.md). Select and preserve the exact reviewed artifact before expiry; recording it here does not select approved distribution bytes.
 
@@ -69,4 +73,4 @@ Use the [approval checklist](../releases/APPROVAL_CHECKLIST.md) with [local draf
 
 For a future exact action, first record the human approval text, date/time in Europe/Berlin, action, immutable source/tree/version/ZIP hash and intended tag/target. Inspect changed source and rebuild/retest if necessary. Creating a GitHub release for an absent tag may create the tag; verify a separately authorized existing tag before any release action. After each authorized action, independently verify its remote outcome and record exact commit/tag/release/asset identifiers and downloaded hashes. Authority for one action does not authorize another.
 
-**UPD-0502 preparation is complete.** [The scoped continuation prompt](NEXT_THREAD_PROMPT.md) awaits an owner's exact action request. No next task, tag or publication action is invented, and this task does not request or record publication approval.
+**That pre-merge UPD-0502 preparation was complete.** The project is now closed; [the continuation prompt](NEXT_THREAD_PROMPT.md) requires a new explicit request to reopen work. No next task, tag or publication action is invented, and closure does not request or record publication approval.
