@@ -1,0 +1,14 @@
+# Development/runtime ignore suggestions. Review and merge into .gitignore in UPD-0001/0002.
+# Do not overwrite an existing .gitignore. Never blanket-ignore all JSON/XML/MP3: synthetic fixtures are intentional.
+# Prefer runtime outputs OUTSIDE the checkout. Adjust exact generated directories to the chosen implementation.
+/artifacts/
+/TestResults/
+/.local/
+/.dev-tools/
+*.part
+*.part.json
+*.log
+__pycache__/
+*.pyc
+# Never track real subscriptions, history, credentials or downloaded podcast archives.
+# Keep named synthetic fixtures under tools/codex-handoff/fixtures tracked.

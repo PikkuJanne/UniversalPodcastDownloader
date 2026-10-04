@@ -1,0 +1,6 @@
+{
+  "source_commit": "2ac82614493be7196c9ebee116f23fec07368b50",
+  "analyzer_version": "1.24.0",
+  "meaning": "The two original warning causes were removed in UPD-0401. No accepted analyzer warning baseline remains; new findings fail analysis.",
+  "findings": []
+}

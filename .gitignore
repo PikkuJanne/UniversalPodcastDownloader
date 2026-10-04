@@ -1,0 +1,9 @@
+/.dev-tools/
+/.local/
+/artifacts/
+/TestResults/
+*.part
+*.part.json
+*.log
+__pycache__/
+*.pyc

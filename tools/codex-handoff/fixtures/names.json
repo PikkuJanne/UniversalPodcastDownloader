@@ -1,0 +1,31 @@
+{
+  "names": [
+    ".",
+    "..",
+    "CON",
+    "con.txt",
+    "PRN",
+    "AUX",
+    "NUL",
+    "COM1",
+    "COM9",
+    "LPT1",
+    "LPT9",
+    "COM¹",
+    "LPT²",
+    "trailing.",
+    "trailing ",
+    "A:B",
+    "A?B",
+    "A/B",
+    "A\\B",
+    "C:\\escape",
+    "\\\\server\\share",
+    "Line\u0001break",
+    "Ääkköset – 日本語 😀",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "Episode",
+    "   "
+  ],
+  "note": "These are untrusted metadata test values, never filesystem commands."
+}
