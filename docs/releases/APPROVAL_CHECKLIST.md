@@ -1,11 +1,11 @@
 # Candidate review and publication approval
 
-Status: **UNRELEASED_CANDIDATE; no publication approval recorded**. UPD-0404 prepares this checklist and review artifacts. It does not complete UPD-0405 website content or UPD-0501/0502 final acceptance/handoff.
+Status: **UNRELEASED_CANDIDATE / NOT_READY; no publication approval recorded**. Updated 4 October 2026 (Europe/Berlin). UPD-0405 portable website content and UPD-0501 acceptance reconciliation are complete. UPD-0502 supplies the [owner-review package](../codex/OWNER_REVIEW.md), but remains blocked by required A041/A045 observations and A059's all-mandatory-gates-met precondition. A060 remains a separate action gate.
 
 ## Review the concrete candidate
 
 - [ ] Confirm the exact version, source commit/tree, clean branch/PR head and successful two-engine tests/analysis. Record run URLs and actual passed/failed/skipped/not-run counts; do not substitute historical or helper-only results.
-- [ ] Resolve all mandatory acceptance cases. At UPD-0404, A055-A060 remain outstanding. Record any explicit owner-approved deferral and narrow feature claims accordingly.
+- [ ] Resolve all mandatory acceptance cases. Current canonical status is56 passed/4 not_run; A041 Explorer double-click, A045 physical Ctrl+C and A059 final gate-qualified handoff are unresolved. A060 has no authorized/performed publication action. Record any explicit owner-approved scope change and narrow feature claims accordingly; the current offline policy rejects deferral flags, so a deliberate claims/policy review would be required.
 - [ ] Download the exact run's candidate artifact into a new review directory. Record artifact ID/name/digest and run attempt. CI artifacts expire after 7 days; retain an explicitly selected reviewed copy before expiry. Storage of a candidate does not authorize release publication.
 - [ ] Independently verify ZIP/manifest hashes from `SHA256SUMS`, the identical embedded manifest, all payload hashes and the committed allowlist. Confirm the full immutable source URL, version and tree against GitHub. The outer GitHub artifact digest and ZIP checksum identify different byte streams.
 - [ ] Treat PR/fork-produced artifact data as untrusted. Review the workflow and candidate source, use ordinary hosted runners, and do not execute downloaded candidate files with credentials or in a privileged release workflow. An action SHA or checksum does not make malicious source safe.
@@ -35,7 +35,8 @@ Status: **UNRELEASED_CANDIDATE; no publication approval recorded**. UPD-0404 pre
 | Approved action(s) | None |
 | Approval date/time | Not applicable |
 | Candidate version | `0.1.0-rc.1` / `UNRELEASED_CANDIDATE` |
-| Approved source/tree/ZIP hash | Unassigned; attach the exact reviewed final candidate before a later decision |
+| Observed candidate identities | [Owner package](../codex/OWNER_REVIEW.md) and PR #6's final-head verification record; these are review identities, not approved source/assets |
+| Approved source/tree/ZIP hash | Unassigned; select the exact fully reviewed candidate only after unresolved readiness conditions are addressed |
 | Intended tag | Unassigned; no tag creation/push authorized |
 | Outcome/URLs | None; no release, merge, settings or deployment action |
 

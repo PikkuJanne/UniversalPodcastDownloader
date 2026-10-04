@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "meaning": "Workflow and downloader acceptance. UPD-0501 reconciles recorded evidence with literal preconditions: A041 Explorer double-click and A045 physical Ctrl+C remain not_run despite passing component observations. A057/A058 record acceptance review and refusal of incomplete readiness; A059/A060 remain later/owner-gated. A055 is content and accurate capture-instructions review, without screenshot or physical display approval. Helper checks and green CI never substitute for downloader acceptance; no publication authority is inferred.",
+  "meaning": "Workflow and downloader acceptance. UPD-0501 reconciles evidence with literal preconditions: A041 Explorer double-click and A045 physical Ctrl+C remain not_run despite passing components; A057/A058 acceptance review/refusal passed. UPD-0502 prepares the owner-review package while A059 all-mandatory-gates-met precondition remains unmet and A060 action authority/outcome remains separately owner-gated. A055 is content/capture-instructions review, without screenshot or physical display approval. Helper checks and green CI never substitute for downloader acceptance; no publication authority inferred.",
   "default_engines": [
     "Windows PowerShell 5.1 on Windows",
     "Supported PowerShell 7.x on Windows; exact version recorded at execution"
@@ -653,7 +653,7 @@
       "expected": "Report ready-for-owner-review, remaining approvals and exact branch/PR/artifact/version identifiers; leave draft private/unpublished as applicable.",
       "fixture": null,
       "status": "not_run",
-      "evidence": null
+      "evidence": "docs/codex/evidence/UPD-0502.md"
     },
     {
       "id": "A060",
@@ -664,7 +664,7 @@
       "expected": "No inferred authority for other destructive/publication operations; audit trail records scope and resulting identifiers.",
       "fixture": null,
       "status": "not_run",
-      "evidence": null
+      "evidence": "docs/codex/evidence/UPD-0502.md"
     }
   ]
 }

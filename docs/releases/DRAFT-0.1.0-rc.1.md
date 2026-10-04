@@ -1,6 +1,6 @@
 # 0.1.0-rc.1 — draft release notes
 
-Status: **UNRELEASED_CANDIDATE**. These are local review material, not a GitHub release or a stable-version announcement. No tag or release exists at the preparation observation on 3 October 2026. Final acceptance and publication approval are still outstanding. See the [approval checklist](APPROVAL_CHECKLIST.md) before any distribution decision.
+Status: **UNRELEASED_CANDIDATE / NOT_READY**. These are local review material. Tags and releases were empty on the fresh 4 October 2026 inspection (Europe/Berlin). Required Explorer double-click and physical Ctrl+C observations, the final gate-qualified handoff and exact publication authority remain outstanding. See the [owner-review package](../codex/OWNER_REVIEW.md) and [approval checklist](APPROVAL_CHECKLIST.md) before any distribution decision.
 
 ## What the candidate contains
 
@@ -12,7 +12,7 @@ The portable ZIP includes both entry points, all 27 runtime helpers, original MI
 
 ## Compatibility and recovery
 
-Both supported Windows engines have concrete automated and fresh-extraction evidence. Exact versions, selected counts, failures and unrun cases are in the [task evidence](../codex/evidence/UPD-0404.md) and the final draft PR. CI also records its hosted Windows Server image and installed engine versions. These observations do not certify all Windows builds, podcast providers or audio files.
+Both supported Windows engines have concrete automated and fresh-extraction evidence. Exact versions, selected counts, failures and unrun cases are in [clean-clone evidence](../codex/evidence/UPD-0501.md), [handoff evidence](../codex/evidence/UPD-0502.md) and the final draft PR. CI also records its hosted Windows Server image and installed engine versions. These observations do not certify all Windows builds, podcast providers or audio files.
 
 Extract a candidate into a new directory, keep `src` with the launchers, and read the packaged README before choosing an archive. Keep older ZIPs/manifests/checksums separately. Application-code rollback does not restore archive or saved-configuration schemas. Preserve media, history/backups, partials and resume sidecars; test rollback with explicit synthetic copies. Completed or unknown media must never be overwritten to force a migration.
 
@@ -40,6 +40,6 @@ Use the exact final-head candidate report and successful workflow run, never a m
 | Artifact | Exact run ID/name; CI retention is 7 days |
 | ZIP and manifest hashes | Values independently checked against `SHA256SUMS` and source |
 | Intended tag/action | Owner-selected exact tag and separately authorized action |
-| Final readiness | A055-A060 remain outstanding at UPD-0404; resolve or explicitly approve any deferral |
+| Final readiness | NOT_READY: A041/A045/A059 unresolved; A060 separately owner-gated. Any explicit scope change requires a deliberate review of claims and policy |
 
 No release download link or tag is invented here. The final PR records concrete candidate identifiers without embedding a document's own commit hash into itself. A CI candidate upload is review storage, not approval to create a GitHub release.

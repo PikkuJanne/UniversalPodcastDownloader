@@ -826,7 +826,7 @@
       "id": "UPD-0502",
       "milestone": "M5",
       "title": "Owner-review handoff and publication gate",
-      "status": "ready",
+      "status": "blocked",
       "dependencies": [
         "UPD-0501"
       ],
@@ -848,9 +848,14 @@
         "A059",
         "A060"
       ],
-      "evidence": [],
+      "evidence": [
+        "docs/codex/evidence/UPD-0502.md",
+        "docs/codex/OWNER_REVIEW.md",
+        "docs/releases/APPROVAL_CHECKLIST.md"
+      ],
       "implementation_commit": null,
-      "pr": null
+      "pr": "https://github.com/PikkuJanne/UniversalPodcastDownloader/pull/6",
+      "blocked_reason": "Review package prepared; A041 Explorer double-click and A045 physical Ctrl+C are unrun, so A059 all-mandatory-gates-met precondition is unmet. A060 remains a separate owner action gate; no waiver or publication authority received."
     }
   ]
 }

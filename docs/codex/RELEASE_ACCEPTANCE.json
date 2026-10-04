@@ -2563,13 +2563,21 @@
           "scope": "The later UPD-0502 handoff has not run and its all-mandatory-gates-met precondition is unmet while A041/A045 remain outstanding; this is concrete reconciliation of an unrun case, not pass evidence.",
           "engines": [],
           "sourceCommit": null
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502.md",
+          "line": 13,
+          "kind": "workflow",
+          "scope": "Concrete UPD-0502 review package, exact predecessor identities, approval checklist and continuation prepared. A041/A045 remain unrun; all-mandatory-gates-met precondition unmet. This is partial handoff/refusal evidence, not a passed final readiness handoff.",
+          "engines": [],
+          "sourceCommit": null
         }
       ],
       "requiredUnrun": [
-        "UPD-0502 final owner-review handoff after required evidence/gates are resolved."
+        "Final gate-qualified UPD-0502 handoff after A041 Explorer double-click and A045 physical Ctrl+C conditions are resolved."
       ],
       "limits": [
-        "Current implementation/reconciliation cannot mark this future mandatory case passed; no ready_for_owner_review claim while any mandatory case is unresolved."
+        "A059 precondition remains unmet; no ready_for_owner_review or pass claim while mandatory conditions remain unresolved."
       ],
       "ownerScopeChange": null,
       "currentSourceBinding": {
@@ -2577,7 +2585,7 @@
         "basis": "current_manual_review"
       },
       "proven": [
-        "UPD-0502 owner-review handoff is a later task and has not run."
+        "Owner-review preparation is complete with explicit unresolved conditions; readiness remains not_ready and task blocked."
       ]
     },
     {
@@ -2592,6 +2600,14 @@
           "line": 81,
           "kind": "workflow",
           "scope": "No exact publication action has been authorized/performed; owner authority and resulting remote identifiers require separate action-specific evidence.",
+          "engines": [],
+          "sourceCommit": null
+        },
+        {
+          "path": "docs/codex/evidence/UPD-0502.md",
+          "line": 19,
+          "kind": "workflow",
+          "scope": "Task requested preparation. Normal feature-branch push/draft PR update are within implementation scope; no exact publication action was authorized/performed. Action-specific approval and verified resulting identifiers remain outstanding.",
           "engines": [],
           "sourceCommit": null
         }
