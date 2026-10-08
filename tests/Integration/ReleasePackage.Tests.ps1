@@ -92,6 +92,7 @@ Describe 'A051/A052 release ZIP workflow and layered extraction support' {
             '-c', 'user.email=upd-fixture@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'Owned synthetic release source')
         $script:releaseSourceCommit = (Invoke-UpdReleaseGit -Root $sourceRoot -Arguments @('rev-parse', 'HEAD')) -join ''
         $script:releaseSourceTree = (Invoke-UpdReleaseGit -Root $sourceRoot -Arguments @('rev-parse', 'HEAD^{tree}')) -join ''
+        $script:releaseSourceConfig = ((Invoke-UpdReleaseGit -Root $sourceRoot -Arguments @('show', ($script:releaseSourceCommit + ':tools/release-package.json'))) -join "`n") | ConvertFrom-Json
         $poisonFiles = @('.local/private-feed-url.txt', '.dev-tools/private-config.json', 'private.log', 'unknown.part',
             'artifacts/previous.zip', 'poison/media.mp3', 'poison/history/state.json', 'poison/shows.json')
         foreach ($relative in $poisonFiles) {
@@ -123,14 +124,14 @@ Describe 'A051/A052 release ZIP workflow and layered extraction support' {
         $script:releaseFirstBuild.sourceCommit | Should -BeExactly $script:releaseSourceCommit
         $script:releaseFirstBuild.sourceTree | Should -BeExactly $script:releaseSourceTree
         $script:releaseSecondBuild.sourceCommit | Should -BeExactly $script:releaseSourceCommit
-        $script:releaseFirstBuild.version | Should -BeExactly '0.1.0-rc.1'
+        $script:releaseFirstBuild.version | Should -BeExactly $script:releaseSourceConfig.version
         foreach ($build in @($script:releaseFirstBuild, $script:releaseSecondBuild)) {
             $manifestBytes = [IO.File]::ReadAllBytes($build.manifestPath)
             $manifest = [Text.Encoding]::UTF8.GetString($manifestBytes) | ConvertFrom-Json
             $manifest.schemaVersion | Should -Be 1
             $manifest.packageName | Should -BeExactly 'UniversalPodcastDownloader'
             $manifest.version | Should -BeExactly $script:releaseFirstBuild.version
-            $manifest.releaseStatus | Should -BeExactly 'UNRELEASED_CANDIDATE'
+            $manifest.releaseStatus | Should -BeExactly $script:releaseSourceConfig.releaseStatus
             $manifest.sourceCommit | Should -BeExactly $script:releaseSourceCommit
             $manifest.sourceTree | Should -BeExactly $script:releaseSourceTree
             $manifest.sourceRepository | Should -BeExactly 'https://github.com/PikkuJanne/UniversalPodcastDownloader'

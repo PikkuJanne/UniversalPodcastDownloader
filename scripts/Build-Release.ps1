@@ -158,9 +158,11 @@ try {
     $configKeys = @(Get-UpdReleaseOrderedPath -Paths $config.PSObject.Properties.Name)
     if (($configKeys -join ',') -cne 'files,packageName,releaseStatus,schemaVersion,sourceRepository,version' -or
         $config.schemaVersion -ne 1 -or $config.packageName -cne 'UniversalPodcastDownloader' -or
-        $config.releaseStatus -cne 'UNRELEASED_CANDIDATE' -or
         $config.sourceRepository -cne 'https://github.com/PikkuJanne/UniversalPodcastDownloader') { throw 'Invalid committed release configuration.' }
-    if ($config.version -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-rc\.([1-9][0-9]*)$') { throw 'Release version must be an unpublished semantic-version rc candidate.' }
+    $rcVersion = $config.version -is [string] -and $config.version -cmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-rc\.([1-9][0-9]*)\z'
+    $stableVersion = $config.version -is [string] -and $config.version -cmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\z'
+    if ($config.releaseStatus -isnot [string] -or -not (($rcVersion -and $config.releaseStatus -ceq 'UNRELEASED_CANDIDATE') -or
+        ($stableVersion -and $config.releaseStatus -ceq 'STABLE_RELEASE'))) { throw 'Release version and status must pair an rc semantic version with UNRELEASED_CANDIDATE or a stable semantic version with STABLE_RELEASE.' }
     $requiredRoot = @('CHANGELOG.md', 'LICENSE', 'README.md', 'RELEASE.md', 'UniversalPodcastDownloader.bat',
         'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader.ps1', 'UniversalPodcastDownloader_icon.png', 'UniversalPodcastDownloader_poster.png')
     $sourceFiles = @(Get-UpdReleaseOrderedPath -Paths @($tracked.Keys | Where-Object { $_.StartsWith('src/', [StringComparison]::Ordinal) }))

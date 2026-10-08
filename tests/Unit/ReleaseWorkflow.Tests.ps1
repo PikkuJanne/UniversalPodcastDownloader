@@ -183,6 +183,8 @@ Describe 'A053/A054 release workflow policy and candidate readiness' -Tag 'Unit'
         [void][IO.Directory]::CreateDirectory((Join-Path $script:CandidateFixture 'scripts'))
         [void][IO.Directory]::CreateDirectory((Join-Path $script:CandidateFixture 'tools'))
         $script:CandidateConfig = [IO.File]::ReadAllText((Join-Path $script:WorkflowRepo 'tools/release-package.json')) | ConvertFrom-Json
+        $script:CandidateConfig.version = '0.1.0-rc.1'
+        $script:CandidateConfig.releaseStatus = 'UNRELEASED_CANDIDATE'
         foreach ($path in $script:CandidateConfig.files) {
             $fullPath = Join-Path $script:CandidateFixture $path
             [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($fullPath))
@@ -191,6 +193,8 @@ Describe 'A053/A054 release workflow policy and candidate readiness' -Tag 'Unit'
         foreach ($path in @('scripts/Build-Release.ps1', 'scripts/Prepare-ReleaseCandidate.ps1', 'tools/release-package.json')) {
             [IO.File]::WriteAllBytes((Join-Path $script:CandidateFixture $path), [IO.File]::ReadAllBytes((Join-Path $script:WorkflowRepo $path)))
         }
+        [IO.File]::WriteAllText((Join-Path $script:CandidateFixture 'tools/release-package.json'),
+            ($script:CandidateConfig | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
         [IO.File]::WriteAllText((Join-Path $script:CandidateFixture '.gitignore'), "/artifacts/`n")
 
         function Invoke-UpdCandidateFixtureGit {
@@ -207,6 +211,16 @@ Describe 'A053/A054 release workflow policy and candidate readiness' -Tag 'Unit'
             '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Owned synthetic release readiness source')
         $script:CandidateCommit = Invoke-UpdCandidateFixtureGit @('rev-parse', 'HEAD')
         $script:CandidateTree = Invoke-UpdCandidateFixtureGit @('rev-parse', 'HEAD^{tree}')
+
+        function Save-UpdCandidateFixtureConfigCommit {
+            param([object]$Config)
+            [IO.File]::WriteAllText((Join-Path $script:CandidateFixture 'tools/release-package.json'),
+                ($Config | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
+            $null = Invoke-UpdCandidateFixtureGit @('add', '--', 'tools/release-package.json')
+            $null = Invoke-UpdCandidateFixtureGit @('-c', 'user.name=UPD fixture', '-c', 'user.email=upd-test@example.invalid',
+                '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Owned synthetic release channel')
+            return Invoke-UpdCandidateFixtureGit @('rev-parse', 'HEAD')
+        }
 
         function Invoke-UpdCandidateFixturePrepare {
             param([string]$Commit, [string]$OutputDirectory, [string]$GitHubOutput)
@@ -331,6 +345,51 @@ Describe 'A053/A054 release workflow policy and candidate readiness' -Tag 'Unit'
         @(Get-ChildItem -LiteralPath $ready.outputDirectory -Force).Count | Should -Be 3
     }
 
+    It 'prepares and independently validates a stable package against its exact committed release status' {
+        $config = $script:CandidateConfig | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+        $config.version = '1.0.0'
+        $config.releaseStatus = 'STABLE_RELEASE'
+        try {
+            $commit = Save-UpdCandidateFixtureConfigCommit -Config $config
+            $directory = Join-Path $script:CandidateFixture ('artifacts/stable-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+            $result = Invoke-UpdCandidateFixturePrepare -Commit $commit -OutputDirectory $directory
+            $result.Code | Should -Be 0 -Because $result.Text
+            $ready = Test-UpdReleaseCandidate -Repository $script:CandidateFixture -SourceCommit $commit -CandidateDirectory $result.Data.outputDirectory
+            $ready.version | Should -BeExactly '1.0.0'
+            $ready.sourceCommit | Should -BeExactly $commit
+            $ready.sourceTree | Should -BeExactly (Invoke-UpdCandidateFixtureGit @('rev-parse', 'HEAD^{tree}'))
+            $manifest = [IO.File]::ReadAllText($ready.manifestPath) | ConvertFrom-Json
+            $manifest.releaseStatus | Should -BeExactly 'STABLE_RELEASE'
+            @(Get-ChildItem -LiteralPath $ready.outputDirectory -Force).Count | Should -Be 3
+        }
+        finally { $null = Invoke-UpdCandidateFixtureGit @('-c', 'advice.detachedHead=false', 'checkout', '--quiet', '--detach', $script:CandidateCommit) }
+    }
+
+    It 'rejects committed <Label> before building or appending candidate outputs' -TestCases @(
+        @{ Label = 'stable version with candidate status'; Version = '1.0.0'; Status = 'UNRELEASED_CANDIDATE' },
+        @{ Label = 'rc version with stable status'; Version = '0.1.0-rc.1'; Status = 'STABLE_RELEASE' },
+        @{ Label = 'unsupported release status'; Version = '1.0.0'; Status = 'RELEASED' },
+        @{ Label = 'leading zero stable component'; Version = '01.0.0'; Status = 'STABLE_RELEASE' }
+    ) {
+        param($Label, $Version, $Status)
+        $Label | Should -Not -BeNullOrEmpty
+        $config = $script:CandidateConfig | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+        $config.version = $Version
+        $config.releaseStatus = $Status
+        $directory = Join-Path $script:CandidateFixture ('artifacts/channel-refused-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+        $output = Join-Path $TestDrive ('channel-refused-' + [guid]::NewGuid().ToString('N') + '.txt')
+        [IO.File]::WriteAllText($output, 'preserve existing output')
+        try {
+            $commit = Save-UpdCandidateFixtureConfigCommit -Config $config
+            { Get-UpdCandidateSource -Repository $script:CandidateFixture -SourceCommit $commit } | Should -Throw '*Invalid committed candidate configuration*'
+            $result = Invoke-UpdCandidateFixturePrepare -Commit $commit -OutputDirectory $directory -GitHubOutput $output
+            $result.Code | Should -Be 1 -Because $result.Text
+            Test-Path -LiteralPath $directory | Should -BeFalse
+            [IO.File]::ReadAllText($output) | Should -BeExactly 'preserve existing output'
+        }
+        finally { $null = Invoke-UpdCandidateFixtureGit @('-c', 'advice.detachedHead=false', 'checkout', '--quiet', '--detach', $script:CandidateCommit) }
+    }
+
     It 'refuses <Label> output poisoning while preserving the candidate and unknown file' -TestCases @(
         @{ Label = 'extra private log'; Name = 'private-feed.log' },
         @{ Label = 'hidden private state'; Name = '.podcast-history.json' },
@@ -350,7 +409,8 @@ Describe 'A053/A054 release workflow policy and candidate readiness' -Tag 'Unit'
     It 'refuses hash-consistent <Label> manifest substitutions' -TestCases @(
         @{ Label = 'different source commit'; Field = 'sourceCommit'; Value = '0000000000000000000000000000000000000000' },
         @{ Label = 'different source tree'; Field = 'sourceTree'; Value = '0000000000000000000000000000000000000000' },
-        @{ Label = 'stable release claim'; Field = 'releaseStatus'; Value = 'RELEASED' },
+        @{ Label = 'unsupported release status'; Field = 'releaseStatus'; Value = 'RELEASED' },
+        @{ Label = 'stable status on rc source'; Field = 'releaseStatus'; Value = 'STABLE_RELEASE' },
         @{ Label = 'different version'; Field = 'version'; Value = '0.1.0-rc.2' },
         @{ Label = 'foreign source URL'; Field = 'sourceCommitUrl'; Value = 'https://example.invalid/commit/claimed-source' }
     ) {

@@ -2,7 +2,7 @@
 
 A local Windows RSS/Atom podcast downloader for keeping original audio with verifiable history. Use the guided text interface, a one-off command, or optional saved shows. There is no runtime package manager, Python, FFmpeg, cloud account, GUI or background service requirement.
 
-This checkout contains implemented source and a local unpublished packaging candidate; see [package, checksum and source guidance](RELEASE.md). These instructions do not announce a public release. Keep `UniversalPodcastDownloader.ps1`, `UniversalPodcastDownloader.bat` and the **complete `src` directory** together. The [MIT license](LICENSE) covers the software; it does not license podcast recordings.
+Version **1.0.0** is the first stable distribution of the completed downloader. Obtain the portable ZIP, manifest, checksums and notes from the [v1.0.0 release page](https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.0); see [package, checksum and source guidance](RELEASE.md). Keep `UniversalPodcastDownloader.ps1`, `UniversalPodcastDownloader.bat` and the **complete `src` directory** together. The [MIT license](LICENSE) covers the software; it does not license podcast recordings.
 
 ## Requirements and compatibility
 

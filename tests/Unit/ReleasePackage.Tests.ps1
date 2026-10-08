@@ -3,8 +3,11 @@ Describe 'A051/A052 release packaging safety and traceability' -Tag 'Unit', 'A05
         $script:PackageRepo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
         $script:PackageEngine = (Get-Process -Id $PID).Path
         $script:PackageBuilder = [IO.File]::ReadAllBytes((Join-Path $script:PackageRepo 'scripts/Build-Release.ps1'))
-        $script:PackageConfig = [IO.File]::ReadAllText((Join-Path $script:PackageRepo 'tools/release-package.json'))
-        $script:PackagePaths = @(($script:PackageConfig | ConvertFrom-Json).files)
+        $fixtureConfig = [IO.File]::ReadAllText((Join-Path $script:PackageRepo 'tools/release-package.json')) | ConvertFrom-Json
+        $fixtureConfig.version = '0.1.0-rc.1'
+        $fixtureConfig.releaseStatus = 'UNRELEASED_CANDIDATE'
+        $script:PackageConfig = $fixtureConfig | ConvertTo-Json -Depth 5
+        $script:PackagePaths = @($fixtureConfig.files)
         Add-Type -AssemblyName System.IO.Compression.FileSystem
 
         function Invoke-UpdPackageFixtureGit {
@@ -221,16 +224,49 @@ Describe 'A051/A052 release packaging safety and traceability' -Tag 'Unit', 'A05
         $result.Data.sourceCommit | Should -BeExactly $script:PackageFixtureCommit
     }
 
-    It 'rejects stable or malformed candidate versions' -TestCases @(
-        @{ Version = '1.0.0' }, @{ Version = '../0.1.0-rc.1' }, @{ Version = '0.1.0-rc.01' }
+    It 'builds a stable <Version> package from its exact committed status and source' -TestCases @(
+        @{ Version = '1.0.0' }, @{ Version = '0.0.0' }
     ) {
         param($Version)
         $config = $script:PackageConfig | ConvertFrom-Json
         $config.version = $Version
+        $config.releaseStatus = 'STABLE_RELEASE'
+        Invoke-UpdPackageFixtureConfigWrite -Config $config
+        $result = Invoke-UpdPackageBuild
+        $result.Code | Should -Be 0 -Because $result.Text
+        $result.Data.version | Should -BeExactly $Version
+        $result.Data.sourceCommit | Should -BeExactly (Invoke-UpdPackageFixtureGit -Arguments @('rev-parse', 'HEAD'))
+        [IO.Path]::GetFileName($result.Data.zipPath) | Should -BeExactly ('UniversalPodcastDownloader-' + $Version + '.zip')
+        $manifest = [IO.File]::ReadAllText($result.Data.manifestPath) | ConvertFrom-Json
+        $manifest.version | Should -BeExactly $Version
+        $manifest.releaseStatus | Should -BeExactly 'STABLE_RELEASE'
+        $manifest.files.Count | Should -Be 36
+    }
+
+    It 'rejects <Label> version and status pairs before creating output' -TestCases @(
+        @{ Label = 'stable version with candidate status'; Version = '1.0.0'; Status = 'UNRELEASED_CANDIDATE' },
+        @{ Label = 'rc version with stable status'; Version = '0.1.0-rc.1'; Status = 'STABLE_RELEASE' },
+        @{ Label = 'unsupported release status'; Version = '1.0.0'; Status = 'RELEASED' },
+        @{ Label = 'version path traversal'; Version = '../0.1.0-rc.1'; Status = 'UNRELEASED_CANDIDATE' },
+        @{ Label = 'zero rc ordinal'; Version = '0.1.0-rc.0'; Status = 'UNRELEASED_CANDIDATE' },
+        @{ Label = 'leading zero rc ordinal'; Version = '0.1.0-rc.01'; Status = 'UNRELEASED_CANDIDATE' },
+        @{ Label = 'leading zero major'; Version = '01.0.0'; Status = 'STABLE_RELEASE' },
+        @{ Label = 'leading zero minor'; Version = '1.00.0'; Status = 'STABLE_RELEASE' },
+        @{ Label = 'leading zero patch'; Version = '1.0.00'; Status = 'STABLE_RELEASE' },
+        @{ Label = 'unsupported prerelease'; Version = '1.0.0-beta.1'; Status = 'STABLE_RELEASE' },
+        @{ Label = 'unsupported build metadata'; Version = '1.0.0+build.1'; Status = 'STABLE_RELEASE' },
+        @{ Label = 'trailing version line break'; Version = "1.0.0`n"; Status = 'STABLE_RELEASE' }
+    ) {
+        param($Label, $Version, $Status)
+        $Label | Should -Not -BeNullOrEmpty
+        $config = $script:PackageConfig | ConvertFrom-Json
+        $config.version = $Version
+        $config.releaseStatus = $Status
         Invoke-UpdPackageFixtureConfigWrite -Config $config
         $result = Invoke-UpdPackageBuild
         $result.Code | Should -Be 1
-        $result.Text | Should -Match 'unpublished semantic-version rc candidate'
+        $result.Text | Should -Match 'Release version and status must pair'
+        Test-Path -LiteralPath $script:PackageOutput | Should -BeFalse
     }
 
     It 'rejects <Label> output paths without changing source files' -TestCases @(

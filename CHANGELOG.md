@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0 — first stable release
+
+The completed downloader is distributed as v1.0.0 at the owner's request on 8 October 2026. The 29 runtime files are unchanged from the tested, merged development closure; this version updates distribution metadata, user guidance and stable-version packaging validation.
+
+- Provide the portable Windows RSS/Atom downloader with Latest/Custom/All modes, configurable output, original audio bytes, verified history and conservative recovery.
+- Include bounded feed discovery/catalogue traversal, safe episode naming, strict owned transfer resume, private run results, optional saved-show batches, interactive byte progress and opt-in keep-awake.
+- Ship the original MIT license and artwork with the complete runtime, README, release guide, source/file manifest and SHA-256 checksums.
+- Support Windows PowerShell 5.1 and PowerShell 7 on Windows. No application runtime package manager, Python, Git or FFmpeg is required.
+
+Known limits remain documented in [README](README.md) and [RELEASE](RELEASE.md). Human physical Ctrl+C and native cleanup were observed in both Windows Sandbox engines; host sleep/lid, hard-kill/power-loss and network-share durability are not guaranteed. Uncheckpointed partial tails require review. Catalogue traversal is bounded and media recognition does not decode entire recordings.
+
 ## 0.1.0-rc.1 — unpublished candidate
 
 No application tags or GitHub releases existed when this candidate version was selected on 3 October 2026. This is the first versioned packaging candidate, not a stable release announcement. The planning bundle's `1.0.0` is unrelated to the application version. Release workflow and local draft material are prepared; final acceptance and publication approval remain outstanding.

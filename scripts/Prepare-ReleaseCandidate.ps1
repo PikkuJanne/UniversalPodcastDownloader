@@ -54,10 +54,12 @@ function Get-UpdCandidateSource {
     if ($headCommit -cne $SourceCommit) { throw 'Candidate source must equal the checked-out tested commit.' }
     $tree = Invoke-UpdCandidateGit -Repository $repo -Arguments @('rev-parse', ($SourceCommit + '^{tree}'))
     $config = (Invoke-UpdCandidateGit -Repository $repo -Arguments @('show', ($SourceCommit + ':tools/release-package.json'))) | ConvertFrom-Json
+    $rcVersion = $config.version -is [string] -and $config.version -cmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-rc\.([1-9][0-9]*)\z'
+    $stableVersion = $config.version -is [string] -and $config.version -cmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\z'
     if ($config.schemaVersion -ne 1 -or $config.packageName -cne 'UniversalPodcastDownloader' -or
-        $config.releaseStatus -cne 'UNRELEASED_CANDIDATE' -or
         $config.sourceRepository -cne 'https://github.com/PikkuJanne/UniversalPodcastDownloader' -or
-        $config.version -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-rc\.([1-9][0-9]*)$') { throw 'Invalid committed candidate configuration.' }
+        $config.releaseStatus -isnot [string] -or -not (($rcVersion -and $config.releaseStatus -ceq 'UNRELEASED_CANDIDATE') -or
+            ($stableVersion -and $config.releaseStatus -ceq 'STABLE_RELEASE'))) { throw 'Invalid committed candidate configuration.' }
     $rootPaths = @('CHANGELOG.md', 'LICENSE', 'README.md', 'RELEASE.md', 'UniversalPodcastDownloader.bat',
         'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader.ps1', 'UniversalPodcastDownloader_icon.png', 'UniversalPodcastDownloader_poster.png')
     $treePaths = @((Invoke-UpdCandidateGit -Repository $repo -Arguments @('ls-tree', '-r', '--name-only', $SourceCommit)) -split "`n")
@@ -156,7 +158,7 @@ function Test-UpdReleaseCandidate {
         if ($manifest.$field -isnot [string]) { throw 'Candidate manifest identifiers must be scalar strings.' }
     }
     if ($manifest.schemaVersion -ne 1 -or $manifest.packageName -cne $source.Config.packageName -or
-        $manifest.version -cne $source.Config.version -or $manifest.releaseStatus -cne 'UNRELEASED_CANDIDATE' -or
+        $manifest.version -cne $source.Config.version -or $manifest.releaseStatus -cne $source.Config.releaseStatus -or
         $manifest.sourceRepository -cne $source.Config.sourceRepository -or $manifest.sourceCommit -cne $source.Commit -or
         $manifest.sourceTree -cne $source.Tree -or $manifest.sourceCommitUrl -cne ($source.Config.sourceRepository + '/commit/' + $source.Commit)) {
         throw 'Candidate manifest identifiers do not match the committed tested source.'

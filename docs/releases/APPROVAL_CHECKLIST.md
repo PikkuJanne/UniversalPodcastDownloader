@@ -1,5 +1,9 @@
 # Candidate review and publication approval
 
+**v1.0.0 follow-up, 8 October 2026:** the owner explicitly requested: “We are on v1.0.0 now so please make sure v1.0.0 is published on GitHub.” This authorizes the stable version checkpoint, verified tag and publication of the reviewed ZIP, manifest and checksums. The agent selects and verifies those bytes within this request; no additional approval is required for the same action. See [v1.0.0 action record](../codex/evidence/V1.0.0-PUBLICATION.md), [release notes](v1.0.0.md) and the [version-specific GitHub release](https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.0). Website assets/deployment, signing, purchases and repository settings remain outside scope.
+
+**Historical 4 October candidate checklist follows.** Its unchecked boxes and NOT GRANTED approval record describe that earlier preparation task, not the later explicit publication request. The frozen candidate acceptance records retain their original source and evidence identities.
+
 Status: **UNRELEASED_CANDIDATE / ready_for_owner_review; no publication approval recorded**. Updated 4 October2026 (Europe/Berlin). UPD-0405 portable website content, UPD-0501 acceptance reconciliation and UPD-0502 [owner-review preparation](../codex/OWNER_REVIEW.md) are complete. Actual human Explorer and both-engine physical Ctrl+C observations resolve A041/A045; all59 mandatory cases, including A059's handoff, are supported. Canonical59 passed/1 not_run. A060 remains a separate action gate; releaseAuthorized=false and published=false.
 
 ## Review the concrete candidate

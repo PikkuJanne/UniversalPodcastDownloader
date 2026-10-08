@@ -1,5 +1,7 @@
 # UPD-0502 owner-review package
 
+**8 October 2026 follow-up:** the owner separately requested v1.0.0 GitHub publication. [Its action record](evidence/V1.0.0-PUBLICATION.md) preserves that authorization and links the selected release outcome. The dated candidate preparation below remains historical; source/test/manual observations are not relabelled as new v1.0.0 runs.
+
 **Project closed 4 October 2026 (Europe/Berlin).** Implementation, mandatory acceptance and merged source are complete; all 26 tasks are done and no task is active. All PRs #1–#6 have been merged. The audited implementation-main source is `22b9c213d086575ca83c45b014db0142a9ce6733`, tree `0ec7d9c7606fcbcc22d9843f7c69830fa0541e62`, with all three jobs successful in [exact main CI37212964287](https://github.com/PikkuJanne/UniversalPodcastDownloader/actions/runs/37212964287). [Project closure evidence](evidence/PROJECT-CLOSURE.md) records the merge/synchronization/artifact outcomes. Website assets and publication are reserved for a later project; A060 remains not_run/owner_gate and no publication authority or release outcome is inferred from the merges.
 
 **Historical pre-merge candidate review:** all remaining sections below retain the 4 October 2026 owner-review snapshot, including its original source/run/artifact hashes and limits. OPEN/DRAFT and unmerged-base descriptors and the action record describe that earlier handoff. Their historical merge-authorization entries do not describe the subsequent owner-authorized merges recorded in PROJECT-CLOSURE.md.

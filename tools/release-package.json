@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "packageName": "UniversalPodcastDownloader",
-  "version": "0.1.0-rc.1",
-  "releaseStatus": "UNRELEASED_CANDIDATE",
+  "version": "1.0.0",
+  "releaseStatus": "STABLE_RELEASE",
   "sourceRepository": "https://github.com/PikkuJanne/UniversalPodcastDownloader",
   "files": [
     "CHANGELOG.md",
