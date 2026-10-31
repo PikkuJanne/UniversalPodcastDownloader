@@ -29,7 +29,7 @@ function Write-PodcastSignalHeader {
     if ($width -ge 50) {
         $caption = '+-- UPD // SIGNAL CONSOLE '
         Write-PodcastSignalLine -Text ($caption + ('-' * ($width - $caption.Length - 1)) + '+') -Color Cyan
-        Write-PodcastSignalLine -Text '| UNIVERSAL PODCAST DOWNLOADER' -Color Cyan
+        Write-PodcastSignalLine -Text ('| UNIVERSAL PODCAST DOWNLOADER'.PadRight($width - 1) + '|') -Color Cyan
         Write-PodcastSignalLine -Text ('+' + ('-' * ($width - 2)) + '+') -Color Cyan
     }
     else { Write-PodcastSignalLine -Text 'UNIVERSAL PODCAST DOWNLOADER' }
@@ -70,7 +70,9 @@ function Write-PodcastSignalProgress {
             else {
                 $total = ([double]$Context.TotalBytes / 1MB).ToString('0.0', [Globalization.CultureInfo]::InvariantCulture)
                 $filled = [int][Math]::Floor([Math]::Max(0, $Context.TransferPercent) * 12.0 / 100)
-                $detail = '[{0}{1}] {2} / {3} MiB' -f ('#' * $filled), ('-' * (12 - $filled)), $received, $total
+                $amount = if ($Context.TotalBytes -lt 1MB) { '{0} / {1} bytes' -f $Context.Bytes, $Context.TotalBytes }
+                    else { '{0} / {1} MiB' -f $received, $total }
+                $detail = '[{0}{1}] {2}' -f ('#' * $filled), ('-' * (12 - $filled)), $amount
             }
             if ($Context.Attempt -gt 1) { $detail += '; attempt ' + $Context.Attempt }
         }

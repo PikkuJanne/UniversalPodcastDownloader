@@ -908,7 +908,7 @@ function Invoke-PodcastRun {
         $null = & $onConfirmed
         $null = Invoke-PodcastDestinationPreflight -Root $baseOutputPath
         if (-not (Test-Path -LiteralPath $baseOutputPath)) {
-            Write-Host '[*] Creating selected base output directory.'
+            if (-not $signalConsole) { Write-Host '[*] Creating selected base output directory.' }
             $null = Assert-PodcastDestination -Root $baseOutputPath -Directory
             try { $null = [IO.Directory]::CreateDirectory($baseOutputPath) }
             catch {
@@ -933,7 +933,7 @@ function Invoke-PodcastRun {
             -Episodes $allEpisodes -SelectedEpisodes $episodes -State $historyState -MaxFileNameLength $fileBudget
         if ($null -ne $legacyReview) { throw 'Legacy archive requires review; use -LegacyPath with -LegacyAction Preview.' }
         if (-not (Test-Path -LiteralPath $OutputPath)) {
-            Write-Host '[*] Creating podcast folder.'
+            if (-not $signalConsole) { Write-Host '[*] Creating podcast folder.' }
             $null = Assert-PodcastDestination -Root $baseOutputPath -RelativePath $safeFeedTitle -Directory
             try { $null = [IO.Directory]::CreateDirectory($OutputPath) }
             catch {
