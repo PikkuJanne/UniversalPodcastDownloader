@@ -299,7 +299,9 @@ function Get-FeedUrlInteractive {
     }
 
     while ($true) {
-        $prompt = if ($SignalConsole) { '  INPUT     Paste RSS feed or show URL' } else { 'Paste RSS feed URL OR podcast page URL' }
+        $prompt = if ($SignalConsole -and (Get-PodcastSignalWidth) -lt 50) { '  INPUT     RSS or show URL' }
+            elseif ($SignalConsole) { '  INPUT     Paste RSS feed or show URL' }
+            else { 'Paste RSS feed URL OR podcast page URL' }
         $inputUrl = Read-Host $prompt
         if ([string]::IsNullOrWhiteSpace($inputUrl)) {
             Write-Host "Please paste a URL (or press Ctrl+C to quit)." -ForegroundColor Red
@@ -744,7 +746,12 @@ function Invoke-PodcastRun {
         if ($needCount) {
             if ($signalConsole) {
                 if (-not $needFeed) { Write-PodcastSignalHeader }
-                Write-PodcastSignalLine -Text '  SELECT    [Enter] Latest  [N] Newest N  [all] All' -Color Cyan
+                if ((Get-PodcastSignalWidth) -lt 50) {
+                    Write-PodcastSignalLine -Text '  SELECT    [Enter] Latest'
+                    Write-PodcastSignalLine -Text '            [N] Newest N'
+                    Write-PodcastSignalLine -Text '            [all] All'
+                }
+                else { Write-PodcastSignalLine -Text '  SELECT    [Enter] Latest  [N] Newest N  [all] All' -Color Cyan }
             }
             else {
                 Write-Host "How many episodes to download (newest first)?"
@@ -775,7 +782,11 @@ function Invoke-PodcastRun {
                     break
                 }
 
-                if ($signalConsole) { Write-PodcastSignalLine -Text '  INVALID   Enter a positive N, all, or Enter for Latest' -Color Red }
+                if ($signalConsole) {
+                    $invalidSelection = if ((Get-PodcastSignalWidth) -lt 50) { '  INVALID   Use Enter, N or all' }
+                        else { '  INVALID   Enter a positive N, all, or Enter for Latest' }
+                    Write-PodcastSignalLine -Text $invalidSelection -Color Red
+                }
                 else { Write-Host "Invalid input. Enter 'all', a positive number, or just Enter." }
             }
         }
@@ -1095,9 +1106,17 @@ function Invoke-PodcastRun {
         Complete-PodcastSignalLine -Context $runResources.Progress
         if ($signalConsole) {
             Write-PodcastSignalDivider
-            Write-PodcastSignalLine -Text ('  RESULT    [SAVED] {0}  [SKIPPED] {1}' -f $downloaded.Count, $skipped.Count) -Color Green
             $resultColor = if ($failed.Count -gt 0) { [ConsoleColor]::Red } else { [ConsoleColor]::Green }
-            Write-PodcastSignalLine -Text ('            [FAILED] {0}  [ADOPTED] {1}' -f $failed.Count, $adopted.Count) -Color $resultColor
+            if ((Get-PodcastSignalWidth) -lt 50) {
+                Write-PodcastSignalLine -Text ('  RESULT    [SAVED] {0}' -f $downloaded.Count)
+                Write-PodcastSignalLine -Text ('            [SKIPPED] {0}' -f $skipped.Count)
+                Write-PodcastSignalLine -Text ('            [FAILED] {0}' -f $failed.Count)
+                Write-PodcastSignalLine -Text ('            [ADOPTED] {0}' -f $adopted.Count)
+            }
+            else {
+                Write-PodcastSignalLine -Text ('  RESULT    [SAVED] {0}  [SKIPPED] {1}' -f $downloaded.Count, $skipped.Count) -Color Green
+                Write-PodcastSignalLine -Text ('            [FAILED] {0}  [ADOPTED] {1}' -f $failed.Count, $adopted.Count) -Color $resultColor
+            }
         }
         else {
             Write-Host ""

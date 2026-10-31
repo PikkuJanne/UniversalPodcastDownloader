@@ -77,7 +77,23 @@ function Write-PodcastSignalProgress {
             if ($Context.Attempt -gt 1) { $detail += '; attempt ' + $Context.Attempt }
         }
     }
-    Write-PodcastSignalLine -Text ('  {0,-10}{1}  {2}' -f $label, $position, $detail) -Color $color -Inline
+    if ((Get-PodcastSignalWidth) -lt 50) {
+        $detail = switch ($Context.Stage) {
+            'preparing' { 'History check' }
+            'verifying' { 'Checking audio' }
+            'downloaded' { 'Audio verified' }
+            'verified_skip' { 'Hash verified' }
+            default {
+                if ($Context.Stage -in @('response', 'bytes')) {
+                    if ($null -eq $Context.TotalBytes) { '{0} B; total ?' -f $Context.Bytes }
+                    else { '{0}/{1} B' -f $Context.Bytes, $Context.TotalBytes }
+                }
+                else { $detail }
+            }
+        }
+        Write-PodcastSignalLine -Text ('  {0,-9}{1} {2}' -f $label, $position, $detail) -Color $color -Inline
+    }
+    else { Write-PodcastSignalLine -Text ('  {0,-10}{1}  {2}' -f $label, $position, $detail) -Color $color -Inline }
     $Context.SignalLineOpen = $true
 }
 

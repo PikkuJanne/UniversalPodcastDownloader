@@ -25,14 +25,14 @@ Describe 'HOTFIX: measurement redirect chain through the public entry point' -Ta
         $hash | Should -Be (Get-FileHash -LiteralPath $script:hotfixAudio -Algorithm SHA256).Hash
         $first.Result.RemainingTemporaryCount | Should -Be 0
         $before = Get-UpdFixtureState -Context $context
-        foreach ($hop in 0..7) { $before.('/hotfix/chain/' + $hop) | Should -Be 1 }
+        foreach ($hop in 0..7) { $hopPath = '/hotfix/chain/' + $hop; $before.$hopPath | Should -Be 1 }
         $before.'/credential-received' | Should -BeNullOrEmpty
         $again = Invoke-UpdIntegrationWorker -Context $context -Action Download -Mode Latest -FeedPath '/feeds/hotfix-chain.xml'
         $again.ExitCode | Should -Be 0
         $again.Result.RunResult.VerifiedSkipped | Should -Be 1
         (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash | Should -Be $hash
         $after = Get-UpdFixtureState -Context $context
-        foreach ($hop in 0..7) { $after.('/hotfix/chain/' + $hop) | Should -Be 1 }
+        foreach ($hop in 0..7) { $hopPath = '/hotfix/chain/' + $hop; $after.$hopPath | Should -Be 1 }
     }
 
     It 'rejects a permanent <Scenario> once without successful history or final garbage' -ForEach @(
@@ -47,8 +47,10 @@ Describe 'HOTFIX: measurement redirect chain through the public entry point' -Ta
         @(Get-ChildItem -LiteralPath $run.OutputPath -Recurse -File -Filter '*.mp3').Count | Should -Be 0
         $run.Result.RemainingTemporaryCount | Should -Be 0
         $stats = Get-UpdFixtureState -Context $context
-        $stats.('/hotfix/' + $Scenario + '/0') | Should -Be $InitialRequests
-        $stats.('/hotfix/' + $Scenario + '/' + ($LastHop + 1)) | Should -BeNullOrEmpty
+        $initialPath = '/hotfix/' + $Scenario + '/0'
+        $stats.$initialPath | Should -Be $InitialRequests
+        $unrequestedPath = '/hotfix/' + $Scenario + '/' + ($LastHop + 1)
+        $stats.$unrequestedPath | Should -BeNullOrEmpty
         foreach ($file in @(Get-ChildItem -LiteralPath $run.OutputPath -Recurse -Force -File -Filter state.json)) {
             $state = [IO.File]::ReadAllText($file.FullName) | ConvertFrom-Json
             foreach ($episode in @($state.episodes)) {
@@ -64,7 +66,7 @@ Describe 'HOTFIX: measurement redirect chain through the public entry point' -Ta
         $run.Result.RunResult.Downloaded | Should -Be 1
         $stats = Get-UpdFixtureState -Context $context
         $stats.'/hotfix/transient/0' | Should -Be 2
-        foreach ($hop in 1..7) { $stats.('/hotfix/transient/' + $hop) | Should -Be 1 }
+        foreach ($hop in 1..7) { $hopPath = '/hotfix/transient/' + $hop; $stats.$hopPath | Should -Be 1 }
         $files = @(Get-ChildItem -LiteralPath $run.OutputPath -Recurse -File -Filter '*.mp3')
         $files.Count | Should -Be 1
         (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash | Should -Be (Get-FileHash -LiteralPath $script:hotfixAudio -Algorithm SHA256).Hash
