@@ -169,12 +169,35 @@ Describe 'A023: explicit validated redirect requests' -Tag 'Unit', 'A023' {
         $script:Responses[0].Content.ReadCalled | Should -BeFalse
     }
 
-    It 'allows five redirects and rejects a sixth before making a seventh request' {
-        $script:Responses = @(foreach ($number in 1..6) { Get-PolicyTestResponse -Status 302 -Location ('/hop-' + $number) })
+    It 'HOTFIX bounds a noncyclic chain at twelve hops before making a fourteenth request' {
+        $script:Responses = @(foreach ($number in 1..13) { Get-PolicyTestResponse -Status 302 -Location ('/hop-' + $number) })
         $client = Get-PolicyTestClient -Responses $script:Responses
-        { Invoke-PodcastHttpGet -Uri 'https://podcast.invalid/feed' -Client $client } | Should -Throw '*five hops*'
-        $client.Requests.Count | Should -Be 6
+        { Invoke-PodcastHttpGet -Uri 'https://podcast.invalid/feed' -Client $client } | Should -Throw '*redirect limit reached (12 hops)*'
+        $client.Requests.Count | Should -Be 13
         @($script:Responses | Where-Object { -not $_.Disposed }).Count | Should -Be 0
+    }
+
+    It 'HOTFIX permits seven distinct measurement redirects before the final response' {
+        $script:Responses = @(foreach ($number in 1..7) { Get-PolicyTestResponse -Status 302 -Location ('https://hop-' + $number + '.invalid/media?token=opaque%2Bvalue') }) + @(Get-PolicyTestResponse)
+        $client = Get-PolicyTestClient -Responses $script:Responses
+        $script:Exchange = Invoke-PodcastHttpGet -Uri 'https://podcast.invalid/feed' -Client $client
+        $script:Exchange.RedirectCount | Should -Be 7
+        $client.Requests.Count | Should -Be 8
+        $script:Exchange.FinalUri.Query | Should -Be '?token=opaque%2Bvalue'
+    }
+
+    It 'HOTFIX rejects a repeated request target without another request or retry' -ForEach @(
+        @{ Location = '/feed' }, @{ Location = '/feed#different-fragment' }
+    ) {
+        $script:Responses = @(Get-PolicyTestResponse -Status 302 -Location $Location)
+        $client = Get-PolicyTestClient -Responses $script:Responses
+        $caught = $null
+        try { Invoke-PodcastTransportOperation -Operation { Invoke-PodcastHttpGet -Uri 'https://podcast.invalid/feed' -Client $client } }
+        catch { $caught = Get-PodcastTransportFailure -ErrorObject $_ }
+        $client.Requests.Count | Should -Be 1
+        $caught.Data['Kind'] | Should -Be 'RedirectCycle'
+        $caught.Data['Retryable'] | Should -BeFalse
+        $caught.Data['Attempts'] | Should -Be 1
     }
 
     It 'does not interpret other 3xx statuses as redirects' {

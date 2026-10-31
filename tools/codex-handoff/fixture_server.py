@@ -505,6 +505,39 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path.startswith('/transport/'):
             self._transport(path, number, head)
             return
+        # Seven real measurement-shaped 302 hops, alternating loopback origins.
+        # The final response is the original known audio, never a proxy request.
+        if path in ('/feeds/hotfix-chain.xml', '/feeds/hotfix-cycle.xml',
+                    '/feeds/hotfix-limit.xml', '/feeds/hotfix-transient.xml'):
+            scenario = path.rsplit('/', 1)[1][7:-4]
+            body = ('<rss version="2.0"><channel><title>Redirect regression</title>'
+                    '<item><title>Synthetic audio</title><guid>hotfix-{}</guid>'
+                    '<enclosure url="{}/hotfix/{}/0" type="audio/mpeg" '
+                    'length="{}"/></item></channel></rss>').format(
+                        scenario, self.server.base_url, scenario, len(self.server.audio))
+            self._send(200, body.encode('utf-8'), head, 'application/xml; charset=utf-8')
+            return
+        hotfix = re.fullmatch(r'/hotfix/(chain|cycle|limit|transient)/(\d+)', path)
+        if hotfix:
+            scenario, hop_text = hotfix.groups()
+            hop = int(hop_text)
+            if self.headers.get('Cookie') or self.headers.get('Authorization'):
+                self.server.count('/credential-received')
+            if scenario == 'transient' and hop == 0 and number == 1:
+                self._send(503, b'Try again', head, 'text/plain')
+                return
+            if hop < 7 or scenario in ('cycle', 'limit'):
+                next_hop = 0 if scenario == 'cycle' else hop + 1
+                host = 'localhost' if next_hop % 2 else '127.0.0.1'
+                location = 'http://{}:{}/hotfix/{}/{}?signature=opaque%2Bvalue'.format(
+                    host, self.server.server_address[1], scenario, next_hop)
+                self._send(302, b'', head, extra={'Location': location, 'Set-Cookie': 'ignored=synthetic'})
+                return
+            if urlsplit(self.path).query != 'signature=opaque%2Bvalue':
+                self._send(403, b'Escaped target changed', head, 'text/plain')
+                return
+            self._send(200, self.server.audio, head)
+            return
         if path == '/__resume':
             with self.server.count_lock:
                 events = list(self.server.resume_events)

@@ -1,6 +1,6 @@
 # Portable release and source guidance
 
-**1.0.0** is the first stable distribution of the completed application. Use the [v1.0.0 release page](https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.0) for the published ZIP, manifest, checksums and release notes. See [changelog](CHANGELOG.md), [usage and recovery](README.md) and the original [MIT license](LICENSE). The earlier `0.1.0-rc.1` packaging candidate and its acceptance observations retain their historical identities.
+**1.0.1** is the stable transfer and terminal hotfix. Use the [v1.0.1 release page](https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.1) for the published ZIP, manifest, checksums and release notes. See [changelog](CHANGELOG.md), [usage and recovery](README.md) and the original [MIT license](LICENSE). The earlier `1.0.0` release and `0.1.0-rc.1` packaging candidate retain their historical identities.
 
 ## Use the extracted application
 

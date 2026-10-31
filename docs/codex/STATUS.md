@@ -1,3 +1,7 @@
+# v1.0.1 hotfix follow-up
+
+Updated 31 October 2026 (Europe/Berlin). The owner explicitly requested the AI Inside transfer fix, guided terminal touch-up, independent Windows checks and stable public release in this chat. This supersedes historical owner-test/publication stops for this patch. The closed milestone program stays closed. See [hotfix record](../releases/v1.0.1.md); the final public release notes carry the exact tested commit, CI, packaged live results and checksums. Preserve the owner's newer artwork. No website change is included.
+
 # Project closure status
 
 Updated 8 October 2026 (Europe/Berlin). The owner has separately requested **v1.0.0 GitHub publication**: “We are on v1.0.0 now so please make sure v1.0.0 is published on GitHub.” This authorizes preparation of the stable version, its normal source checkpoint, tag and release assets, followed by verified publication. See [v1.0.0 publication record](evidence/V1.0.0-PUBLICATION.md) and the [version-specific release page](https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.0) for the selected source, asset hashes and actual outcome. Website assets and deployment remain later work.

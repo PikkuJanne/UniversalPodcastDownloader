@@ -343,3 +343,72 @@ Describe 'A044 owned progress cleanup and host errors' -Tag 'Unit', 'A044' {
         $script:ClosedProgressIds.ToArray() | Should -Not -Contain $context.TransferId
     }
 }
+
+Describe 'A044 signal console rendering boundaries' -Tag 'Unit', 'A044' {
+    BeforeEach {
+        $script:SignalRows = [Collections.Generic.List[object]]::new()
+        $script:SignalPreference = $global:ProgressPreference
+        $global:ProgressPreference = 'Continue'
+        Mock Get-PodcastSignalWidth { 59 }
+        Mock Write-Host {
+            $script:SignalRows.Add([pscustomobject]@{ Text = [string]$Object; Color = $ForegroundColor; Inline = [bool]$NoNewline })
+        }
+        Mock Write-Progress { throw 'Signal console must own only its compact line.' }
+    }
+    AfterEach { $global:ProgressPreference = $script:SignalPreference }
+
+    It 'renders a distinct frame and truthful unknown bytes without publisher data or a percentage' {
+        Write-PodcastSignalHeader
+        $context = New-PodcastProgressContext -TotalEpisodes 1
+        $context.SignalConsole = $true
+        Start-PodcastEpisodeProgress -Context $context -Index 1
+        Start-PodcastTransferProgress -Context $context -TotalBytes $null -Attempt 1
+        Update-PodcastTransferProgress -Context $context -Bytes 8192 -Stage verifying
+        $text = ($script:SignalRows.Text -join "`n")
+        $text | Should -Match 'UPD // SIGNAL CONSOLE'
+        $text | Should -Match 'UNIVERSAL PODCAST DOWNLOADER'
+        $text | Should -Match 'PREPARE'
+        $text | Should -Match 'RECEIVE.*0 bytes; total unknown'
+        $text | Should -Match 'VERIFY.*Checking audio and saving history'
+        $text | Should -Not -Match '%|https?://|private|100'
+        $context.Bytes | Should -Be 8192
+        $context.TransferPercent | Should -Be -1
+    }
+
+    It 'pairs retry and failure labels with amber and red and emits no pipeline output' {
+        $context = New-PodcastProgressContext -TotalEpisodes 1
+        $context.SignalConsole = $true
+        @(
+            Start-PodcastEpisodeProgress -Context $context -Index 1
+            Start-PodcastTransferProgress -Context $context -TotalBytes 100 -Attempt 2
+            Complete-PodcastEpisodeProgress -Context $context -Outcome failed
+            Complete-PodcastRunProgress -Context $context
+            Close-PodcastProgress -Context $context
+        ).Count | Should -Be 0
+        @($script:SignalRows | Where-Object { $_.Text -match 'RETRY' -and $_.Color -eq 'Yellow' }).Count | Should -Be 1
+        @($script:SignalRows | Where-Object { $_.Text -match 'FAILED' -and $_.Color -eq 'Red' }).Count | Should -Be 1
+        $context.SignalLineOpen | Should -BeFalse
+    }
+
+    It 'keeps a narrow console in bounded monochrome ASCII' {
+        Mock Get-PodcastSignalWidth { 32 }
+        Write-PodcastSignalHeader
+        Write-PodcastSignalDivider
+        Write-PodcastSignalLine -Text ('  INPUT     ' + ('x' * 80)) -Color Cyan
+        @($script:SignalRows | Where-Object { $_.Text.Length -gt 32 -or $_.Color -ne 'Gray' }).Count | Should -Be 0
+        ($script:SignalRows.Text -join '') | Should -Not -Match '[^\x20-\x7e]'
+    }
+
+    It 'preserves receiving observations when the host cannot render a signal line' {
+        Mock Write-Host { throw [IO.IOException]::new('private renderer failure') }
+        $context = New-PodcastProgressContext -TotalEpisodes 1
+        $context.SignalConsole = $true
+        { Start-PodcastEpisodeProgress -Context $context -Index 1 } | Should -Not -Throw
+        Start-PodcastTransferProgress -Context $context -TotalBytes 100 -Attempt 1
+        Update-PodcastTransferProgress -Context $context -Bytes 37 -Stage verifying
+        $context.Bytes | Should -Be 37
+        $context.TransferPercent | Should -Be 37
+        $context.EpisodeOutcome | Should -BeExactly ''
+        { Close-PodcastProgress -Context $context } | Should -Not -Throw
+    }
+}

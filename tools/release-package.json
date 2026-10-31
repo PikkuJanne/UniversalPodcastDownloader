@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "packageName": "UniversalPodcastDownloader",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "releaseStatus": "STABLE_RELEASE",
   "sourceRepository": "https://github.com/PikkuJanne/UniversalPodcastDownloader",
   "files": [
@@ -11,8 +11,8 @@
     "RELEASE.md",
     "UniversalPodcastDownloader.bat",
     "UniversalPodcastDownloader.ico",
+    "UniversalPodcastDownloader.png",
     "UniversalPodcastDownloader.ps1",
-    "UniversalPodcastDownloader_icon.png",
     "UniversalPodcastDownloader_poster.png",
     "src/Batch.ps1",
     "src/Commands.ps1",

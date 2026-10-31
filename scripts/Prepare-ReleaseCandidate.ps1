@@ -61,7 +61,7 @@ function Get-UpdCandidateSource {
         $config.releaseStatus -isnot [string] -or -not (($rcVersion -and $config.releaseStatus -ceq 'UNRELEASED_CANDIDATE') -or
             ($stableVersion -and $config.releaseStatus -ceq 'STABLE_RELEASE'))) { throw 'Invalid committed candidate configuration.' }
     $rootPaths = @('CHANGELOG.md', 'LICENSE', 'README.md', 'RELEASE.md', 'UniversalPodcastDownloader.bat',
-        'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader.ps1', 'UniversalPodcastDownloader_icon.png', 'UniversalPodcastDownloader_poster.png')
+        'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader.png', 'UniversalPodcastDownloader.ps1', 'UniversalPodcastDownloader_poster.png')
     $treePaths = @((Invoke-UpdCandidateGit -Repository $repo -Arguments @('ls-tree', '-r', '--name-only', $SourceCommit)) -split "`n")
     $sourcePaths = @($treePaths | Where-Object { $_.StartsWith('src/', [StringComparison]::Ordinal) })
     if ($sourcePaths.Count -ne 27 -or @($sourcePaths | Where-Object { $_ -cnotmatch '^src/[A-Za-z]+\.ps1$' }).Count) { throw 'Invalid committed candidate runtime inventory.' }

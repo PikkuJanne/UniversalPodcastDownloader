@@ -6,11 +6,11 @@
   "closed_date": "2026-10-04",
   "closure_scope": "Implementation, mandatory acceptance and merged source complete; website assets and deployment remain later work. A separate v1.0.0 publication follow-up was explicitly authorized on 2026-10-08.",
   "release_followup": {
-    "version": "1.0.0",
-    "authorization_date": "2026-10-08",
-    "authorized_action": "Prepare and publish the verified v1.0.0 tag and portable release assets on GitHub.",
-    "record": "docs/codex/evidence/V1.0.0-PUBLICATION.md",
-    "release_url": "https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.0"
+    "version": "1.0.1",
+    "authorization_date": "2026-10-31",
+    "authorized_action": "Fix the reproduced AI Inside transfer failure, apply the guided TUI touch-up, run Windows package checks and publish the stable portable release in this chat.",
+    "record": "docs/releases/v1.0.1.md",
+    "release_url": "https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.1"
   },
   "status_values": [
     "todo",

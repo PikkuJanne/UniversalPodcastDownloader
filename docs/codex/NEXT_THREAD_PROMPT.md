@@ -1,3 +1,7 @@
+# Current hotfix context
+
+The 31 October 2026 v1.0.1 request is one end-to-end hotfix and stable-publication task, authorized in the current chat. Complete it here; do not create another chat or request owner testing/approval. See [hotfix record](../releases/v1.0.1.md) and verify the public release before repeating publication. The following project-closure text is historical.
+
 # Project closed
 
 Closed 4 October 2026 (Europe/Berlin). **All 26 implementation tasks are done; project_status=closed and current_task=null.** Implementation, mandatory acceptance and merged source are complete. On 8 October the owner separately authorized v1.0.0 GitHub publication; read [its action record](evidence/V1.0.0-PUBLICATION.md) and independently inspect the [version-specific release](https://github.com/PikkuJanne/UniversalPodcastDownloader/releases/tag/v1.0.0) before repeating any release action. Website assets and deployment remain a later project. Read [project closure evidence](evidence/PROJECT-CLOSURE.md), STATUS.md and TASKS.json for the historical closure record.

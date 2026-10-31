@@ -1,5 +1,93 @@
 #requires -Version 5.1
 
+function Get-PodcastSignalWidth {
+    [CmdletBinding()]
+    param()
+    try { return [Math]::Max(1, [Math]::Min(78, [Console]::WindowWidth - 1)) }
+    catch { return 59 }
+}
+
+function Write-PodcastSignalLine {
+    [CmdletBinding()]
+    param([string]$Text, [ConsoleColor]$Color = [ConsoleColor]::Gray, [switch]$Inline)
+    try {
+        $width = Get-PodcastSignalWidth
+        $line = if ($Text.Length -gt $width) { $Text.Substring(0, $width) } else { $Text }
+        # Built-in colors and ASCII work in both Windows engines. A narrow
+        # console keeps explicit labels and uses a monochrome fallback.
+        if ($width -lt 50) { $Color = [ConsoleColor]::Gray }
+        if ($Inline) { Write-Host ("`r" + $line.PadRight($width)) -ForegroundColor $Color -NoNewline }
+        else { Write-Host $line -ForegroundColor $Color }
+    }
+    catch { if (Test-PodcastCancellation -ErrorObject $_) { throw } }
+}
+
+function Write-PodcastSignalHeader {
+    [CmdletBinding()]
+    param()
+    $width = Get-PodcastSignalWidth
+    if ($width -ge 50) {
+        $caption = '+-- UPD // SIGNAL CONSOLE '
+        Write-PodcastSignalLine -Text ($caption + ('-' * ($width - $caption.Length - 1)) + '+') -Color Cyan
+        Write-PodcastSignalLine -Text '| UNIVERSAL PODCAST DOWNLOADER' -Color Cyan
+        Write-PodcastSignalLine -Text ('+' + ('-' * ($width - 2)) + '+') -Color Cyan
+    }
+    else { Write-PodcastSignalLine -Text 'UNIVERSAL PODCAST DOWNLOADER' }
+    Write-PodcastSignalLine -Text '  READY     Awaiting feed input' -Color Green
+}
+
+function Write-PodcastSignalDivider {
+    [CmdletBinding()]
+    param()
+    $width = Get-PodcastSignalWidth
+    $line = if ($width -ge 3) { '+' + ('-' * ($width - 2)) + '+' } else { '-' * $width }
+    Write-PodcastSignalLine -Text $line -Color Cyan
+}
+
+function Write-PodcastSignalProgress {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Context)
+    $position = '{0:00}/{1:00}' -f $Context.EpisodeIndex, $Context.TotalEpisodes
+    $color = [ConsoleColor]::Green
+    $label = 'RECEIVE'
+    $detail = 'Opening media request'
+    switch ($Context.Stage) {
+        'preparing' { $label = 'PREPARE'; $detail = 'Checking local history' }
+        'verifying' { $label = 'VERIFY'; $detail = 'Checking audio and saving history' }
+        'downloaded' { $label = 'SAVED'; $detail = 'Audio and history verified' }
+        'verified_skip' { $label = 'SKIPPED'; $detail = 'Local size and SHA-256 verified' }
+        'failed' { $label = 'FAILED'; $detail = 'Transfer failed'; $color = [ConsoleColor]::Red }
+        'conflict' { $label = 'CONFLICT'; $detail = 'Existing media preserved'; $color = [ConsoleColor]::Red }
+        'cancelled' { $label = 'CANCELLED'; $detail = 'Recovery evidence preserved'; $color = [ConsoleColor]::Yellow }
+        'deferred' { $label = 'DEFERRED'; $detail = 'Transfer deferred'; $color = [ConsoleColor]::Yellow }
+        'legacy_unverified' { $label = 'UNVERIFIED'; $detail = 'Existing local media preserved'; $color = [ConsoleColor]::Yellow }
+        'complete' { $label = 'COMPLETE'; $detail = 'All selected episodes verified' }
+        'incomplete' { $label = 'INCOMPLETE'; $detail = 'See result below'; $color = [ConsoleColor]::Yellow }
+        default {
+            if ($Context.Attempt -gt 1) { $label = 'RETRY'; $color = [ConsoleColor]::Yellow }
+            $received = ([double]$Context.Bytes / 1MB).ToString('0.0', [Globalization.CultureInfo]::InvariantCulture)
+            if ($null -eq $Context.TotalBytes) { $detail = $Context.Bytes.ToString([Globalization.CultureInfo]::InvariantCulture) + ' bytes; total unknown' }
+            else {
+                $total = ([double]$Context.TotalBytes / 1MB).ToString('0.0', [Globalization.CultureInfo]::InvariantCulture)
+                $filled = [int][Math]::Floor([Math]::Max(0, $Context.TransferPercent) * 12.0 / 100)
+                $detail = '[{0}{1}] {2} / {3} MiB' -f ('#' * $filled), ('-' * (12 - $filled)), $received, $total
+            }
+            if ($Context.Attempt -gt 1) { $detail += '; attempt ' + $Context.Attempt }
+        }
+    }
+    Write-PodcastSignalLine -Text ('  {0,-10}{1}  {2}' -f $label, $position, $detail) -Color $color -Inline
+    $Context.SignalLineOpen = $true
+}
+
+function Complete-PodcastSignalLine {
+    [CmdletBinding()]
+    param([AllowNull()]$Context)
+    if ($null -eq $Context -or -not $Context.SignalLineOpen) { return }
+    try { Write-Host '' }
+    catch { if (Test-PodcastCancellation -ErrorObject $_) { throw } }
+    $Context.SignalLineOpen = $false
+}
+
 function Test-PodcastProgressInteractive {
     [CmdletBinding()]
     param()
@@ -32,6 +120,7 @@ function New-PodcastProgressContext {
         Stage = 'preparing'; EpisodeOutcome = ''; EpisodeFinished = $false; TransferStarted = $false
         RunVerified = $false; EpisodePercent = 0; TransferPercent = -1
         ShownIds = [Collections.Generic.List[int]]::new(); Closed = $false; Clock = $Clock; LastRenderedAt = $null
+        SignalConsole = $false; SignalLineOpen = $false
     }
 }
 
@@ -51,6 +140,12 @@ function Write-PodcastProgressContext {
     try {
         $now = [double](& $Context.Clock)
         if (-not $Force -and $null -ne $Context.LastRenderedAt -and $now - $Context.LastRenderedAt -lt 250.0) { return }
+        if ($Context.SignalConsole) {
+            if ($Context.Stage -in @('complete', 'incomplete')) { Complete-PodcastSignalLine -Context $Context }
+            else { Write-PodcastSignalProgress -Context $Context }
+            $Context.LastRenderedAt = $now
+            return
+        }
         $index = $Context.EpisodeIndex
         $status = switch ($Context.Stage) {
             'preparing' { 'Preparing: episode {0}' -f $index }
@@ -166,6 +261,7 @@ function Close-PodcastProgress {
     [CmdletBinding()]
     param([AllowNull()]$Context)
     if ($null -eq $Context -or $Context.Closed) { return }
+    Complete-PodcastSignalLine -Context $Context
     $Context.Closed = $true
     $firstCancellation = $null
     # Completion only retires this context's own records. A local preference

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 — transfer and terminal hotfix
+
+- Fix AI Inside transfers that reach the old five-redirect limit: follow at most twelve validated hops, reject cycles, and report permanent redirect failures without leaking request URLs. Preserve original audio, verified history and retry/resume safeguards.
+- Give the guided terminal a compact signal-console layout with distinct input, selection, transfer, verification and result states; keep unattended output plain.
+- Align the portable package inventory with the owner's current application artwork.
+- Verify the extracted Windows package with Windows PowerShell 5.1 and PowerShell 7, including a public AI Inside episode and its verified repeat-run skip. See the release notes for exact observations and package checksum.
+
 ## 1.0.0 — first stable release
 
 The completed downloader is distributed as v1.0.0 at the owner's request on 8 October 2026. The 29 runtime files are unchanged from the tested, merged development closure; this version updates distribution metadata, user guidance and stable-version packaging validation.

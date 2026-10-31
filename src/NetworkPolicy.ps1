@@ -75,6 +75,12 @@ function Invoke-PodcastHttpGet {
     $request = $null
     $response = $null
     $redirects = 0
+    # Measurement services can legitimately precede the media CDN. Bound the
+    # complete chain while rejecting a repeated request target immediately.
+    # Exact escaped targets stay private in memory; fragments are not sent.
+    $maximumRedirects = 12
+    $visited = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    $null = $visited.Add($current.GetComponents([UriComponents]::HttpRequestUrl, [UriFormat]::UriEscaped))
     $redirectDeadline = ([DateTimeOffset](& $Policy.Clock)).AddSeconds($Policy.RetryBudgetSeconds)
     if ($null -ne $Policy.PSObject.Properties['RetryDeadlineUtc']) { $redirectDeadline = [DateTimeOffset]$Policy.RetryDeadlineUtc }
     try {
@@ -119,7 +125,9 @@ function Invoke-PodcastHttpGet {
                 $request = $null
                 return $result
             }
-            if ($redirects -ge 5) { throw 'The HTTP redirect limit of five hops was exceeded.' }
+            if ($redirects -ge $maximumRedirects) {
+                throw (New-PodcastTransportException -Kind RedirectLimit -Message 'Transfer stopped: redirect limit reached (12 hops); not retried.')
+            }
             $location = $null
             try { $location = $response.Headers.Location }
             catch { throw 'The HTTP redirect has an invalid Location header.' }
@@ -129,6 +137,9 @@ function Invoke-PodcastHttpGet {
             $next = $null
             if (-not [Uri]::TryCreate($current, $location, [ref]$next)) { throw 'The HTTP redirect has an invalid Location header.' }
             $current = Get-PodcastRequestUri -Uri $next.AbsoluteUri -PreviousUri $current
+            if (-not $visited.Add($current.GetComponents([UriComponents]::HttpRequestUrl, [UriFormat]::UriEscaped))) {
+                throw (New-PodcastTransportException -Kind RedirectCycle -Message 'Transfer stopped: redirect cycle detected; not retried.')
+            }
             $notBefore = Get-PodcastRetryAfterUtc -Response $response -Policy $Policy
             if ($null -ne $notBefore) { Wait-PodcastRetryDelay -NotBefore $notBefore -Deadline $redirectDeadline -Policy $Policy }
             $redirects++

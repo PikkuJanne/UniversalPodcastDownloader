@@ -9,6 +9,17 @@ Describe 'A020: safe URL and diagnostic text boundaries' -Tag 'Unit', 'A020' {
     BeforeEach { $null = Initialize-PodcastDiagnostics -Preview }
     AfterEach { Close-PodcastDiagnostics }
 
+    It 'HOTFIX reports an allowlisted redirect reason without exposing the exception body' -ForEach @(
+        @{ Kind = 'RedirectLimit'; Expected = 'Transfer stopped: redirect limit reached (12 hops); not retried.' },
+        @{ Kind = 'RedirectCycle'; Expected = 'Transfer stopped: redirect cycle detected; not retried.' }
+    ) {
+        $failure = [InvalidOperationException]::new('https://private.invalid/private-path?token=private-token')
+        $failure.Data['PodcastTransport'] = $true
+        $failure.Data['Kind'] = $Kind
+        (Get-PodcastDiagnosticError -Error $failure) | Should -BeExactly $Expected
+        (Protect-PodcastDiagnosticText -Text $Expected) | Should -BeExactly $Expected
+    }
+
     It 'retains only host and an opaque ID for <Case>' -ForEach @(
         @{ Case = 'userinfo'; Url = 'https://private-user:private-pass@podcast.invalid/feed'; HostName = 'podcast.invalid' },
         @{ Case = 'unlabelled opaque path'; Url = 'https://podcast.invalid/9f6a174e12bd64d28c72874a1/feed.xml'; HostName = 'podcast.invalid' },

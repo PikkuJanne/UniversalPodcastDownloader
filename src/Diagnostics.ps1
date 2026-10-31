@@ -137,6 +137,8 @@ function Get-PodcastDiagnosticError {
                 'HttpStatus' { return 'The server returned an unsuccessful HTTP status.' }
                 'IncompleteBody' { return 'The response body was incomplete.' }
                 'Permanent' { return 'The request was rejected by the network policy.' }
+                'RedirectLimit' { return 'Transfer stopped: redirect limit reached (12 hops); not retried.' }
+                'RedirectCycle' { return 'Transfer stopped: redirect cycle detected; not retried.' }
             }
         }
         if ($null -eq $cause.InnerException) { break }

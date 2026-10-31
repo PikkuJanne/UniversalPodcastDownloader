@@ -164,7 +164,7 @@ try {
     if ($config.releaseStatus -isnot [string] -or -not (($rcVersion -and $config.releaseStatus -ceq 'UNRELEASED_CANDIDATE') -or
         ($stableVersion -and $config.releaseStatus -ceq 'STABLE_RELEASE'))) { throw 'Release version and status must pair an rc semantic version with UNRELEASED_CANDIDATE or a stable semantic version with STABLE_RELEASE.' }
     $requiredRoot = @('CHANGELOG.md', 'LICENSE', 'README.md', 'RELEASE.md', 'UniversalPodcastDownloader.bat',
-        'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader.ps1', 'UniversalPodcastDownloader_icon.png', 'UniversalPodcastDownloader_poster.png')
+        'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader.png', 'UniversalPodcastDownloader.ps1', 'UniversalPodcastDownloader_poster.png')
     $sourceFiles = @(Get-UpdReleaseOrderedPath -Paths @($tracked.Keys | Where-Object { $_.StartsWith('src/', [StringComparison]::Ordinal) }))
     if ($sourceFiles.Count -ne 27 -or @($sourceFiles | Where-Object { $_ -cnotmatch '^src/[A-Za-z]+\.ps1$' }).Count) { throw 'Committed src inventory must contain exactly 27 runtime PowerShell files.' }
     $expected = @(Get-UpdReleaseOrderedPath -Paths @($requiredRoot + $sourceFiles))

@@ -32,7 +32,7 @@ function New-PodcastTransportException {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates only an in-memory safe exception.')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][ValidateSet('HeaderTimeout', 'IdleTimeout', 'Connection', 'HttpStatus', 'IncompleteBody', 'Deferred', 'Permanent')][string]$Kind,
+        [Parameter(Mandatory)][ValidateSet('HeaderTimeout', 'IdleTimeout', 'Connection', 'HttpStatus', 'IncompleteBody', 'Deferred', 'Permanent', 'RedirectLimit', 'RedirectCycle')][string]$Kind,
         [Parameter(Mandatory)][string]$Message,
         [bool]$Retryable = $false,
         [Nullable[DateTimeOffset]]$RetryAfterUtc,

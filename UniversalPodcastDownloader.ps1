@@ -290,22 +290,24 @@ function Invoke-PodcastWebRequest {
 
 # --- Shared RSS/Atom resolution and guided input ---
 function Get-FeedUrlInteractive {
-    param($Policy = (New-PodcastTransportPolicy), [ValidateRange(1, 100)][int]$MaxPages = 20)
+    param($Policy = (New-PodcastTransportPolicy), [ValidateRange(1, 100)][int]$MaxPages = 20, [switch]$SignalConsole)
 
-    Write-Host "==== Universal Podcast Downloader ====" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Paste a direct RSS/Atom feed URL or a podcast show page URL." -ForegroundColor Yellow
-    Write-Host "For pages with several feeds, choose the feed number shown below."
-    Write-Host ""
+    if ($SignalConsole) { Write-PodcastSignalHeader }
+    else {
+        Write-Host "Paste a direct RSS/Atom feed URL or a podcast show page URL."
+        Write-Host "For pages with several feeds, choose the feed number shown below."
+    }
 
     while ($true) {
-        $inputUrl = Read-Host "Paste RSS feed URL OR podcast page URL"
+        $prompt = if ($SignalConsole) { '  INPUT     Paste RSS feed or show URL' } else { 'Paste RSS feed URL OR podcast page URL' }
+        $inputUrl = Read-Host $prompt
         if ([string]::IsNullOrWhiteSpace($inputUrl)) {
             Write-Host "Please paste a URL (or press Ctrl+C to quit)." -ForegroundColor Red
             continue
         }
         try {
-            Write-Host "  Fetching URL..." -ForegroundColor DarkCyan
+            if ($SignalConsole) { Write-PodcastSignalLine -Text '  RESOLVE   Reading feed metadata' -Color Green }
+            else { Write-Host "  Fetching URL..." }
             return (Resolve-PodcastItems -Feeds @($inputUrl) -Interactive -Policy $Policy -MaxPages $MaxPages)
         } catch {
             if (Test-PodcastCancellation -ErrorObject $_) { throw }
@@ -685,6 +687,7 @@ function Invoke-PodcastRun {
     $historyLock = $null
     $archiveLock = $null
     $runResources = [pscustomobject]@{ Power = $null; Progress = $null; Result = $null }
+    $signalConsole = $false
     $onConfirmed = {
         if ($KeepAwake -and $null -eq $runResources.Power) {
             $runResources.Power = Start-PodcastKeepAwake -Enabled
@@ -730,23 +733,29 @@ function Invoke-PodcastRun {
         }
         $needFeed = $cli.NeedFeed
         $needCount = $cli.NeedCount
+        $signalConsole = ($needFeed -or $needCount) -and -not $NonInteractive -and -not $PassThru -and (Test-PodcastProgressInteractive)
 
         $resolved = $null
         if ($needFeed) {
-            $resolved = Get-FeedUrlInteractive -Policy $transportPolicy -MaxPages $MaxFeedPages
+            $resolved = Get-FeedUrlInteractive -Policy $transportPolicy -MaxPages $MaxFeedPages -SignalConsole:$signalConsole
             $FeedUrl = $resolved.Url
         }
 
         if ($needCount) {
-            Write-Host ""
-            Write-Host "How many episodes to download (newest first)?" -ForegroundColor Yellow
-            Write-Host "  - Press Enter for only the latest episode."
-            Write-Host "  - Enter a number like 5 to download the 5 newest."
-            Write-Host "  - Type 'all' to download all accessible entries within the feed limits."
-            Write-Host ""
+            if ($signalConsole) {
+                if (-not $needFeed) { Write-PodcastSignalHeader }
+                Write-PodcastSignalLine -Text '  SELECT    [Enter] Latest  [N] Newest N  [all] All' -Color Cyan
+            }
+            else {
+                Write-Host "How many episodes to download (newest first)?"
+                Write-Host "  - Press Enter for only the latest episode."
+                Write-Host "  - Enter a number like 5 to download the 5 newest."
+                Write-Host "  - Type 'all' to download all accessible entries within the feed limits."
+            }
 
             while ($true) {
-                $inputCount = Read-Host "Episodes to download (number / 'all' / Enter = 1)"
+                $selectionPrompt = if ($signalConsole) { '  SELECT    Episodes' } else { "Episodes to download (number / 'all' / Enter = 1)" }
+                $inputCount = Read-Host $selectionPrompt
                 if ([string]::IsNullOrWhiteSpace($inputCount)) {
                     $Mode = 'Latest'
                     break
@@ -766,7 +775,8 @@ function Invoke-PodcastRun {
                     break
                 }
 
-                Write-Host "Invalid input. Enter 'all', a positive number, or just Enter." -ForegroundColor Red
+                if ($signalConsole) { Write-PodcastSignalLine -Text '  INVALID   Enter a positive N, all, or Enter for Latest' -Color Red }
+                else { Write-Host "Invalid input. Enter 'all', a positive number, or just Enter." }
             }
         }
 
@@ -786,11 +796,13 @@ function Invoke-PodcastRun {
         $baseOutputPath = Assert-PodcastDestination -Root $rootInput -Directory
         $candidateFeeds = @($FeedUrl) | Where-Object { $_ } | Select-Object -Unique
 
-        Write-Host "[*] Fetching podcast feed..."
+        if (-not $signalConsole) { Write-Host "[*] Fetching podcast feed..." }
         if ($null -eq $resolved) { $resolved = Resolve-PodcastItems -Feeds $candidateFeeds -Policy $transportPolicy -MaxPages $MaxFeedPages }
-        Write-Host ("    Using feed: " + (Get-PodcastSafeUrl -Url $resolved.Url))
-        Write-Host ('    Feed pages retrieved: {0}; repeated entries removed: {1}.' -f $resolved.Catalogue.PagesFetched, $resolved.Catalogue.DuplicateCount)
-        Write-Host '    Selection uses accessible entries; a complete historical catalogue is not guaranteed.'
+        if (-not $signalConsole) {
+            Write-Host ("    Using feed: " + (Get-PodcastSafeUrl -Url $resolved.Url))
+            Write-Host ('    Feed pages retrieved: {0}; repeated entries removed: {1}.' -f $resolved.Catalogue.PagesFetched, $resolved.Catalogue.DuplicateCount)
+            Write-Host '    Selection uses accessible entries; a complete historical catalogue is not guaranteed.'
+        }
         if (-not $resolved.Catalogue.Complete) {
             $catalogueMessage = Get-PodcastCatalogueMessage -Catalogue $resolved.Catalogue
             Write-Warning $catalogueMessage
@@ -811,10 +823,9 @@ function Invoke-PodcastRun {
             Write-Verbose 'Feed title lookup was unavailable; the established unnamed-show fallback is retained.'
         }
 
-        if ($feedTitle) {
-            Write-Host '    Feed title available (kept in local archive metadata).'
-        } else {
-            Write-Host "    Feed title: (unknown)"
+        if (-not $signalConsole) {
+            if ($feedTitle) { Write-Host '    Feed title available (kept in local archive metadata).' }
+            else { Write-Host "    Feed title: (unknown)" }
         }
 
         $episodes = @(foreach ($it in $resolved.Items) { Get-EpisodeData $it })
@@ -965,7 +976,8 @@ function Invoke-PodcastRun {
 
         $total = $destinationPlan.Count
         $runResources.Progress = New-PodcastProgressContext -TotalEpisodes $total -NonInteractive:$NonInteractive
-        Write-Host "[*] Episodes to download: $total"
+        $runResources.Progress.SignalConsole = $signalConsole
+        if (-not $signalConsole) { Write-Host "[*] Episodes to download: $total" }
         Write-PodcastDiagnostic ("Episodes to download (after mode/filter): {0}" -f $total)
 
         $downloaded = @()
@@ -985,7 +997,7 @@ function Invoke-PodcastRun {
 
             $historyAction = Resolve-PodcastHistoryItem -Context $historyContext -Planned $planned
             if ($historyAction -eq 'verified_skip') {
-                Write-Host "[-] Skipping (verified history): episode $index"
+                if (-not $signalConsole) { Write-Host "[-] Skipping (verified history): episode $index" }
                 $skipped += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome verified_skip `
                     -Bytes $planned.StateRecord.bytes -Verification 'local-size-sha256' -Message 'Recorded media verified on disk.'
@@ -994,7 +1006,7 @@ function Invoke-PodcastRun {
                 continue
             }
             if ($historyAction -eq 'adopted_skip') {
-                Write-Host "[-] Skipping (owner-adopted local file): episode $index"
+                if (-not $signalConsole) { Write-Host "[-] Skipping (owner-adopted local file): episode $index" }
                 $adopted += [PSCustomObject]@{ Title = $ep.Title; File = $destFile }
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome legacy_unverified `
                     -Message 'Owner-adopted local media is unchanged; transfer completeness remains unverified.'
@@ -1004,6 +1016,7 @@ function Invoke-PodcastRun {
             }
             if ($historyAction -eq 'conflict') {
                 $message = 'Existing media is unknown or changed; preserved for review.'
+                Complete-PodcastSignalLine -Context $runResources.Progress
                 Write-Warning $message
                 $failed += [PSCustomObject]@{ EpisodeId = $planned.EpisodeId; Error = $message }
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome conflict -Message $message
@@ -1012,7 +1025,7 @@ function Invoke-PodcastRun {
                 continue
             }
 
-            Write-Host "[+] Downloading episode $index of $total"
+            if (-not $signalConsole) { Write-Host "[+] Downloading episode $index of $total" }
             Write-Verbose ("    URL: " + (Get-PodcastSafeUrl -Url $ep.Url))
             Write-Verbose ("    Episode ID: " + $planned.EpisodeId)
 
@@ -1043,12 +1056,13 @@ function Invoke-PodcastRun {
                     $attempt = [int]$lastError.Exception.Data['PodcastAttempts']
                 }
                 $msg = Get-PodcastDiagnosticError -Error $lastError
+                Complete-PodcastSignalLine -Context $runResources.Progress
                 Write-Warning ("    Transfer failed: {0}" -f $msg)
                 Write-PodcastDiagnostic ("Transfer failed: {0}" -f $msg) 'WARN'
             }
 
             if ($success) {
-                Write-Host "    Saved episode $index."
+                if (-not $signalConsole) { Write-Host "    Saved episode $index." }
                 $downloaded += [PSCustomObject]@{ Title = $ep.Title; File = $transferResult.File }
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $planned.EpisodeId -Outcome downloaded `
                     -Bytes $transferResult.Bytes -Verification $transferResult.Verification -Attempts $attempt -Message 'Media transfer validated and recorded.'
@@ -1078,13 +1092,22 @@ function Invoke-PodcastRun {
             }
         }
 
-        Write-Host ""
-        Write-Host "Summary" -ForegroundColor Cyan
-        Write-Host "-------"
-        Write-Host ("Downloaded : {0}" -f $downloaded.Count)
-        Write-Host ("Skipped    : {0}" -f $skipped.Count)
-        Write-Host ("Adopted    : {0}" -f $adopted.Count)
-        Write-Host ("Failed     : {0}" -f $failed.Count)
+        Complete-PodcastSignalLine -Context $runResources.Progress
+        if ($signalConsole) {
+            Write-PodcastSignalDivider
+            Write-PodcastSignalLine -Text ('  RESULT    [SAVED] {0}  [SKIPPED] {1}' -f $downloaded.Count, $skipped.Count) -Color Green
+            $resultColor = if ($failed.Count -gt 0) { [ConsoleColor]::Red } else { [ConsoleColor]::Green }
+            Write-PodcastSignalLine -Text ('            [FAILED] {0}  [ADOPTED] {1}' -f $failed.Count, $adopted.Count) -Color $resultColor
+        }
+        else {
+            Write-Host ""
+            Write-Host "Summary"
+            Write-Host "-------"
+            Write-Host ("Downloaded : {0}" -f $downloaded.Count)
+            Write-Host ("Skipped    : {0}" -f $skipped.Count)
+            Write-Host ("Adopted    : {0}" -f $adopted.Count)
+            Write-Host ("Failed     : {0}" -f $failed.Count)
+        }
 
         Write-PodcastDiagnostic ("Summary: Downloaded={0}, Skipped={1}, Failed={2}, Adopted={3}" -f $downloaded.Count, $skipped.Count, $failed.Count, $adopted.Count)
 
@@ -1104,8 +1127,10 @@ function Invoke-PodcastRun {
         if ($runResult.Complete) {
             $runResult.Message = 'Run completed.'
             Write-PodcastDiagnostic 'Run completed.' 'INFO'
-            Write-Host ''
-            Write-Host '[OK] Done. Files are in the selected podcast archive.'
+            if (-not $signalConsole) {
+                Write-Host ''
+                Write-Host '[OK] Done. Files are in the selected podcast archive.'
+            }
         }
         else {
             $runResult.Message = 'Run incomplete; failed, deferred, conflicting or unverified media, or unresolved feed pages remain.'
@@ -1127,6 +1152,7 @@ function Invoke-PodcastRun {
                 $episodeResults += New-PodcastEpisodeResult -EpisodeId $remaining.EpisodeId -Outcome deferred -Message 'Episode was not processed because the run stopped.'
             }
         }
+        Complete-PodcastSignalLine -Context $runResources.Progress
         Write-Host ("ERROR: {0}" -f $safeFailure) -ForegroundColor Red
         Write-PodcastDiagnostic $safeFailure 'ERROR'
         $catalogue = if ($null -ne $resolved) { $resolved.Catalogue } else { $null }

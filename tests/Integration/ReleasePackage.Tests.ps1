@@ -106,7 +106,7 @@ Describe 'A051/A052 release ZIP workflow and layered extraction support' {
         $script:releaseFirstBuild = Invoke-UpdReleaseBuild -Context $context -SourceRoot $sourceRoot -OutputName 'build one'
         $script:releaseSecondBuild = Invoke-UpdReleaseBuild -Context $context -SourceRoot $sourceRoot -OutputName 'build two'
         $expectedPayload = @('UniversalPodcastDownloader.ps1', 'UniversalPodcastDownloader.bat', 'LICENSE', 'README.md',
-            'CHANGELOG.md', 'RELEASE.md', 'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader_icon.png',
+            'CHANGELOG.md', 'RELEASE.md', 'UniversalPodcastDownloader.ico', 'UniversalPodcastDownloader.png',
             'UniversalPodcastDownloader_poster.png') + @(Get-ChildItem -LiteralPath (Join-Path $sourceRoot 'src') -File -Filter '*.ps1' | ForEach-Object { 'src/' + $_.Name })
         [Array]::Sort($expectedPayload, [StringComparer]::Ordinal)
         Add-Type -AssemblyName System.IO.Compression.FileSystem
